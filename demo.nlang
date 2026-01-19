@@ -1,0 +1,28 @@
+// Simple CNN for MNIST classification
+network MNIST_CNN {
+    input: { shape: [28, 28, 1] }
+    weights: "models/mnist_cnn.bin"
+    
+    layers: [
+        Conv2D(filters: 32, kernel: [3, 3], activation: "relu")
+        MaxPool(pool: 2)
+        Conv2D(filters: 64, kernel: [3, 3], activation: "relu")
+        MaxPool(pool: 2)
+        Flatten()
+        Dense(units: 128, activation: "relu")
+        Dense(units: 10, activation: "softmax")
+    ]
+}
+
+// Another example with different activations
+network TestNet {
+    input: { shape: [32, 32, 3] }
+    weights: "test_model.weights"
+    
+    layers: [
+        Conv2D(filters: 16, kernel: [5, 5], activation: "tanh")
+        AvgPool(pool: 2)
+        Dense(units: 64, activation: "sigmoid")
+        Dense(units: 10, activation: "linear")
+    ]
+}
