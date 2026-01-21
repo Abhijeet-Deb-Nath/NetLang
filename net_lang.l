@@ -23,16 +23,10 @@ typedef enum {
     
     // Parameter keywords
     TOK_FILTERS, TOK_KERNEL, TOK_ACTIVATION, TOK_STRIDE, TOK_PADDING,
-    TOK_INITIALIZER, TOK_OPTIMIZER, TOK_POOL, TOK_UNITS,
+    TOK_POOL, TOK_UNITS,
     
     // Activation functions (tokens)
     TOK_RELU, TOK_SIGMOID, TOK_TANH, TOK_SOFTMAX, TOK_LINEAR,
-    
-    // Initializers (tokens)
-    TOK_XAVIER, TOK_HE, TOK_GLOROT, TOK_ZEROS, TOK_ONES, TOK_UNIFORM, TOK_NORMAL,
-    
-    // Optimizers (tokens)
-    TOK_ADAM, TOK_SGD, TOK_RMSPROP, TOK_ADAGRAD, TOK_MOMENTUM,
     
     // Values (user content)
     TOK_NUMBER,
@@ -54,10 +48,8 @@ const char* token_names[] = {
     "NETWORK", "INPUT", "SHAPE", "WEIGHTS", "LAYERS",
     "CONV2D", "DENSE", "MAXPOOL", "AVGPOOL", "FLATTEN",
     "FILTERS", "KERNEL", "ACTIVATION", "STRIDE", "PADDING",
-    "INITIALIZER", "OPTIMIZER", "POOL", "UNITS",
+    "POOL", "UNITS",
     "RELU", "SIGMOID", "TANH", "SOFTMAX", "LINEAR",
-    "XAVIER", "HE", "GLOROT", "ZEROS", "ONES", "UNIFORM", "NORMAL",
-    "ADAM", "SGD", "RMSPROP", "ADAGRAD", "MOMENTUM",
     "NUMBER",
     "IDENTIFIER",
     "STRING_PATH",
@@ -114,8 +106,6 @@ kernel      { print_token(TOK_KERNEL, yytext); }
 activation  { print_token(TOK_ACTIVATION, yytext); }
 stride      { print_token(TOK_STRIDE, yytext); }
 padding     { print_token(TOK_PADDING, yytext); }
-initializer { print_token(TOK_INITIALIZER, yytext); }
-optimizer   { print_token(TOK_OPTIMIZER, yytext); }
 pool        { print_token(TOK_POOL, yytext); }
 units       { print_token(TOK_UNITS, yytext); }
 
@@ -125,22 +115,6 @@ sigmoid     { print_token(TOK_SIGMOID, yytext); }
 tanh        { print_token(TOK_TANH, yytext); }
 softmax     { print_token(TOK_SOFTMAX, yytext); }
 linear      { print_token(TOK_LINEAR, yytext); }
-
- /* ========== INITIALIZERS ========== */
-xavier      { print_token(TOK_XAVIER, yytext); }
-he          { print_token(TOK_HE, yytext); }
-glorot      { print_token(TOK_GLOROT, yytext); }
-zeros       { print_token(TOK_ZEROS, yytext); }
-ones        { print_token(TOK_ONES, yytext); }
-uniform     { print_token(TOK_UNIFORM, yytext); }
-normal      { print_token(TOK_NORMAL, yytext); }
-
- /* ========== OPTIMIZERS ========== */
-adam        { print_token(TOK_ADAM, yytext); }
-sgd         { print_token(TOK_SGD, yytext); }
-rmsprop     { print_token(TOK_RMSPROP, yytext); }
-adagrad     { print_token(TOK_ADAGRAD, yytext); }
-momentum    { print_token(TOK_MOMENTUM, yytext); }
 
  /* ========== NUMBERS (Values) ========== */
 {INTEGER}   { print_token(TOK_NUMBER, yytext); }
