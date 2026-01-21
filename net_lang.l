@@ -21,11 +21,22 @@ typedef enum {
     TOK_NETWORK, TOK_INPUT, TOK_SHAPE, TOK_WEIGHTS, TOK_LAYERS,
     TOK_CONV2D, TOK_DENSE, TOK_MAXPOOL, TOK_AVGPOOL, TOK_FLATTEN,
     
+    // Parameter keywords
+    TOK_FILTERS, TOK_KERNEL, TOK_ACTIVATION, TOK_STRIDE, TOK_PADDING,
+    TOK_INITIALIZER, TOK_OPTIMIZER, TOK_POOL, TOK_UNITS,
+    
+    // Activation functions (tokens)
+    TOK_RELU, TOK_SIGMOID, TOK_TANH, TOK_SOFTMAX, TOK_LINEAR,
+    
+    // Initializers (tokens)
+    TOK_XAVIER, TOK_HE, TOK_GLOROT, TOK_ZEROS, TOK_ONES, TOK_UNIFORM, TOK_NORMAL,
+    
+    // Optimizers (tokens)
+    TOK_ADAM, TOK_SGD, TOK_RMSPROP, TOK_ADAGRAD, TOK_MOMENTUM,
+    
     // Values (user content)
     TOK_NUMBER,
-    TOK_IDENTIFIER,     // Network names, parameter names
-    TOK_STRING,         // Generic string literal
-    TOK_STRING_ACT,     // Activation function string
+    TOK_IDENTIFIER,     // Network names, custom parameter names
     TOK_STRING_PATH,    // File path string
     
     // Punctuation (language tokens)
@@ -42,10 +53,13 @@ typedef enum {
 const char* token_names[] = {
     "NETWORK", "INPUT", "SHAPE", "WEIGHTS", "LAYERS",
     "CONV2D", "DENSE", "MAXPOOL", "AVGPOOL", "FLATTEN",
+    "FILTERS", "KERNEL", "ACTIVATION", "STRIDE", "PADDING",
+    "INITIALIZER", "OPTIMIZER", "POOL", "UNITS",
+    "RELU", "SIGMOID", "TANH", "SOFTMAX", "LINEAR",
+    "XAVIER", "HE", "GLOROT", "ZEROS", "ONES", "UNIFORM", "NORMAL",
+    "ADAM", "SGD", "RMSPROP", "ADAGRAD", "MOMENTUM",
     "NUMBER",
     "IDENTIFIER",
-    "STRING",
-    "STRING_ACT",
     "STRING_PATH",
     "LBRACE", "RBRACE",
     "LBRACKET", "RBRACKET",
@@ -61,8 +75,6 @@ int error_count = 0;
 
 // Function prototypes
 void print_token(TokenType type, char* text);
-int is_activation(char* str);
-int is_filepath(char* str);
 void print_summary();
 
 %}
@@ -96,6 +108,40 @@ MaxPool     { print_token(TOK_MAXPOOL, yytext); }
 AvgPool     { print_token(TOK_AVGPOOL, yytext); }
 Flatten     { print_token(TOK_FLATTEN, yytext); }
 
+ /* ========== PARAMETER KEYWORDS ========== */
+filters     { print_token(TOK_FILTERS, yytext); }
+kernel      { print_token(TOK_KERNEL, yytext); }
+activation  { print_token(TOK_ACTIVATION, yytext); }
+stride      { print_token(TOK_STRIDE, yytext); }
+padding     { print_token(TOK_PADDING, yytext); }
+initializer { print_token(TOK_INITIALIZER, yytext); }
+optimizer   { print_token(TOK_OPTIMIZER, yytext); }
+pool        { print_token(TOK_POOL, yytext); }
+units       { print_token(TOK_UNITS, yytext); }
+
+ /* ========== ACTIVATION FUNCTIONS ========== */
+relu        { print_token(TOK_RELU, yytext); }
+sigmoid     { print_token(TOK_SIGMOID, yytext); }
+tanh        { print_token(TOK_TANH, yytext); }
+softmax     { print_token(TOK_SOFTMAX, yytext); }
+linear      { print_token(TOK_LINEAR, yytext); }
+
+ /* ========== INITIALIZERS ========== */
+xavier      { print_token(TOK_XAVIER, yytext); }
+he          { print_token(TOK_HE, yytext); }
+glorot      { print_token(TOK_GLOROT, yytext); }
+zeros       { print_token(TOK_ZEROS, yytext); }
+ones        { print_token(TOK_ONES, yytext); }
+uniform     { print_token(TOK_UNIFORM, yytext); }
+normal      { print_token(TOK_NORMAL, yytext); }
+
+ /* ========== OPTIMIZERS ========== */
+adam        { print_token(TOK_ADAM, yytext); }
+sgd         { print_token(TOK_SGD, yytext); }
+rmsprop     { print_token(TOK_RMSPROP, yytext); }
+adagrad     { print_token(TOK_ADAGRAD, yytext); }
+momentum    { print_token(TOK_MOMENTUM, yytext); }
+
  /* ========== NUMBERS (Values) ========== */
 {INTEGER}   { print_token(TOK_NUMBER, yytext); }
 {FLOAT}     { print_token(TOK_NUMBER, yytext); }
@@ -103,24 +149,8 @@ Flatten     { print_token(TOK_FLATTEN, yytext); }
  /* ========== IDENTIFIERS (Values) ========== */
 {ID}        { print_token(TOK_IDENTIFIER, yytext); }
 
- /* ========== STRING LITERALS (Values) ========== */
-{STRING}    {
-    char* text = yytext;
-    char content[256];
-    
-    // Remove quotes for analysis
-    strncpy(content, text + 1, strlen(text) - 2);
-    content[strlen(text) - 2] = '\0';
-    
-    // Categorize the string
-    if (is_activation(content)) {
-        print_token(TOK_STRING_ACT, text);
-    } else if (is_filepath(content)) {
-        print_token(TOK_STRING_PATH, text);
-    } else {
-        print_token(TOK_STRING, text);
-    }
-}
+ /* ========== STRING LITERALS (File Paths) ========== */
+{STRING}    { print_token(TOK_STRING_PATH, yytext); }
 
  /* ========== PUNCTUATION (Language Tokens) ========== */
 "{"         { print_token(TOK_LBRACE, yytext); }
@@ -154,24 +184,6 @@ void print_token(TokenType type, char* text) {
            text, 
            line_number);
     token_count++;
-}
-
-int is_activation(char* str) {
-    return (strcmp(str, "relu") == 0 ||
-            strcmp(str, "sigmoid") == 0 ||
-            strcmp(str, "tanh") == 0 ||
-            strcmp(str, "softmax") == 0 ||
-            strcmp(str, "linear") == 0);
-}
-
-int is_filepath(char* str) {
-    // Check if string looks like a file path
-    return (strstr(str, ".bin") != NULL ||
-            strstr(str, ".h5") != NULL ||
-            strstr(str, ".weights") != NULL ||
-            strstr(str, "/") != NULL ||
-            strstr(str, "\\") != NULL ||
-            strstr(str, ".") != NULL);
 }
 
 void print_summary() {

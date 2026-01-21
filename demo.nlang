@@ -1,28 +1,30 @@
 // Simple CNN for MNIST classification
 network MNIST_CNN {
-    input: { shape: [28, 28, 1] }
+    input(shape: [28, 28, 1])
     weights: "models/mnist_cnn.bin"
     
     layers: [
-        Conv2D(filters: 32, kernel: [3, 3], activation: "relu")
+        Conv2D(filters: 32, kernel: [3, 3], activation: relu, padding: 1, stride: 1, initializer: he)
         MaxPool(pool: 2)
-        Conv2D(filters: 64, kernel: [3, 3], activation: "relu")
+        Conv2D(filters: 64, kernel: [3, 3], activation: relu, padding: 1, initializer: he)
         MaxPool(pool: 2)
         Flatten()
-        Dense(units: 128, activation: "relu")
-        Dense(units: 10, activation: "softmax")
+        Dense(units: 128, activation: relu, initializer: xavier)
+        Dense(units: 10, activation: softmax, initializer: glorot)
     ]
+    optimizer: adam
 }
 
-// Another example with different activations
+// Another example with different activations and initializers
 network TestNet {
-    input: { shape: [32, 32, 3] }
+    input(shape: [32, 32, 3])
     weights: "test_model.weights"
     
     layers: [
-        Conv2D(filters: 16, kernel: [5, 5], activation: "tanh")
+        Conv2D(filters: 16, kernel: [5, 5], activation: tanh, stride: 2, initializer: uniform(0.1, 0.5))
         AvgPool(pool: 2)
-        Dense(units: 64, activation: "sigmoid")
-        Dense(units: 10, activation: "linear")
+        Dense(units: 64, activation: sigmoid, initializer: normal(0, 0.01))
+        Dense(units: 10, activation: linear, initializer: zeros)
     ]
+    optimizer: sgd
 }
