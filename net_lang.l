@@ -74,6 +74,9 @@ void print_summary();
 %option noyywrap
 %option yylineno
 
+/* Start conditions for multi-line comments */
+%x COMMENT
+
 /* Regular expressions for patterns */
 DIGIT       [0-9]
 INTEGER     {DIGIT}+
@@ -82,7 +85,7 @@ ID          [a-zA-Z_][a-zA-Z0-9_]*
 STRING      \"[^\"]*\"
 WS          [ \t\r]
 NEWLINE     \n
-COMMENT     "//"[^\n]*
+SLCOMMENT   "//"[^\n]*
 
 %%
 
@@ -139,7 +142,12 @@ linear      { print_token(TOK_LINEAR, yytext); }
  /* ========== WHITESPACE & COMMENTS ========== */
 {WS}+       { /* Ignore whitespace */ }
 {NEWLINE}   { line_number++; }
-{COMMENT}   { /* Ignore comments */ }
+{SLCOMMENT} { /* Ignore single-line comments */ }
+
+"/*"        { BEGIN(COMMENT); /* Start multi-line comment */ }
+<COMMENT>"*/" { BEGIN(INITIAL); /* End multi-line comment */ }
+<COMMENT>\n { line_number++; /* Count lines in comments */ }
+<COMMENT>.  { /* Ignore comment content */ }
 
  /* ========== ERROR HANDLING ========== */
 .           {
