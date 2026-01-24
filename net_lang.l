@@ -18,8 +18,10 @@
 // Token types for output
 typedef enum {
     // Keywords (language tokens)
-    TOK_NETWORK, TOK_INPUT, TOK_SHAPE, TOK_WEIGHTS, TOK_LAYERS,
-    TOK_CONV2D, TOK_DENSE, TOK_MAXPOOL, TOK_AVGPOOL, TOK_FLATTEN,
+    TOK_NETWORK, TOK_MODULE, TOK_INPUT, TOK_SHAPE, TOK_WEIGHTS, TOK_LAYERS,
+    TOK_RETURN, TOK_FROM,
+    TOK_CONV2D, TOK_DENSE, TOK_MAXPOOL, TOK_AVGPOOL, TOK_FLATTEN, TOK_CONCAT,
+    TOK_BATCHNORM, TOK_LAYERNORM,
     
     // Parameter keywords
     TOK_FILTERS, TOK_KERNEL, TOK_ACTIVATION, TOK_STRIDE, TOK_PADDING,
@@ -37,7 +39,7 @@ typedef enum {
     TOK_LBRACE, TOK_RBRACE,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_LPAREN, TOK_RPAREN,
-    TOK_COLON, TOK_COMMA,
+    TOK_COLON, TOK_COMMA, TOK_ASSIGN,
     
     // Special
     TOK_ERROR
@@ -45,8 +47,10 @@ typedef enum {
 
 // Token names for human-readable output
 const char* token_names[] = {
-    "NETWORK", "INPUT", "SHAPE", "WEIGHTS", "LAYERS",
-    "CONV2D", "DENSE", "MAXPOOL", "AVGPOOL", "FLATTEN",
+    "NETWORK", "MODULE", "INPUT", "SHAPE", "WEIGHTS", "LAYERS",
+    "RETURN", "FROM",
+    "CONV2D", "DENSE", "MAXPOOL", "AVGPOOL", "FLATTEN", "CONCAT",
+    "BATCHNORM", "LAYERNORM",
     "FILTERS", "KERNEL", "ACTIVATION", "STRIDE", "PADDING",
     "POOL", "UNITS",
     "RELU", "SIGMOID", "TANH", "SOFTMAX", "LINEAR",
@@ -56,7 +60,7 @@ const char* token_names[] = {
     "LBRACE", "RBRACE",
     "LBRACKET", "RBRACKET",
     "LPAREN", "RPAREN",
-    "COLON", "COMMA",
+    "COLON", "COMMA", "ASSIGN",
     "ERROR"
 };
 
@@ -92,6 +96,9 @@ SLCOMMENT   "//"[^\n]*
  /* ========== KEYWORDS (Language Tokens) ========== */
  /* These are FIXED elements of NetLang grammar */
 network     { print_token(TOK_NETWORK, yytext); }
+module      { print_token(TOK_MODULE, yytext); }
+return      { print_token(TOK_RETURN, yytext); }
+from        { print_token(TOK_FROM, yytext); }
 input       { print_token(TOK_INPUT, yytext); }
 shape       { print_token(TOK_SHAPE, yytext); }
 weights     { print_token(TOK_WEIGHTS, yytext); }
@@ -102,6 +109,9 @@ Dense       { print_token(TOK_DENSE, yytext); }
 MaxPool     { print_token(TOK_MAXPOOL, yytext); }
 AvgPool     { print_token(TOK_AVGPOOL, yytext); }
 Flatten     { print_token(TOK_FLATTEN, yytext); }
+Concat      { print_token(TOK_CONCAT, yytext); }
+BatchNorm   { print_token(TOK_BATCHNORM, yytext); }
+LayerNorm   { print_token(TOK_LAYERNORM, yytext); }
 
  /* ========== PARAMETER KEYWORDS ========== */
 filters     { print_token(TOK_FILTERS, yytext); }
@@ -120,14 +130,26 @@ softmax     { print_token(TOK_SOFTMAX, yytext); }
 linear      { print_token(TOK_LINEAR, yytext); }
 
  /* ========== NUMBERS (Values) ========== */
-{INTEGER}   { print_token(TOK_NUMBER, yytext); }
-{FLOAT}     { print_token(TOK_NUMBER, yytext); }
+{INTEGER}   { 
+    /* yylval.ival = atoi(yytext); */  /* Uncomment when integrating with parser */
+    print_token(TOK_NUMBER, yytext); 
+}
+{FLOAT}     { 
+    /* yylval.fval = atof(yytext); */  /* Uncomment when integrating with parser */
+    print_token(TOK_NUMBER, yytext); 
+}
 
  /* ========== IDENTIFIERS (Values) ========== */
-{ID}        { print_token(TOK_IDENTIFIER, yytext); }
+{ID}        { 
+    /* yylval.sval = strdup(yytext); */  /* Uncomment when integrating with parser */
+    print_token(TOK_IDENTIFIER, yytext); 
+}
 
  /* ========== STRING LITERALS (File Paths) ========== */
-{STRING}    { print_token(TOK_STRING_PATH, yytext); }
+{STRING}    { 
+    /* yylval.sval = strdup(yytext); */  /* Uncomment when integrating with parser */
+    print_token(TOK_STRING_PATH, yytext); 
+}
 
  /* ========== PUNCTUATION (Language Tokens) ========== */
 "{"         { print_token(TOK_LBRACE, yytext); }
@@ -138,6 +160,7 @@ linear      { print_token(TOK_LINEAR, yytext); }
 ")"         { print_token(TOK_RPAREN, yytext); }
 ":"         { print_token(TOK_COLON, yytext); }
 ","         { print_token(TOK_COMMA, yytext); }
+"="         { print_token(TOK_ASSIGN, yytext); }
 
  /* ========== WHITESPACE & COMMENTS ========== */
 {WS}+       { /* Ignore whitespace */ }

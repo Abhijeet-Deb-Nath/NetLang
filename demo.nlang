@@ -1,45 +1,31 @@
 // Simple CNN for MNIST classification (Inference)
+// Using explicit dataflow pattern
 network MNIST_CNN {
     input(shape: [28, 28, 1])
-    weights: "models/mnist_cnn.bin"
+    weights("models/mnist_cnn.bin")
     
-    layers: [
-        Conv2D(filters: 32, 
-               kernel: [3, 3], 
-               stride: 1, 
-               padding: 1, 
-               activation: relu)
-        MaxPool(pool: 2)
-        Conv2D( filters: 64, 
-                kernel: [3, 3], 
-                stride: 1, 
-                padding: 1, 
-                activation: relu)
-
-        MaxPool(pool: 2)
-        Flatten()
-        Dense(  units: 128, 
-                activation: relu)
-        Dense(  units: 10, 
-                activation: softmax)
-    ]
+    x = Conv2D(filters: 32, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
+    x = MaxPool(pool: [2, 2]) from x
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2]) from x
+    x = Flatten() from x
+    x = Dense(units: 128, activation: relu) from x
+    x = Dense(units: 10, activation: softmax) from x
 }
 
-// Another example - Image classification
+// Another example - Image classification with VGG-style architecture
 network ImageNet_VGG {
     input(shape: [224, 224, 3])
-    weights: "models/vgg16.bin"
+    weights("models/vgg16.bin")
     
-    layers: [
-        Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu)
-        Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu)
-        MaxPool(pool: 2)
-        
-        Conv2D(filters: 128, kernel: [3, 3], stride: 1, padding: 1, activation: relu)
-        MaxPool(pool: 2)
-        
-        Flatten()
-        Dense(units: 4096, activation: relu)
-        Dense(units: 1000, activation: softmax)
-    ]
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2]) from x
+    
+    x = Conv2D(filters: 128, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2]) from x
+    
+    x = Flatten() from x
+    x = Dense(units: 4096, activation: relu) from x
+    x = Dense(units: 1000, activation: softmax) from x
 }
