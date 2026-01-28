@@ -1,54 +1,73 @@
-# NetLang Lexer
+# NetLang Compiler
 
-A lexical analyzer for NetLang, a domain-specific language (DSL) for defining neural network architectures.
+A domain-specific language compiler for neural network inference, targeting native machine code via LLVM.
 
-## Overview
-
-This project implements a Flex-based lexer that tokenizes NetLang source files into categorized token streams. NetLang allows users to define CNN architectures with a clean, declarative syntax.
-
-## Features
-
-- **Keywords**: `network`, `input`, `shape`, `weights`, `layers`
-- **Layer types**: `Conv2D`, `Dense`, `MaxPool`, `AvgPool`, `Flatten`
-- **Value types**: Numbers, identifiers, strings (generic, activation functions, file paths)
-- **Error handling**: Line tracking and error reporting
-
-## Usage
-
-1. **Compile the lexer:**
-   ```bash
-   flex net_lang.l
-   gcc lex.yy.c -o lexer
-   ```
-
-2. **Tokenize a NetLang file:**
-   ```bash
-   ./lexer < demo.nlang
-   ```
-
-## Example NetLang Code
+## Pipeline
 
 ```
-network MNIST_CNN {
-    input: { shape: [28, 28, 1] }
-    weights: "models/mnist_cnn.bin"
+NetLang Source (.nlang)
+        ↓
+   [1] Lexer (Flex)           ← ✅ Complete
+        ↓
+   [2] Parser (Bison)         ← 🔄 In Progress
+        ↓
+   [3] AST + Semantic Analysis
+        ↓
+   [4] Computation Graph IR
+        ↓
+   [5] LLVM IR Generation
+        ↓
+   [6] Native Code (AVX2/SSE4.2 optimized)
+```
+
+## Target Hardware
+
+- **CPU:** Intel Core i5-5200U (Broadwell)
+- **SIMD:** AVX2, SSE4.2
+- **Optimizations:** Cache-aware layouts, vectorized ops, multi-threaded inference
+
+## Project Structure
+
+```
+src/
+├── lexer/      # Flex tokenizer
+├── parser/     # Bison grammar + AST builder
+├── ast/        # AST node definitions
+├── semantic/   # Type checking, validation
+└── codegen/    # LLVM IR generation
+examples/       # .nlang sample files
+build/          # Compiled outputs
+```
+
+## Language Features
+
+- **Networks:** Define neural network architectures
+- **Modules:** Reusable sub-network blocks (e.g., InceptionBlock)
+- **Layers:** Conv2D, Dense, MaxPool, AvgPool, Flatten, Concat, BatchNorm, LayerNorm
+- **Dataflow:** Explicit tensor routing with `from` keyword
+
+## Build
+
+```bash
+make          # Build compiler
+make test     # Run on examples
+make clean    # Clean build artifacts
+```
+
+## Example
+
+```netlang
+network MNIST {
+    input(shape: [28, 28, 1])
+    weights("model.bin")
     
-    layers: [
-        Conv2D(filters: 32, kernel: [3, 3], activation: "relu")
-        MaxPool(pool: 2)
-        Flatten()
-        Dense(units: 10, activation: "softmax")
-    ]
+    x = Conv2D(filters: 32, kernel: [3,3], activation: relu) from input
+    x = MaxPool(pool: [2,2]) from x
+    x = Flatten() from x
+    x = Dense(units: 10, activation: softmax) from x
 }
 ```
 
-## Files
-
-- `net_lang.l` - Flex lexer specification
-- `demo.nlang` - Example NetLang programs
-- `lex.yy.c` - Generated C lexer code
-- `demo.nlang_tokens.txt` - Sample tokenized output
-
 ## Author
 
-Compiler Design Course Project
+Abhijeet Deb Nath — Compiler Design Course
