@@ -26,8 +26,17 @@ if errorlevel 1 goto error
 gcc -Wall -g -c -o build\ast.o src\ast\ast.c -Isrc\ast
 if errorlevel 1 goto error
 
+gcc -Wall -g -c -o build\semantic.o src\semantic\semantic.c -Isrc\ast -Isrc\semantic
+if errorlevel 1 goto error
+
+gcc -Wall -g -c -o build\symbol_table.o src\semantic\symbol_table.c -Isrc\ast -Isrc\semantic
+if errorlevel 1 goto error
+
+gcc -Wall -g -c -o build\type_checker.o src\semantic\type_checker.c -Isrc\ast -Isrc\semantic
+if errorlevel 1 goto error
+
 echo [4/4] Linking...
-gcc -Wall -g -o build\netlang.exe build\lex.yy.o build\net_lang.tab.o build\ast.o
+gcc -Wall -g -o build\netlang.exe build\lex.yy.o build\net_lang.tab.o build\ast.o build\semantic.o build\symbol_table.o build\type_checker.o
 if errorlevel 1 goto error
 
 echo.

@@ -1,0 +1,28 @@
+// Test cases for semantic error detection
+// This file SHOULD produce errors - used for testing
+
+network ErrorTest {
+    input(shape: [28, 28, 1])
+    
+    // ERROR 1: Undefined variable
+    x = Conv2D(filters: 32, kernel: [3, 3]) from undefined_var
+    
+    // ERROR 2: Shape mismatch (Dense needs 1D, but x is 3D)
+    y = Dense(units: 10) from x
+    
+    // ERROR 3: Using variable before definition
+    z = MaxPool(pool: [2, 2]) from future_var
+    future_var = Conv2D(filters: 64, kernel: [3, 3]) from input
+}
+
+// ERROR 4: Module without return statement
+module BrokenModule(num_filters) {
+    x = Conv2D(filters: num_filters, kernel: [3, 3], activation: relu) from input
+    // Missing: return x
+}
+
+// ERROR 5: Calling undefined module
+network ModuleErrorTest {
+    input(shape: [28, 28, 1])
+    x = UndefinedModule(param: 32) from input
+}

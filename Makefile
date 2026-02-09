@@ -20,6 +20,7 @@ BUILD_DIR = build
 LEXER_DIR = $(SRC_DIR)/lexer
 PARSER_DIR = $(SRC_DIR)/parser
 AST_DIR = $(SRC_DIR)/ast
+SEMANTIC_DIR = $(SRC_DIR)/semantic
 
 # Output
 TARGET = $(BUILD_DIR)/netlang
@@ -31,9 +32,11 @@ BISON_H = $(BUILD_DIR)/net_lang.tab.h
 
 # Source files
 AST_SRC = $(AST_DIR)/ast.c
+SEMANTIC_SRC = $(SEMANTIC_DIR)/semantic.c $(SEMANTIC_DIR)/symbol_table.c $(SEMANTIC_DIR)/type_checker.c
 
 # Object files
-OBJS = $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/net_lang.tab.o $(BUILD_DIR)/ast.o
+OBJS = $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/net_lang.tab.o $(BUILD_DIR)/ast.o \
+       $(BUILD_DIR)/semantic.o $(BUILD_DIR)/symbol_table.o $(BUILD_DIR)/type_checker.o
 
 # Default target
 all: $(BUILD_DIR) $(TARGET)
@@ -63,6 +66,16 @@ $(BUILD_DIR)/net_lang.tab.o: $(BISON_C)
 # Compile AST
 $(BUILD_DIR)/ast.o: $(AST_SRC)
 	$(CC) $(CFLAGS) -I$(AST_DIR) -c -o $@ $<
+
+# Compile semantic analyzer
+$(BUILD_DIR)/semantic.o: $(SEMANTIC_DIR)/semantic.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -c -o $@ $<
+
+$(BUILD_DIR)/symbol_table.o: $(SEMANTIC_DIR)/symbol_table.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -c -o $@ $<
+
+$(BUILD_DIR)/type_checker.o: $(SEMANTIC_DIR)/type_checker.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -c -o $@ $<
 
 # Link everything
 $(TARGET): $(OBJS)

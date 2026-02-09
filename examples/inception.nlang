@@ -1,0 +1,41 @@
+// Fixed Inception module - using proper parameter passing
+// Modules should NOT reference 'input' - they receive data via 'from' clause
+
+module InceptionBlock(filters_1x1, filters_3x3, filters_5x5, input_tensor) {
+    // Branch 1: Simple 1x1 Conv
+    b1 = Conv2D(filters: filters_1x1, kernel: [1,1], activation: relu) from input_tensor
+
+    // Branch 2: 1x1 -> 3x3 reduction
+    t2 = Conv2D(filters: filters_3x3, kernel: [1,1], activation: relu) from input_tensor
+    b2 = Conv2D(filters: filters_3x3, kernel: [3,3], padding: 1, activation: relu) from t2
+
+    // Branch 3: MaxPool -> 1x1 projection
+    t3 = MaxPool(pool: [3,3], stride: 1, padding: 1) from input_tensor
+    b3 = Conv2D(filters: filters_1x1, kernel: [1,1], activation: relu) from t3
+
+    // Concatenate all branches
+    result = Concat(b1, b2, b3)
+    return result
+}
+
+network GoogLeNet_Mini {
+    input(shape: [224, 224, 3])
+    
+    // Initial convolutions
+    x = Conv2D(filters: 64, kernel: [7,7], stride: 2, padding: 3, activation: relu) from input
+    x = MaxPool(pool: [3,3], stride: 2, padding: 1) from x
+    
+    x = Conv2D(filters: 192, kernel: [3,3], padding: 1, activation: relu) from x
+    x = MaxPool(pool: [3,3], stride: 2, padding: 1) from x
+    
+    // Inception modules (simplified - just 2 blocks)
+    x = InceptionBlock(filters_1x1: 64, filters_3x3: 128, filters_5x5: 32, input_tensor: x) from x
+    x = InceptionBlock(filters_1x1: 128, filters_3x3: 192, filters_5x5: 96, input_tensor: x) from x
+    
+    // Global average pooling (simulated with large pool)
+    x = AvgPool(pool: [7, 7], stride: 1) from x
+    
+    // Flatten and classify
+    x = Flatten() from x
+    x = Dense(units: 1000, activation: softmax) from x
+}

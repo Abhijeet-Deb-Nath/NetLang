@@ -1,0 +1,8 @@
+NetLang Parser v0.1
+Parsing: examples\test_errors.nlang
+========================================
+
+Parse error at line 22: syntax error, unexpected RBRACE, expecting RETURN or IDENTIFIER
+Near token: '}'
+
+✗ Parse failed with errors.

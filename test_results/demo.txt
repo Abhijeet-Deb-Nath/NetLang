@@ -1,0 +1,236 @@
+NetLang Parser v0.1
+Parsing: examples\demo.nlang
+========================================
+
+
+✓ Parse successful!
+
+========== AST DUMP ==========
+
+[PROGRAM] (line 3)
+  [NETWORK] (line 3)
+    name: MNIST_CNN
+    input:
+      [INPUT] (line 4)
+        shape:
+          [ARRAY] (line 4)
+            elements:
+              [NUMBER] (line 4)
+                value: 28 (int)
+              [NUMBER] (line 4)
+                value: 28 (int)
+              [NUMBER] (line 4)
+                value: 1 (int)
+    weights:
+      [WEIGHTS] (line 5)
+        path: models/mnist_cnn.bin
+    statements:
+      [ASSIGNMENT] (line 7)
+        target: x
+        value:
+          [CONV2D] (line 7)
+            filters: 32
+            kernel: [3, 3]
+            stride: 1
+            padding: 1
+            activation: relu
+        from:
+          [IDENTIFIER] (line 7)
+            name: input
+      [ASSIGNMENT] (line 8)
+        target: x
+        value:
+          [MAXPOOL] (line 8)
+            pool: [2, 2]
+            stride: 0
+        from:
+          [IDENTIFIER] (line 8)
+            name: x
+      [ASSIGNMENT] (line 9)
+        target: x
+        value:
+          [CONV2D] (line 9)
+            filters: 64
+            kernel: [3, 3]
+            stride: 1
+            padding: 1
+            activation: relu
+        from:
+          [IDENTIFIER] (line 9)
+            name: x
+      [ASSIGNMENT] (line 10)
+        target: x
+        value:
+          [MAXPOOL] (line 10)
+            pool: [2, 2]
+            stride: 0
+        from:
+          [IDENTIFIER] (line 10)
+            name: x
+      [ASSIGNMENT] (line 11)
+        target: x
+        value:
+          [FLATTEN] (line 11)
+        from:
+          [IDENTIFIER] (line 11)
+            name: x
+      [ASSIGNMENT] (line 12)
+        target: x
+        value:
+          [DENSE] (line 12)
+            units: 128
+            activation: relu
+        from:
+          [IDENTIFIER] (line 12)
+            name: x
+      [ASSIGNMENT] (line 13)
+        target: x
+        value:
+          [DENSE] (line 13)
+            units: 10
+            activation: softmax
+        from:
+          [IDENTIFIER] (line 13)
+            name: x
+  [NETWORK] (line 17)
+    name: ImageNet_VGG
+    input:
+      [INPUT] (line 18)
+        shape:
+          [ARRAY] (line 18)
+            elements:
+              [NUMBER] (line 18)
+                value: 224 (int)
+              [NUMBER] (line 18)
+                value: 224 (int)
+              [NUMBER] (line 18)
+                value: 3 (int)
+    weights:
+      [WEIGHTS] (line 19)
+        path: models/vgg16.bin
+    statements:
+      [ASSIGNMENT] (line 21)
+        target: x
+        value:
+          [CONV2D] (line 21)
+            filters: 64
+            kernel: [3, 3]
+            stride: 1
+            padding: 1
+            activation: relu
+        from:
+          [IDENTIFIER] (line 21)
+            name: input
+      [ASSIGNMENT] (line 22)
+        target: x
+        value:
+          [CONV2D] (line 22)
+            filters: 64
+            kernel: [3, 3]
+            stride: 1
+            padding: 1
+            activation: relu
+        from:
+          [IDENTIFIER] (line 22)
+            name: x
+      [ASSIGNMENT] (line 23)
+        target: x
+        value:
+          [MAXPOOL] (line 23)
+            pool: [2, 2]
+            stride: 0
+        from:
+          [IDENTIFIER] (line 23)
+            name: x
+      [ASSIGNMENT] (line 25)
+        target: x
+        value:
+          [CONV2D] (line 25)
+            filters: 128
+            kernel: [3, 3]
+            stride: 1
+            padding: 1
+            activation: relu
+        from:
+          [IDENTIFIER] (line 25)
+            name: x
+      [ASSIGNMENT] (line 26)
+        target: x
+        value:
+          [MAXPOOL] (line 26)
+            pool: [2, 2]
+            stride: 0
+        from:
+          [IDENTIFIER] (line 26)
+            name: x
+      [ASSIGNMENT] (line 28)
+        target: x
+        value:
+          [FLATTEN] (line 28)
+        from:
+          [IDENTIFIER] (line 28)
+            name: x
+      [ASSIGNMENT] (line 29)
+        target: x
+        value:
+          [DENSE] (line 29)
+            units: 4096
+            activation: relu
+        from:
+          [IDENTIFIER] (line 29)
+            name: x
+      [ASSIGNMENT] (line 30)
+        target: x
+        value:
+          [DENSE] (line 30)
+            units: 1000
+            activation: softmax
+        from:
+          [IDENTIFIER] (line 30)
+            name: x
+
+========================================
+========== SEMANTIC ANALYSIS ==========
+========================================
+
+
+✓ Semantic analysis passed!
+  Warnings: 13
+
+========== SYMBOL TABLE ==========
+
+Scope: global
+  - ImageNet_VGG (LAYER)
+  - MNIST_CNN (LAYER)
+  Scope: network:MNIST_CNN
+    - x (VAR) [10]
+    - x (VAR) [128]
+    - x (VAR) [3136]
+    - x (VAR) [7, 7, 64]
+    - x (VAR) [14, 14, 64]
+    - x (VAR) [14, 14, 32]
+    - x (VAR) [28, 28, 32]
+    - input (INPUT) [28, 28, 1]
+  Scope: network:ImageNet_VGG
+    - x (VAR) [1000]
+    - x (VAR) [4096]
+    - x (VAR) [401408]
+    - x (VAR) [56, 56, 128]
+    - x (VAR) [112, 112, 128]
+    - x (VAR) [112, 112, 64]
+    - x (VAR) [224, 224, 64]
+    - x (VAR) [224, 224, 64]
+    - input (INPUT) [224, 224, 3]
+Warning (line 8): Redefining variable 'x'
+Warning (line 9): Redefining variable 'x'
+Warning (line 10): Redefining variable 'x'
+Warning (line 11): Redefining variable 'x'
+Warning (line 12): Redefining variable 'x'
+Warning (line 13): Redefining variable 'x'
+Warning (line 22): Redefining variable 'x'
+Warning (line 23): Redefining variable 'x'
+Warning (line 25): Redefining variable 'x'
+Warning (line 26): Redefining variable 'x'
+Warning (line 28): Redefining variable 'x'
+Warning (line 29): Redefining variable 'x'
+Warning (line 30): Redefining variable 'x'

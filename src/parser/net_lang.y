@@ -1,7 +1,8 @@
 %{
 /*
- * NetLang Parser - Phase 2
+ * NetLang Parser - Phase 2 & 3
  * Builds Abstract Syntax Tree from token stream
+ * Performs semantic analysis and type checking
  * 
  * Grammar for NetLang DSL:
  * - Networks: network Name { ... }
@@ -17,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../ast/ast.h"
+#include "../semantic/semantic.h"
 
 /* Flex/Bison integration */
 extern int yylex(void);
@@ -593,7 +595,31 @@ int main(int argc, char** argv) {
         printf("========== AST DUMP ==========\n\n");
         ast_print(ast_root, 0);
         
+        printf("\n========================================\n");
+        printf("========== SEMANTIC ANALYSIS ==========\n");
+        printf("========================================\n\n");
+        
+        SemanticResult sem_result = analyze_program(ast_root);
+        
+        if (sem_result.is_valid) {
+            printf("\n✓ Semantic analysis passed!\n");
+            printf("  Warnings: %d\n", sem_result.warning_count);
+            
+            printf("\n========== SYMBOL TABLE ==========\n\n");
+            scope_print(sem_result.global_scope, 0);
+        } else {
+            fprintf(stderr, "\n✗ Semantic analysis failed!\n");
+            fprintf(stderr, "  Errors: %d\n", sem_result.error_count);
+            fprintf(stderr, "  Warnings: %d\n", sem_result.warning_count);
+            
+            /* Cleanup */
+            scope_destroy(sem_result.global_scope);
+            ast_free(ast_root);
+            return 1;
+        }
+        
         /* Cleanup */
+        scope_destroy(sem_result.global_scope);
         ast_free(ast_root);
     } else {
         fprintf(stderr, "\n✗ Parse failed with errors.\n");
