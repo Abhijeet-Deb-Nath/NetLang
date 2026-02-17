@@ -1,18 +1,3 @@
-// NetLang Example Demonstrations
-// ================================
-// This file has been split into separate examples.
-// Each .nlang file should contain exactly ONE network definition.
-//
-// Available examples:
-//   - mnist.nlang       : Simple CNN for digit classification
-//   - vgg16.nlang       : Deep VGG-style architecture
-//   - inception.nlang   : Modular design with InceptionBlock
-//   - test_valid.nlang  : Valid syntax for testing parser
-//   - test_errors.nlang : Error cases for semantic analysis
-//
-// Usage:
-//   ./net_lang examples/mnist.nlang
-
 // Simple CNN for MNIST digit classification (0-9)
 // Architecture: Conv-Pool-Conv-Pool-Dense-Dense
 network MNIST_CNN {

@@ -326,11 +326,18 @@ typedef union {
 #### 5.4.2 Tokens with Values
 
 ```yacc
-%token <sval> RELU SIGMOID TANH SOFTMAX LINEAR
 %token <ival> NUMBER
 %token <fval> FLOAT_NUM
 %token <sval> IDENTIFIER STRING_LIT
 ```
+
+#### 5.4.3 Activation Function Tokens (No Value)
+
+```yacc
+%token RELU SIGMOID TANH SOFTMAX LINEAR
+```
+
+**Note:** Activation functions are simple keywords like `NETWORK` or `FROM`. They don't carry string values - they're just recognized patterns
 
 **What `<type>` means:**
 
@@ -369,9 +376,9 @@ number:
 ### 5.5 Non-Terminal Types
 
 ```yacc
-%type <node> program definition network_def module_def
+%type <node> program network_def module_def
 %type <node> statement assignment return_stmt
-%type <list> definition_list statement_list
+%type <list> module_list statement_list
 %type <params> module_params param_list layer_params
 ```
 
@@ -451,8 +458,16 @@ non_terminal:
 
 ```yacc
 program:
-    definition_list {
+    network_def {
         ast_root = ast_program(@1.first_line);
+        ASTList* defs = ast_list_new();
+        ast_list_append(defs, $1);
+        ast_root->data.program.definitions = defs;
+        $$ = ast_root;
+    }
+    | module_list network_def {
+        ast_root = ast_program(@1.first_line);
+        ast_list_append($1, $2);
         ast_root->data.program.definitions = $1;
         $$ = ast_root;
     }
@@ -464,47 +479,54 @@ program:
 | Element | Meaning |
 |---------|---------|
 | `program:` | This is the **start symbol** (top-level rule) |
-| `definition_list` | Must match a list of definitions |
+| `network_def` | Must match exactly one network definition |
+| `module_list network_def` | Optional modules followed by network |
 | `{...}` | **Semantic action** - C code executed when rule matches |
 | `ast_root = ...` | Create program node and store in global variable |
-| `$1` | Value of `definition_list` (an `ASTList*`) |
+| `$1` | Value of first symbol (network or module_list) |
+| `$2` | Value of second symbol (network_def in case 2) |
 | `$$` | Return value of this rule (an `ASTNode*`) |
-| `@1.first_line` | Line number where `definition_list` starts |
 
 **What this rule says:**
-> "A complete NetLang program consists of a list of definitions (networks and modules). When we successfully parse this, create a program AST node and store it."
+> "A complete NetLang program consists of exactly ONE network, optionally preceded by helper modules. Each .nlang file defines a single network architecture."
+
+**Design rationale:**
+- Each file = one network architecture
+- Modules are reusable components for that network
+- No ambiguity about which network to compile
+- Cleaner separation of concerns
 
 ---
 
-### 6.2 Definition Lists
+### 6.2 Module Lists (Optional)
 
 ```yacc
-definition_list:
-    definition {
+module_list:
+    module_def {
         $$ = ast_list_new();
         ast_list_append($$, $1);
     }
-    | definition_list definition {
+    | module_list module_def {
         ast_list_append($1, $2);
         $$ = $1;
     }
     ;
 ```
 
-**This is a recursive rule** for building lists.
+**This is a recursive rule** for building lists of modules.
 
-**Case 1: Single definition**
+**Case 1: Single module**
 ```yacc
-definition {
+module_def {
     $$ = ast_list_new();      // Create new empty list
-    ast_list_append($$, $1);  // Add the definition to it
+    ast_list_append($$, $1);  // Add the module to it
 }
 ```
 
-**Case 2: Multiple definitions (recursive)**
+**Case 2: Multiple modules (recursive)**
 ```yacc
-definition_list definition {
-    ast_list_append($1, $2);  // Add new definition to existing list
+module_list module_def {
+    ast_list_append($1, $2);  // Add new module to existing list
     $$ = $1;                  // Return the extended list
 }
 ```
@@ -513,24 +535,26 @@ definition_list definition {
 
 Source code:
 ```nlang
-network Net1 { ... }
-network Net2 { ... }
-module MyModule(...) { ... }
+module ConvBlock(...) { ... }
+module ResidualBlock(...) { ... }
+network ResNet { ... }
 ```
 
 Parse sequence:
 ```
-1. Parse "network Net1" → definition₁
-2. Match: definition → definition_list₁ (list with 1 item)
+1. Parse "module ConvBlock" → module_def₁
+2. Match: module_def → module_list₁ (list with 1 item)
 
-3. Parse "network Net2" → definition₂
-4. Match: definition_list₁ definition₂ → definition_list₂ (list with 2 items)
+3. Parse "module ResidualBlock" → module_def₂
+4. Match: module_list₁ module_def₂ → module_list₂ (list with 2 items)
 
-5. Parse "module MyModule" → definition₃
-6. Match: definition_list₂ definition₃ → definition_list₃ (list with 3 items)
+5. Parse "network ResNet" → network_def
+6. Match: module_list₂ network_def → program
 ```
 
-Final: `definition_list` contains [Net1, Net2, MyModule]
+Final: program contains [ConvBlock, ResidualBlock, ResNet]
+
+**Key constraint:** Modules MUST come before the network definition
 
 ---
 
@@ -1239,19 +1263,13 @@ Step 19: yylex() returns RBRACE
 Step 20: yyparse() reduces: network_def
          Action: Create NETWORK node with all components
 
-Step 21: yyparse() reduces: definition
-         (network_def IS a definition)
+Step 21: yyparse() reduces: program (network_def case)
+         Action: Create list with network, create PROGRAM node, set ast_root
 
-Step 22: yyparse() reduces: definition_list
-         Action: Create list containing the network
+Step 22: yyparse() calls yylex()
+Step 23: yylex() returns 0 (EOF)
 
-Step 23: yyparse() reduces: program
-         Action: Create PROGRAM node, set ast_root
-
-Step 24: yyparse() calls yylex()
-Step 25: yylex() returns 0 (EOF)
-
-Step 26: yyparse() returns 0 (success!)
+Step 24: yyparse() returns 0 (success!)
 ```
 
 ---

@@ -72,11 +72,11 @@ SLCOMMENT   "//"[^\n]*
 "units"       { return UNITS; }
 
  /* ========== ACTIVATION FUNCTIONS ========== */
-"relu"        { yylval.sval = strdup(yytext); return RELU; }
-"sigmoid"     { yylval.sval = strdup(yytext); return SIGMOID; }
-"tanh"        { yylval.sval = strdup(yytext); return TANH; }
-"softmax"     { yylval.sval = strdup(yytext); return SOFTMAX; }
-"linear"      { yylval.sval = strdup(yytext); return LINEAR; }
+"relu"        { return RELU; }
+"sigmoid"     { return SIGMOID; }
+"tanh"        { return TANH; }
+"softmax"     { return SOFTMAX; }
+"linear"      { return LINEAR; }
 
  /* ========== NUMBERS ========== */
 {INTEGER}     { 

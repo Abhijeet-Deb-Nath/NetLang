@@ -63,7 +63,7 @@ ASTNode* ast_root = NULL;
 %token FILTERS KERNEL ACTIVATION STRIDE PADDING POOL UNITS
 
 /* Activation functions */
-%token <sval> RELU SIGMOID TANH SOFTMAX LINEAR
+%token RELU SIGMOID TANH SOFTMAX LINEAR
 
 /* Literals */
 %token <ival> NUMBER
@@ -75,14 +75,14 @@ ASTNode* ast_root = NULL;
 %token COLON COMMA ASSIGN
 
 /* ========== NON-TERMINAL TYPES ========== */
-%type <node> program definition network_def module_def
+%type <node> program network_def module_def
 %type <node> input_decl weights_decl
 %type <node> statement assignment return_stmt
 %type <node> layer_expr conv2d_layer dense_layer pool_layer
 %type <node> flatten_layer concat_layer norm_layer module_call
 %type <node> expr from_clause identifier_expr
 %type <node> number array
-%type <list> definition_list statement_list array_elements concat_args
+%type <list> module_list statement_list array_elements concat_args
 %type <params> module_params param_list layer_params layer_param_list
 %type <activation> activation_value
 %type <netbody> network_body
@@ -94,28 +94,33 @@ ASTNode* ast_root = NULL;
 
 /* ========== GRAMMAR RULES ========== */
 
+/* ONE network per file, with optional helper modules */
 program:
-    definition_list {
+    network_def {
         ast_root = ast_program(@1.first_line);
+        ASTList* defs = ast_list_new();
+        ast_list_append(defs, $1);
+        ast_root->data.program.definitions = defs;
+        $$ = ast_root;
+    }
+    | module_list network_def {
+        ast_root = ast_program(@1.first_line);
+        ast_list_append($1, $2);  /* Add network to end of module list */
         ast_root->data.program.definitions = $1;
         $$ = ast_root;
     }
     ;
 
-definition_list:
-    definition {
+/* Zero or more modules (must come before network) */
+module_list:
+    module_def {
         $$ = ast_list_new();
         ast_list_append($$, $1);
     }
-    | definition_list definition {
+    | module_list module_def {
         ast_list_append($1, $2);
         $$ = $1;
     }
-    ;
-
-definition:
-    network_def { $$ = $1; }
-    | module_def { $$ = $1; }
     ;
 
 /* ========== NETWORK DEFINITION ========== */
@@ -552,11 +557,11 @@ array_elements:
     ;
 
 activation_value:
-    RELU { $$ = ACT_RELU; free($1); }
-    | SIGMOID { $$ = ACT_SIGMOID; free($1); }
-    | TANH { $$ = ACT_TANH; free($1); }
-    | SOFTMAX { $$ = ACT_SOFTMAX; free($1); }
-    | LINEAR { $$ = ACT_LINEAR; free($1); }
+    RELU { $$ = ACT_RELU; }
+    | SIGMOID { $$ = ACT_SIGMOID; }
+    | TANH { $$ = ACT_TANH; }
+    | SOFTMAX { $$ = ACT_SOFTMAX; }
+    | LINEAR { $$ = ACT_LINEAR; }
     ;
 
 %%
