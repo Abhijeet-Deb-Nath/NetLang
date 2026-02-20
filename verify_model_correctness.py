@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Batch accuracy test for NetLang compiled network"""
+"""
+Verify Model Correctness - Test prediction accuracy on MNIST test set
+Usage: python verify_model_correctness.py [exe_path] [num_samples]
+Example: python verify_model_correctness.py generated/lenet5_optimized.exe 100
+"""
 import subprocess
 import sys
 import os
@@ -7,13 +11,28 @@ import re
 from pathlib import Path
 
 def main():
+    # Parse arguments
+    if len(sys.argv) > 1 and not sys.argv[1].isdigit():
+        exe_path = sys.argv[1]
+        n_test = int(sys.argv[2]) if len(sys.argv) > 2 else 100
+    else:
+        exe_path = 'bin\\test_lenet5.exe'  # Default
+        n_test = int(sys.argv[1]) if len(sys.argv) > 1 else 100
+    
+    print(f"Testing executable: {exe_path}")
+    print(f"Number of samples: {n_test}")
+    print()
+    
     test_dir = Path('test_data/preprocessed_28x28')
     test_files = sorted(test_dir.glob('mnist_*.bin'))
     
-    n_test = int(sys.argv[1]) if len(sys.argv) > 1 else 100
+    if not test_files:
+        print("ERROR: No test files found in test_data/preprocessed_28x28/")
+        return
+    
     test_files = test_files[:n_test]
     
-    print(f"Testing {len(test_files)} images...")
+    print(f"Running inference on {len(test_files)} images...")
     
     correct = 0
     total = 0
@@ -28,7 +47,7 @@ def main():
         
         # Run inference
         result = subprocess.run(
-            ['bin\\test_lenet5.exe', str(f)],
+            [exe_path, str(f)],
             capture_output=True,
             text=True
         )

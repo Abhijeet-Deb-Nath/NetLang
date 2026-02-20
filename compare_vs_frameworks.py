@@ -62,7 +62,7 @@ def load_test_image(filepath):
 
 
 def benchmark_netlang(test_files, n_warmup=10, n_runs=100):
-    """Benchmark NetLang compiled executable"""
+    """Benchmark NetLang compiled executable (FAIR - uses internal timing)"""
     print("\n[1/6] NetLang Compiler")
     print("=" * 60)
     
@@ -73,35 +73,54 @@ def benchmark_netlang(test_files, n_warmup=10, n_runs=100):
     times = []
     correct = 0
     
+    print("Note: Using internal timing from C code (fair comparison)")
+    
     # Warmup
     for _ in range(n_warmup):
         subprocess.run(['bin\\test_lenet5.exe', test_files[0]], 
                       capture_output=True, text=True)
     
-    # Benchmark
+    # Benchmark - extract internal timing from C code
     for test_file in test_files:
         label = int(test_file.stem.split('_')[-1])
         
-        start = time.perf_counter()
         result = subprocess.run(['bin\\test_lenet5.exe', str(test_file)],
                               capture_output=True, text=True)
-        elapsed = (time.perf_counter() - start) * 1000
         
-        # Parse prediction
+        # Parse prediction and internal timing
+        internal_time = None
         for line in result.stdout.split('\n'):
             if 'RESULT:' in line:
                 pred = int(line.split(':')[1].strip())
                 if pred == label:
                     correct += 1
-                break
+            
+            # Extract internal inference time: "OK (4.00 ms)"
+            if 'OK (' in line and 'ms)' in line:
+                try:
+                    time_str = line.split('(')[1].split('ms')[0].strip()
+                    internal_time = float(time_str)
+                except:
+                    pass
         
-        times.append(elapsed)
+        if internal_time:
+            times.append(internal_time)
+    
+    if not times:
+        print("⚠ Warning: Could not extract internal timing, falling back to subprocess timing")
+        # Fallback: re-run with subprocess timing
+        times = []
+        for test_file in test_files:
+            start = time.perf_counter()
+            subprocess.run(['bin\\test_lenet5.exe', str(test_file)],
+                          capture_output=True, text=True)
+            times.append((time.perf_counter() - start) * 1000)
     
     avg_time = np.mean(times)
     std_time = np.std(times)
     accuracy = 100 * correct / len(test_files)
     
-    print(f"✓ Inference time: {avg_time:.2f} ± {std_time:.2f} ms")
+    print(f"✓ Inference time: {avg_time:.2f} ± {std_time:.2f} ms (internal timing)")
     print(f"✓ Accuracy: {accuracy:.1f}% ({correct}/{len(test_files)})")
     
     return {'mean': avg_time, 'std': std_time, 'accuracy': accuracy}

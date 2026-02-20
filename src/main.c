@@ -9,7 +9,8 @@
  * 1. Lexical analysis (tokenization)
  * 2. Syntax analysis (parsing to AST)
  * 3. Semantic analysis (type checking, shape inference)
- * 4. Code generation (optimized C output)
+ * 4. Optimization (operator fusion, cache blocking)
+ * 5. Code generation (optimized C output)
  * 
  * Author: Abhijeet Deb Nath
  * Date: February 2026
@@ -21,6 +22,8 @@
 #include "ast/ast.h"
 #include "semantic/semantic.h"
 #include "codegen/codegen.h"
+#include "codegen/fusion_optimizer.h"
+#include "codegen/blocking_config.h"
 
 /* External declarations from lexer/parser */
 extern FILE* yyin;
@@ -95,7 +98,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "      ✓ Parsing successful\n");
     
     /* ========== STAGE 2: SEMANTIC ANALYSIS ========== */
-    fprintf(stderr, "[2/4] Running semantic analysis...\n");
+    fprintf(stderr, "[2/5] Running semantic analysis...\n");
     
     SemanticResult sem_result = analyze_program(ast_root);
     
@@ -110,8 +113,31 @@ int main(int argc, char** argv) {
         fprintf(stderr, "      ⚠ %d warning(s)\n", sem_result.warning_count);
     }
     
-    /* ========== STAGE 3: CODE GENERATION ========== */
-    fprintf(stderr, "[3/4] Generating optimized C code...\n");
+    /* ========== STAGE 3: OPTIMIZATION (Operator Fusion) ========== */
+    fprintf(stderr, "[3/5] Applying operator fusion...\n");
+    
+    /* Find network node for optimization */
+    ASTNode* network = NULL;
+    if (ast_root->type == NODE_PROGRAM) {
+        ASTList* defs = ast_root->data.program.definitions;
+        if (defs && defs->head) {
+            network = defs->head;
+        }
+    }
+    
+    if (network && network->type == NODE_NETWORK) {
+        /* Operator fusion detection */
+        int fusion_count = detect_fusion_patterns(network, sem_result.global_scope);
+        print_fusion_stats(fusion_count);
+    } else {
+        fprintf(stderr, "      No network found for optimization\n");
+    }
+    
+    /* NOTE: Cache blocking detection happens during code generation (Stage 4)
+     * because it needs accurate shape information from LayerInfo structs */
+    
+    /* ========== STAGE 4: CODE GENERATION ========== */
+    fprintf(stderr, "[4/5] Generating optimized C code...\n");
     
     /* Open output file if specified */
     if (output_file != NULL) {
@@ -126,7 +152,7 @@ int main(int argc, char** argv) {
     }
     
     /* Find network node (assume first definition is a network) */
-    ASTNode* network = NULL;
+    network = NULL;
     if (ast_root->type == NODE_PROGRAM) {
         ASTList* defs = ast_root->data.program.definitions;
         if (defs && defs->head) {
@@ -143,7 +169,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     
-    /* Generate code */
+    /* Generate code (includes fusion + blocking detection) */
     generate_network_code(network, sem_result.global_scope, output);
     
     if (output_file != NULL) {
@@ -152,8 +178,8 @@ int main(int argc, char** argv) {
     
     fprintf(stderr, "      ✓ Code generation complete\n");
     
-    /* ========== STAGE 4: COMPILATION INSTRUCTIONS ========== */
-    fprintf(stderr, "[4/4] Next steps:\n");
+    /* ========== STAGE 5: COMPILATION INSTRUCTIONS ========== */
+    fprintf(stderr, "[5/5] Next steps:\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "  Compile the generated code:\n");
     if (output_file != NULL) {

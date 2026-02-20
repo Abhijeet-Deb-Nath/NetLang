@@ -55,6 +55,9 @@ void extract_layers(CodegenContext* ctx, ASTNode* network);
 /* Detect fusion opportunities (Conv2D+ReLU) */
 void detect_fusion_opportunities(CodegenContext* ctx);
 
+/* Detect cache blocking opportunities for Conv2D layers */
+void detect_blocking_opportunities(CodegenContext* ctx);
+
 /* Code generation phases */
 void emit_includes(CodegenContext* ctx);
 void emit_network_struct(CodegenContext* ctx);

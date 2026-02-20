@@ -34,13 +34,13 @@ BISON_H = $(BUILD_DIR)/net_lang.tab.h
 # Source files
 AST_SRC = $(AST_DIR)/ast.c
 SEMANTIC_SRC = $(SEMANTIC_DIR)/semantic.c $(SEMANTIC_DIR)/symbol_table.c $(SEMANTIC_DIR)/type_checker.c
-CODEGEN_SRC = $(CODEGEN_DIR)/codegen.c
+CODEGEN_SRC = $(CODEGEN_DIR)/codegen.c $(CODEGEN_DIR)/fusion_optimizer.c
 MAIN_SRC = $(SRC_DIR)/main.c
 
 # Object files
 OBJS = $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/net_lang.tab.o $(BUILD_DIR)/ast.o \
        $(BUILD_DIR)/semantic.o $(BUILD_DIR)/symbol_table.o $(BUILD_DIR)/type_checker.o \
-       $(BUILD_DIR)/codegen.o $(BUILD_DIR)/main.o
+       $(BUILD_DIR)/codegen.o $(BUILD_DIR)/fusion_optimizer.o $(BUILD_DIR)/main.o
 
 # Default target
 all: $(BUILD_DIR) $(TARGET)
@@ -83,6 +83,10 @@ $(BUILD_DIR)/type_checker.o: $(SEMANTIC_DIR)/type_checker.c
 
 # Compile code generator
 $(BUILD_DIR)/codegen.o: $(CODEGEN_DIR)/codegen.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(CODEGEN_DIR) -c -o $@ $<
+
+# Compile fusion optimizer
+$(BUILD_DIR)/fusion_optimizer.o: $(CODEGEN_DIR)/fusion_optimizer.c
 	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(CODEGEN_DIR) -c -o $@ $<
 
 # Compile main driver

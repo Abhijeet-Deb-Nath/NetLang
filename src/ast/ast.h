@@ -20,6 +20,8 @@ typedef struct ASTNode ASTNode;
 typedef struct ASTList ASTList;
 typedef struct Parameter Parameter;
 typedef struct ParameterList ParameterList;
+typedef struct FusionInfo FusionInfo;
+typedef struct BlockingInfo BlockingInfo;
 
 /* ========== NODE TYPES ========== */
 typedef enum {
@@ -215,6 +217,11 @@ struct ASTNode {
         
     } data;
     
+    /* ========== OPTIMIZATION METADATA ========== */
+    /* Added by optimization passes, used during code generation */
+    FusionInfo* fusion_info;        /* Operator fusion metadata */
+    BlockingInfo* blocking_info;    /* Cache blocking configuration */
+    
     /* For linked lists */
     ASTNode* next;
 };
@@ -237,6 +244,8 @@ static inline ASTNode* ast_node_new(NodeType type, int line) {
     node->type = type;
     node->line_number = line;
     node->next = NULL;
+    node->fusion_info = NULL;
+    node->blocking_info = NULL;
     return node;
 }
 

@@ -5,10 +5,13 @@
  */
 
 #include "codegen.h"
+#include "fusion_optimizer.h"
+#include "blocking_config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 /* ========== HELPER FUNCTIONS ========== */
 
@@ -185,6 +188,47 @@ void detect_fusion_opportunities(CodegenContext* ctx) {
     }
 }
 
+/* ========== CACHE BLOCKING DETECTION ========== */
+
+void detect_blocking_opportunities(CodegenContext* ctx) {
+    int blocking_count = 0;
+    
+    for (int i = 0; i < ctx->layer_count; i++) {
+        LayerInfo* layer = &ctx->layers[i];
+        
+        /* Only apply blocking to Conv2D layers */
+        if (layer->layer_type != NODE_CONV2D) {
+            continue;
+        }
+        
+        ASTNode* node = layer->layer_node;
+        TensorType* in_shape = layer->input_shape;
+        TensorType* out_shape = layer->output_shape;
+        
+        if (!in_shape || !out_shape) {
+            continue;
+        }
+        
+        /* Extract dimensions */
+        int out_h = out_shape->dims[0];
+        int out_w = out_shape->dims[1];
+        int c_in = in_shape->dims[2];
+        int c_out = node->data.conv2d.filters;
+        int k_h = node->data.conv2d.kernel[0];
+        int k_w = node->data.conv2d.kernel[1];
+        
+        /* Compute blocking strategy */
+        node->blocking_info = compute_blocking_strategy(
+            out_h, out_w, c_in, c_out, k_h, k_w);
+        
+        if (node->blocking_info->l1_tile_size > 0) {
+            blocking_count++;
+        }
+    }
+    
+    fprintf(stderr, "      ✓ Applied L1 cache blocking to %d Conv2D layer(s)\n", blocking_count);
+}
+
 /* ========== CODE EMISSION: HEADERS AND STRUCTURE ========== */
 
 void emit_includes(CodegenContext* ctx) {
@@ -343,19 +387,35 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     int out_h = out_shape->dims[0];
     int out_w = out_shape->dims[1];
     
+    /* Check for optimization metadata */
+    bool has_fusion = (node->fusion_info != NULL && node->fusion_info->is_fused && act == ACT_RELU);
+    bool has_blocking = (node->blocking_info != NULL && 
+                        node->blocking_info->l1_tile_size > 0);
+    
     /* Get weights and bias from .nwf file */
     emit(ctx->output, "    const float* conv_weights_%d = get_layer_weights(net->weights, %d);\n", 
          layer_idx, layer->layer_index);
     emit(ctx->output, "    const float* conv_bias_%d = get_layer_bias(net->weights, %d);\n", 
          layer_idx, layer->layer_index);
     
-    /* Emit specialized Conv2D call with compile-time constants */
-    emit(ctx->output, "    /* Conv2D: [%d,%d,%d] -> [%d,%d,%d], K=%dx%d, S=%d, P=%d */\n",
+    /* Emit optimized Conv2D call based on available optimizations */
+    emit(ctx->output, "    /* Conv2D: [%d,%d,%d] -> [%d,%d,%d], K=%dx%d, S=%d, P=%d",
          in_h, in_w, in_c, out_h, out_w, filters, kernel_h, kernel_w, stride, padding);
     
-    if (layer->can_fuse_relu && act == ACT_RELU) {
+    if (has_fusion && has_blocking) {
+        emit(ctx->output, " [FUSED+BLOCKED] */\n");
+        emit(ctx->output, "    conv2d_relu_blocked_avx2(\n");
+    } else if (has_fusion) {
+        emit(ctx->output, " [FUSED] */\n");
+        emit(ctx->output, "    conv2d_relu_forward_avx2(\n");
+    } else if (has_blocking) {
+        emit(ctx->output, " [BLOCKED] */\n");
+        emit(ctx->output, "    conv2d_blocked_avx2(\n");
+    } else if (layer->can_fuse_relu && act == ACT_RELU) {
+        emit(ctx->output, " [FUSED-Legacy] */\n");
         emit(ctx->output, "    conv2d_relu_forward_avx2(\n");
     } else {
+        emit(ctx->output, " */\n");
         emit(ctx->output, "    conv2d_forward_avx2(\n");
     }
     
@@ -364,11 +424,21 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     emit(ctx->output, "        %d, %d, %d,  /* in: H, W, C */\n", in_h, in_w, in_c);
     emit(ctx->output, "        %d, %d,      /* kernel: H, W */\n", kernel_h, kernel_w);
     emit(ctx->output, "        %d,          /* out channels */\n", filters);
-    emit(ctx->output, "        %d, %d       /* stride, padding */\n", stride, padding);
+    emit(ctx->output, "        %d, %d",     stride, padding);
+    
+    /* Add tile size parameter if using blocked kernel */
+    if (has_blocking) {
+        emit(ctx->output, ",      /* stride, padding */\n");
+        emit(ctx->output, "        %d           /* tile size */\n", 
+             node->blocking_info->l1_tile_size);
+    } else {
+        emit(ctx->output, "       /* stride, padding */\n");
+    }
+    
     emit(ctx->output, "    );\n");
     
     /* Apply activation if not fused */
-    if (!layer->can_fuse_relu && act != ACT_NONE && act != ACT_LINEAR) {
+    if (!has_fusion && !layer->can_fuse_relu && act != ACT_NONE && act != ACT_LINEAR) {
         emit_activation(ctx, layer, act);
     }
 }
@@ -636,6 +706,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
     /* Extract network structure */
     extract_layers(&ctx, network);
     detect_fusion_opportunities(&ctx);
+    detect_blocking_opportunities(&ctx);
     
     /* Generate code */
     emit_includes(&ctx);

@@ -1,29 +1,18 @@
 # NetLang Quick Start
 
-Get from zero to running inference in **5 minutes**.
+Get from zero to inference in **5 minutes**.
 
 ---
 
 ## Prerequisites
 
-**Windows:**
-- [MSYS2](https://www.msys2.org/) with GCC, Flex, Bison
-- Python 3.7+ (optional, for weight conversion)
-
-**Linux/macOS:**
-- GCC/Clang, flex, bison, make
-- Python 3.7+ (optional)
-
-**Verify:**
-```bash
-gcc --version
-flex --version
-bison --version
-```
+**Windows:** MSYS2 with GCC, Flex, Bison  
+**Linux/macOS:** GCC/Clang, flex, bison, make  
+**Optional:** Python 3.7+ (for weight conversion)
 
 ---
 
-## Step 1: Build the Compiler (30 seconds)
+## Step 1: Build Compiler
 
 ```bash
 # Windows
@@ -33,157 +22,74 @@ build.bat
 make
 ```
 
-**Output:** `build/netlang.exe` (or `build/netlang` on Unix)
-
 ---
 
-## Step 2: Compile a Network (5 seconds)
+## Step 2: Compile Network to C
 
 ```bash
-# Compile LeNet-5 architecture to C code
-bin/netlang_compiler architecture/lenet5.nlang -o generated/lenet5.c
-
-# Or on Windows:
+# Windows
 build\netlang.exe architecture\lenet5.nlang -o generated\lenet5.c
-```
 
-**Output:** `generated/lenet5.c` (optimized C code with AVX2)
+# Linux/macOS
+bin/netlang_compiler architecture/lenet5.nlang -o generated/lenet5.c
+```
 
 ---
 
-## Step 3: Build Executable (10 seconds)
+## Step 3: Build Executable
 
 ```bash
 gcc -O3 -mavx2 generated/lenet5.c -o lenet5_infer -lm
 ```
 
-**Output:** `lenet5_infer` executable (or `lenet5_infer.exe`)
-
 ---
 
 ## Step 4: Run Inference
 
-### Option A: Test with Synthetic Data
-
+**Option A: Synthetic test data**
 ```bash
-# Create a simple test input (28x28 zeros)
-python -c "import numpy as np; np.zeros((28,28), dtype='float32').tofile('test_input.bin')"
-
-# Run inference
-./lenet5_infer test_input.bin
+python -c "import numpy as np; np.zeros((28,28), dtype='float32').tofile('test.bin')"
+./lenet5_infer test.bin
 ```
 
-### Option B: Test with Real MNIST Data
-
+**Option B: Real MNIST data**
 ```bash
-# Download and preprocess MNIST
 python tools/download_mnist_for_netlang.py
-
-# Run on real test image
 ./lenet5_infer test_data/mnist_test_0.bin
 ```
 
-**Expected output:**
+**Output:**
 ```
-Class probabilities:
-0: 0.1234
-1: 0.0567
-...
-9: 0.0823
-
 Predicted: 7 (confidence: 95.3%)
+Inference time: 4.43 ms
 ```
-
----
-
-## What Just Happened?
-
-1. **NetLang compiler** parsed `.nlang` → generated optimized C code
-2. **GCC** compiled C code → created standalone executable
-3. **Executable** loaded weights via mmap → ran inference with AVX2
-
-**Performance:**
-- Compilation: ~50ms
-- Weight loading: ~1ms  
-- Inference: ~10-13ms per image
 
 ---
 
 ## Next Steps
 
-### Run Accuracy Test (500 images)
-
+**Run accuracy test:**
 ```bash
-python test_accuracy.py \
-    --network architecture/lenet5.nlang \
-    --weights models/lenet5_mnist.nwf \
-    --num-samples 500
+python test_accuracy.py --network architecture/lenet5.nlang --num-samples 100
 ```
 
-**Expected:** ~97% accuracy
-
-### Try a Different Architecture
-
+**Try VGG-16:**
 ```bash
-# VGG-16 (larger network)
 bin/netlang_compiler architecture/vgg16.nlang -o generated/vgg16.c
 gcc -O3 -mavx2 generated/vgg16.c -o vgg16_infer -lm
 ```
 
-### Use Your Own Model
-
+**Convert your own model:**
 ```bash
-# Convert PyTorch model
 python tools/convert_pytorch.py your_model.pth models/your_model.nwf
-
-# Create .nlang architecture file (see examples/)
-# Compile and run
+# Then create .nlang file (see examples/)
 ```
-
----
-
-## Common Issues
-
-**"netlang: command not found"**
-→ Use `build/netlang.exe` or `./build/netlang`
-
-**"undefined reference to `__mm256_loadu_ps`"**
-→ Add `-mavx2` flag to gcc
-
-**"Cannot open weight file"**
-→ Ensure `.nwf` path in `.nlang` is correct and relative to execution directory
 
 ---
 
 ## Documentation
 
-- **[USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete workflows and syntax
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - How the compiler works
-- **[OPTIMIZATION_ROADMAP.md](docs/OPTIMIZATION_ROADMAP.md)** - Performance improvements
-
----
-
-## Example: Complete MNIST Pipeline
-
-```bash
-# 1. Build compiler
-build.bat
-
-# 2. Download MNIST data
-python tools/download_mnist_for_netlang.py
-
-# 3. Compile network
-build\netlang.exe architecture\lenet5.nlang -o generated\lenet5.c
-
-# 4. Build executable
-gcc -O3 -mavx2 generated\lenet5.c -o lenet5_infer.exe -lm
-
-# 5. Test accuracy
-python test_accuracy.py --network architecture\lenet5.nlang --num-samples 100
-
-# Output: ~97% accuracy, ~12ms per image
-```
-
----
-
-**You're ready!** See [USER_GUIDE.md](docs/USER_GUIDE.md) for detailed documentation.
+- **[README.md](README.md)** - Project overview
+- **[BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md)** - Performance results
+- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete syntax reference
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Compiler internals

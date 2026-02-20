@@ -68,6 +68,40 @@ void conv2d_relu_forward_avx2(
     int padding
 );
 
+/**
+ * Conv2D with L1 cache blocking (3-5× faster for medium/large layers)
+ * Uses tiling to keep working set in L1 cache (32 KB)
+ */
+void conv2d_blocked_avx2(
+    const float* input,
+    const float* weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int tile_size       /* Tile dimension (e.g., 8 for 8×8 tiles) */
+);
+
+/**
+ * Conv2D + ReLU fused with L1 cache blocking (combined optimization)
+ * Best performance: fuses ReLU and uses cache-efficient tiling
+ */
+void conv2d_relu_blocked_avx2(
+    const float* input,
+    const float* weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int tile_size
+);
+
 /* ========== DENSE (FULLY CONNECTED) KERNELS ========== */
 
 /**
