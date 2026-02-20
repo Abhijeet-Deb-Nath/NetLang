@@ -8,6 +8,9 @@
 #include "runtime.h"
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <malloc.h>  /* For _aligned_malloc/_aligned_free */
+#endif
 
 /* ========== WEIGHT FILE OPERATIONS ========== */
 
@@ -232,7 +235,11 @@ void tensor_free(Tensor* t) {
 
 void* aligned_alloc_64(size_t size) {
 #ifdef _WIN32
-    return _aligned_malloc(size, 64);
+    #ifdef __MINGW32__
+        return __mingw_aligned_malloc(size, 64);
+    #else
+        return _aligned_malloc(size, 64);
+    #endif
 #else
     void* ptr = NULL;
     if (posix_memalign(&ptr, 64, size) != 0) {
@@ -246,7 +253,11 @@ void aligned_free(void* ptr) {
     if (!ptr) return;
     
 #ifdef _WIN32
-    _aligned_free(ptr);
+    #ifdef __MINGW32__
+        __mingw_aligned_free(ptr);
+    #else
+        _aligned_free(ptr);
+    #endif
 #else
     free(ptr);
 #endif

@@ -1,0 +1,75 @@
+# Compiled binaries
+*.exe
+*.out
+*.o
+*.obj
+
+# Build artifacts
+build/*.o
+build/*.exe
+build/lex.yy.c
+build/net_lang.tab.c
+build/net_lang.tab.h
+build/net_lang.output
+build/*.s
+
+# Generated files
+generated/*.c
+generated/*.h
+
+# Binary executables (network inference)
+bin/*.exe
+
+# IDE and editor files
+.vscode/
+.vs/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Test outputs
+test_results/*.txt
+
+# Temporary files
+*.tmp
+*.log
+.cache/
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Keep README files in directories
+!**/README.md
+
+# Model files (optional - uncomment if models are large)
+# models/*.nwf
+# onnx_weight_files/*.onnx
+
+# Test data
+test_data/images/*.png
+test_data/images/*.jpg
+test_data/images/*.jpeg
+test_data/preprocessed/*.bin
+
+# Keep structure folders
+!bin/.gitkeep
+!generated/.gitkeep
+!models/.gitkeep
+!onnx_weight_files/.gitkeep
+!test_data/.gitkeep
+!test_data/images/.gitkeep
+!test_data/preprocessed/.gitkeep

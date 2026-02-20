@@ -146,18 +146,25 @@ void dense_forward_avx2(
     int in_features,
     int out_features
 ) {
+    /* NOTE: .nwf format stores Dense weights as [out_features, in_features] (transposed)
+     * This enables sequential access for each output neuron and aligned loads.
+     */
+    
     /* For each output neuron */
     for (int out = 0; out < out_features; out++) {
         __m256 sum = _mm256_setzero_ps();
         int in;
         
+        /* Base offset for this output's weights (sequential in .nwf format) */
+        const float* out_weights = &weights[out * in_features];
+        
         /* Vectorized dot product (process 8 inputs at a time) */
         for (in = 0; in <= in_features - 8; in += 8) {
-            /* Load 8 input values */
-            __m256 inp = _mm256_loadu_ps(&input[in]);
+            /* Load 8 input values - ALIGNED (from aligned_alloc_64) */
+            __m256 inp = _mm256_load_ps(&input[in]);
             
-            /* Load 8 weights for this output */
-            __m256 wgt = _mm256_loadu_ps(&weights[in * out_features + out]);
+            /* Load 8 weights for this output - ALIGNED (from .nwf format) */
+            __m256 wgt = _mm256_load_ps(&out_weights[in]);
             
             /* FMA: sum += input * weight */
             sum = _mm256_fmadd_ps(inp, wgt, sum);
@@ -170,7 +177,7 @@ void dense_forward_avx2(
         
         /* Handle remaining elements (scalar) */
         for (; in < in_features; in++) {
-            result += input[in] * weights[in * out_features + out];
+            result += input[in] * out_weights[in];
         }
         
         /* Add bias */
@@ -289,5 +296,132 @@ void concat_forward(
         }
         
         out_offset += C;
+    }
+}
+
+/* ========== FUSED OPERATOR KERNELS ========== */
+
+/**
+ * Conv2D + ReLU fused kernel
+ * Applies ReLU activation inline during convolution, saving memory bandwidth
+ */
+void conv2d_relu_forward_avx2(
+    const float* input,
+    const float* weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding
+) {
+    int H_out = (H_in + 2 * padding - K_h) / stride + 1;
+    int W_out = (W_in + 2 * padding - K_w) / stride + 1;
+    
+    /* Zero output initially */
+    memset(output, 0, H_out * W_out * C_out * sizeof(float));
+    
+    __m256 zero_vec = _mm256_setzero_ps();
+    
+    /* For each output channel */
+    for (int oc = 0; oc < C_out; oc++) {
+        float bias_val = bias ? bias[oc] : 0.0f;
+        
+        /* For each output row */
+        for (int oh = 0; oh < H_out; oh++) {
+            int h_start = oh * stride - padding;
+            
+            /* For each output column (process 8 at a time) */
+            for (int ow = 0; ow < W_out; ow += 8) {
+                int batch_size = (ow + 8 <= W_out) ? 8 : (W_out - ow);
+                
+                __m256 sum[8];
+                for (int b = 0; b < batch_size; b++) {
+                    sum[b] = _mm256_setzero_ps();
+                }
+                
+                /* Convolve with kernel */
+                for (int kh = 0; kh < K_h; kh++) {
+                    int h = h_start + kh;
+                    if (h < 0 || h >= H_in) continue;
+                    
+                    for (int kw = 0; kw < K_w; kw++) {
+                        for (int ic = 0; ic < C_in; ic++) {
+                            int w_idx = ((kh * K_w + kw) * C_in + ic) * C_out + oc;
+                            __m256 weight_vec = _mm256_set1_ps(weights[w_idx]);
+                            
+                            for (int b = 0; b < batch_size; b++) {
+                                int w = (ow + b) * stride - padding + kw;
+                                
+                                if (w >= 0 && w < W_in) {
+                                    int in_idx = (h * W_in + w) * C_in + ic;
+                                    __m256 inp_vec = _mm256_set1_ps(input[in_idx]);
+                                    sum[b] = _mm256_fmadd_ps(inp_vec, weight_vec, sum[b]);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                /* Store results with FUSED ReLU (max(0, result)) */
+                for (int b = 0; b < batch_size; b++) {
+                    __m256 hadd = _mm256_hadd_ps(sum[b], sum[b]);
+                    hadd = _mm256_hadd_ps(hadd, hadd);
+                    float result = ((float*)&hadd)[0] + ((float*)&hadd)[4] + bias_val;
+                    
+                    /* Apply ReLU inline: max(0, result) */
+                    result = (result > 0.0f) ? result : 0.0f;
+                    
+                    int out_idx = (oh * W_out + ow + b) * C_out + oc;
+                    output[out_idx] = result;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Dense + ReLU fused kernel
+ * Applies ReLU activation inline during matrix multiplication
+ */
+void dense_relu_forward_avx2(
+    const float* input,
+    const float* weights,
+    const float* bias,
+    float* output,
+    int in_features,
+    int out_features
+) {
+    __m256 zero_vec = _mm256_setzero_ps();
+    
+    /* For each output neuron */
+    for (int out = 0; out < out_features; out++) {
+        __m256 sum = _mm256_setzero_ps();
+        int in;
+        
+        /* Base offset for this output's weights */
+        const float* out_weights = &weights[out * in_features];
+        
+        /* Vectorized dot product */
+        for (in = 0; in <= in_features - 8; in += 8) {
+            __m256 inp = _mm256_load_ps(&input[in]);
+            __m256 wgt = _mm256_load_ps(&out_weights[in]);
+            sum = _mm256_fmadd_ps(inp, wgt, sum);
+        }
+        
+        /* Horizontal sum */
+        __m256 hadd = _mm256_hadd_ps(sum, sum);
+        hadd = _mm256_hadd_ps(hadd, hadd);
+        float result = ((float*)&hadd)[0] + ((float*)&hadd)[4];
+        
+        /* Handle remaining elements */
+        for (; in < in_features; in++) {
+            result += input[in] * out_weights[in];
+        }
+        
+        /* Add bias and apply FUSED ReLU */
+        result += (bias ? bias[out] : 0.0f);
+        output[out] = (result > 0.0f) ? result : 0.0f;
     }
 }

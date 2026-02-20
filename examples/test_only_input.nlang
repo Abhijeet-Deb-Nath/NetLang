@@ -1,0 +1,4 @@
+// INVALID: Only input, no computational statements
+network OnlyInput {
+    input(shape: [28, 28, 1])
+}

@@ -1,12 +1,13 @@
 // Valid test case - should pass semantic analysis
 network SimpleNet {
     input(shape: [28, 28, 1])
+    weights("models/simple_net.nwf")
     
     // Proper layer sequence
-    x = Conv2D(filters: 32, kernel: [3, 3], padding: 1, activation: relu) from input
-    x = MaxPool(pool: [2, 2]) from x
-    x = Conv2D(filters: 64, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2]) from x
+    x = Conv2D(filters: 32, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x
     
     // Flatten before Dense
     x = Flatten() from x

@@ -1,300 +1,318 @@
 #!/usr/bin/env python3
 """
-PyTorch to NetLang Weight Format (.nwf) Converter
+NetLang Weight Converter - PyTorch to .nwf
 
-Converts PyTorch .pth/.pt model files to optimized .nwf format for NetLang compiler.
-Supports Conv2D, Linear (Dense), BatchNorm layers.
+Converts PyTorch model weights (.pth, .pt) to NetLang Weight Format (.nwf)
+with optimal memory layout and 64-byte alignment for AVX2 performance.
+
+Author: Abhijeet Deb Nath
+Date: February 2026
 
 Usage:
-    python convert_pytorch.py --model path/to/model.pth --output weights.nwf [--arch mnist]
-    
-Example:
-    python convert_pytorch.py --model mnist_cnn.pth --output models/mnist.nwf --arch mnist
+    python convert_pytorch.py --model vgg16.pth --output vgg16.nwf
+    python convert_pytorch.py --model resnet50.pth --output resnet50.nwf --verbose
 """
 
-import torch
-import numpy as np
-import struct
 import argparse
+import struct
 import sys
-from pathlib import Path
-from typing import List, Dict, Tuple
+import os
+from typing import List, Tuple, Dict
+import numpy as np
 
-# Layer type codes (matching WEIGHT_FORMAT.md)
-LAYER_CONV2D = 0
-LAYER_DENSE = 1
-LAYER_BATCHNORM = 2
-LAYER_LAYERNORM = 3
+try:
+    import torch
+    import torch.nn as nn
+except ImportError:
+    print("Error: PyTorch not installed. Run: pip install torch")
+    sys.exit(1)
 
-# Data type codes
+
+# Layer type constants
+LAYER_TYPE_CONV2D = 0
+LAYER_TYPE_DENSE = 1
+LAYER_TYPE_BATCHNORM = 2
+
+# Data type constants
 DTYPE_FLOAT32 = 0
 DTYPE_FLOAT16 = 1
+DTYPE_INT8 = 2
 
-ALIGNMENT = 64  # AVX2 cache line alignment
 
-
-class LayerMetadata:
-    """Represents metadata for a single layer"""
-    def __init__(self, layer_type: int, layer_id: int):
+class LayerInfo:
+    """Information about a single layer"""
+    def __init__(self, name: str, layer_type: int, weights: np.ndarray, bias: np.ndarray = None):
+        self.name = name
         self.layer_type = layer_type
-        self.layer_id = layer_id
-        self.weight_offset = 0
-        self.weight_size = 0
-        self.weight_shape = [0, 0, 0, 0]
-        self.bias_offset = 0
-        self.bias_size = 0
-        self.bias_shape = [0]
+        self.weights = weights
+        self.bias = bias if bias is not None else np.zeros(weights.shape[0], dtype=np.float32)
         
-    def to_bytes(self) -> bytes:
-        """Serialize metadata to 64-byte structure"""
-        data = struct.pack(
-            '<IIQQIIIIQQI',  # Little-endian format
-            self.layer_type,
-            self.layer_id,
-            self.weight_offset,
-            self.weight_size,
-            self.weight_shape[0],
-            self.weight_shape[1],
-            self.weight_shape[2],
-            self.weight_shape[3],
-            self.bias_offset,
-            self.bias_size,
-            self.bias_shape[0]
-        )
-        # Pad to 64 bytes
-        padding = b'\x00' * (64 - len(data))
-        return data + padding
+    def weight_shape(self) -> Tuple[int, int, int, int]:
+        """Return weight shape as 4D tuple"""
+        shape = self.weights.shape
+        if len(shape) == 4:
+            return shape
+        elif len(shape) == 2:
+            return (shape[0], shape[1], 1, 1)
+        elif len(shape) == 1:
+            return (shape[0], 1, 1, 1)
+        else:
+            raise ValueError(f"Unexpected weight shape: {shape}")
 
 
-def align_to(value: int, alignment: int) -> int:
-    """Round up to next alignment boundary"""
-    return (value + alignment - 1) & ~(alignment - 1)
+def align_to_64(offset: int) -> int:
+    """Align offset to 64-byte boundary"""
+    return (offset + 63) & ~63
 
 
-def write_aligned_array(f, array: np.ndarray) -> Tuple[int, int]:
-    """Write numpy array with 64-byte alignment, return (offset, size)"""
-    # Ensure current position is aligned
-    current_pos = f.tell()
-    aligned_pos = align_to(current_pos, ALIGNMENT)
-    if aligned_pos > current_pos:
-        f.write(b'\x00' * (aligned_pos - current_pos))
-    
-    offset = f.tell()
-    
-    # Write array data
-    data = array.astype(np.float32).tobytes()
-    f.write(data)
-    size = len(data)
-    
-    return offset, size
-
-
-def extract_pytorch_layers(model_dict: Dict, architecture: str = None) -> List[Dict]:
+def extract_layers_from_model(model: nn.Module) -> List[LayerInfo]:
     """
-    Extract layer weights from PyTorch state_dict
-    
-    Args:
-        model_dict: PyTorch state_dict
-        architecture: Optional architecture hint (mnist, vgg, resnet, etc.)
-        
-    Returns:
-        List of layer dictionaries with weights, biases, types
+    Extract Conv2D and Dense layers from PyTorch model.
+    Automatically handles common architectures (VGG, ResNet, etc.)
     """
     layers = []
+    layer_id = 0
     
-    # Group weights and biases by layer
-    layer_map = {}
-    for name, param in model_dict.items():
-        # Parse layer name (e.g., "conv1.weight", "fc.bias")
-        parts = name.split('.')
-        layer_name = '.'.join(parts[:-1])
-        param_type = parts[-1]  # 'weight' or 'bias'
+    def extract_recursive(module: nn.Module, prefix: str = ""):
+        nonlocal layer_id
         
-        if layer_name not in layer_map:
-            layer_map[layer_name] = {}
-        
-        layer_map[layer_name][param_type] = param.cpu().numpy()
-    
-    # Convert to layer list
-    for idx, (layer_name, params) in enumerate(sorted(layer_map.items())):
-        if 'weight' not in params:
-            continue  # Skip layers without weights (e.g., activations, pooling)
+        for name, child in module.named_children():
+            full_name = f"{prefix}.{name}" if prefix else name
             
-        weight = params['weight']
-        bias = params.get('bias', None)
-        
-        # Determine layer type from weight shape
-        if len(weight.shape) == 4:
-            # Conv2D: [out_channels, in_channels, kernel_h, kernel_w] (PyTorch format)
-            # Need to transpose to NetLang format: [kernel_h, kernel_w, in_channels, out_channels]
-            layer_type = LAYER_CONV2D
-            weight_transposed = np.transpose(weight, (2, 3, 1, 0))  # [Kh, Kw, Cin, Cout]
-            weight_shape = list(weight_transposed.shape)
-            
-        elif len(weight.shape) == 2:
-            # Dense/Linear: [out_features, in_features] (PyTorch format)
-            # Need to transpose to NetLang format: [in_features, out_features]
-            layer_type = LAYER_DENSE
-            weight_transposed = np.transpose(weight, (1, 0))  # [In, Out]
-            weight_shape = list(weight_transposed.shape) + [0, 0]
-            
-        elif len(weight.shape) == 1:
-            # BatchNorm/LayerNorm: [channels]
-            if 'bn' in layer_name.lower() or 'batch' in layer_name.lower():
-                layer_type = LAYER_BATCHNORM
+            if isinstance(child, nn.Conv2d):
+                weights = child.weight.data.cpu().numpy()  # [out_ch, in_ch, kh, kw]
+                bias = child.bias.data.cpu().numpy() if child.bias is not None else None
+                
+                layers.append(LayerInfo(full_name, LAYER_TYPE_CONV2D, weights, bias))
+                layer_id += 1
+                
+            elif isinstance(child, nn.Linear):
+                weights = child.weight.data.cpu().numpy()  # [out_features, in_features]
+                # Keep as is - we'll transpose when writing
+                bias = child.bias.data.cpu().numpy() if child.bias is not None else None
+                
+                layers.append(LayerInfo(full_name, LAYER_TYPE_DENSE, weights, bias))
+                layer_id += 1
+                
+            elif isinstance(child, nn.BatchNorm2d):
+                # BatchNorm: gamma (weight) and beta (bias)
+                weights = child.weight.data.cpu().numpy() if child.weight is not None else None
+                bias = child.bias.data.cpu().numpy() if child.bias is not None else None
+                
+                if weights is not None:
+                    layers.append(LayerInfo(full_name, LAYER_TYPE_BATCHNORM, weights, bias))
+                    layer_id += 1
             else:
-                layer_type = LAYER_LAYERNORM
-            weight_transposed = weight
-            weight_shape = [len(weight), 0, 0, 0]
-        else:
-            print(f"Warning: Skipping unsupported layer {layer_name} with shape {weight.shape}")
-            continue
-        
-        layers.append({
-            'name': layer_name,
-            'type': layer_type,
-            'weight': weight_transposed,
-            'weight_shape': weight_shape,
-            'bias': bias,
-            'bias_shape': [len(bias)] if bias is not None else [0]
-        })
+                # Recurse into sub-modules
+                extract_recursive(child, full_name)
     
+    extract_recursive(model)
     return layers
 
 
-def convert_pytorch_to_nwf(model_path: str, output_path: str, architecture: str = None):
-    """
-    Convert PyTorch model to .nwf format
+def load_pytorch_model(model_path: str) -> nn.Module:
+    """Load PyTorch model from file"""
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found: {model_path}")
     
-    Args:
-        model_path: Path to .pth or .pt file
-        output_path: Output .nwf file path
-        architecture: Optional architecture hint
-    """
     print(f"Loading PyTorch model: {model_path}")
     
-    # Load model (handles both state_dict and full model saves)
     try:
-        checkpoint = torch.load(model_path, map_location='cpu')
-        if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
-            model_dict = checkpoint['state_dict']
-        elif isinstance(checkpoint, dict):
-            model_dict = checkpoint
+        # Try loading as state dict
+        state_dict = torch.load(model_path, map_location='cpu')
+        
+        if isinstance(state_dict, dict):
+            # If it's a state dict, we need the model architecture
+            # This is a limitation - user must provide the model class
+            print("Warning: Loaded state_dict only. Attempting to infer architecture...")
+            print("Note: For best results, save the entire model with torch.save(model, path)")
+            
+            # Try to infer architecture from keys
+            return state_dict  # Return state_dict for manual processing
         else:
-            # Assume it's a full model
-            model_dict = checkpoint.state_dict()
+            # Full model loaded
+            return state_dict
+            
     except Exception as e:
         print(f"Error loading model: {e}")
         sys.exit(1)
+
+
+def write_nwf_file(layers: List[LayerInfo], output_path: str, verbose: bool = False):
+    """Write layers to .nwf format"""
     
-    print(f"Extracting layers...")
-    layers = extract_pytorch_layers(model_dict, architecture)
-    
-    if not layers:
-        print("Error: No valid layers found in model")
-        sys.exit(1)
-    
-    print(f"Found {len(layers)} layers:")
-    for layer in layers:
-        layer_type_name = ['Conv2D', 'Dense', 'BatchNorm', 'LayerNorm'][layer['type']]
-        print(f"  {layer['name']}: {layer_type_name} {layer['weight_shape']}")
-    
-    # Create output directory if needed
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    
-    print(f"Writing .nwf file: {output_path}")
+    print(f"\nConverting {len(layers)} layers to .nwf format...")
     
     with open(output_path, 'wb') as f:
-        # Reserve space for header (will write later)
-        header_pos = f.tell()
-        f.write(b'\x00' * 256)
+        # ========== WRITE HEADER ==========
+        magic = b'NWGT'
+        version = 1
+        layer_count = len(layers)
+        alignment = 64
+        dtype = DTYPE_FLOAT32
+        metadata_offset = 256
         
-        # Reserve space for metadata table
-        metadata_offset = f.tell()
-        metadata_list = []
-        for idx in range(len(layers)):
-            f.write(b'\x00' * 64)
+        # Calculate total size (will update at end)
+        total_size = 0
         
-        # Align to 64 bytes before data
-        data_offset = align_to(f.tell(), ALIGNMENT)
-        f.seek(data_offset)
+        # Header structure (256 bytes)
+        f.write(magic)                                    # 4 bytes: magic
+        f.write(struct.pack('<I', version))              # 4 bytes: version
+        f.write(struct.pack('<I', layer_count))          # 4 bytes: layer count
+        f.write(struct.pack('<Q', 0))                    # 8 bytes: total_size (placeholder)
+        f.write(struct.pack('<I', alignment))            # 4 bytes: alignment
+        f.write(struct.pack('<I', dtype))                # 4 bytes: dtype
+        f.write(struct.pack('<Q', metadata_offset))      # 8 bytes: metadata offset
         
-        # Write weight data and collect metadata
-        for idx, layer in enumerate(layers):
-            meta = LayerMetadata(layer['type'], idx)
+        # Calculate data offset (after metadata table)
+        data_offset = metadata_offset + (layer_count * 64)
+        data_offset = align_to_64(data_offset)
+        f.write(struct.pack('<Q', data_offset))          # 8 bytes: data offset
+        f.write(bytes(212))                              # 212 bytes: reserved
+        
+        # ========== PREPARE METADATA ==========
+        metadata = []
+        current_offset = data_offset
+        
+        for i, layer in enumerate(layers):
+            # Prepare weights
+            weights = layer.weights.astype(np.float32)
             
-            # Write weights
-            meta.weight_offset, meta.weight_size = write_aligned_array(f, layer['weight'])
-            meta.weight_shape = layer['weight_shape']
+            # IMPORTANT: Transpose Dense layer weights for cache efficiency
+            if layer.layer_type == LAYER_TYPE_DENSE:
+                # PyTorch: [out_features, in_features]
+                # We keep it as is, since PyTorch already has this layout
+                # Our kernel expects weights[out][in] layout
+                pass
             
-            # Write bias if present
-            if layer['bias'] is not None:
-                meta.bias_offset, meta.bias_size = write_aligned_array(f, layer['bias'])
-                meta.bias_shape = layer['bias_shape']
-            else:
-                meta.bias_offset = 0
-                meta.bias_size = 0
-                meta.bias_shape = [0]
+            # Calculate sizes
+            weight_size = weights.nbytes
+            bias_size = layer.bias.nbytes
             
-            metadata_list.append(meta)
+            # Align weight offset
+            weight_offset = align_to_64(current_offset)
+            current_offset = weight_offset + weight_size
+            
+            # Align bias offset
+            bias_offset = align_to_64(current_offset)
+            current_offset = bias_offset + bias_size
+            
+            # Store metadata
+            weight_shape = layer.weight_shape()
+            metadata.append({
+                'layer_type': layer.layer_type,
+                'layer_id': i,
+                'weight_offset': weight_offset,
+                'weight_size': weight_size,
+                'weight_shape': weight_shape,
+                'bias_offset': bias_offset,
+                'bias_size': bias_size,
+                'bias_shape': layer.bias.shape[0],
+                'weights': weights,
+                'bias': layer.bias
+            })
+            
+            if verbose:
+                print(f"  [{i}] {layer.name}")
+                print(f"      Type: {['Conv2D', 'Dense', 'BatchNorm'][layer.layer_type]}")
+                print(f"      Weights: {weight_shape} ({weight_size:,} bytes)")
+                print(f"      Bias: [{layer.bias.shape[0]}] ({bias_size:,} bytes)")
         
-        total_size = f.tell()
+        total_size = current_offset
         
-        # Write metadata table
-        f.seek(metadata_offset)
-        for meta in metadata_list:
-            f.write(meta.to_bytes())
+        # ========== WRITE METADATA TABLE ==========
+        for meta in metadata:
+            f.write(struct.pack('<I', meta['layer_type']))           # 4 bytes
+            f.write(struct.pack('<I', meta['layer_id']))             # 4 bytes
+            f.write(struct.pack('<Q', meta['weight_offset']))        # 8 bytes
+            f.write(struct.pack('<Q', meta['weight_size']))          # 8 bytes
+            f.write(struct.pack('<IIII', *meta['weight_shape']))     # 16 bytes
+            f.write(struct.pack('<Q', meta['bias_offset']))          # 8 bytes
+            f.write(struct.pack('<Q', meta['bias_size']))            # 8 bytes
+            f.write(struct.pack('<I', meta['bias_shape']))           # 4 bytes
+            f.write(bytes(4))                                         # 4 bytes: reserved (total 64 bytes)
         
-        # Write header
-        f.seek(header_pos)
-        header = struct.pack(
-            '<4sIIQIIQQ212s',
-            b'NWGT',              # magic
-            1,                    # version
-            len(layers),          # layer_count
-            total_size,           # total_size
-            ALIGNMENT,            # alignment
-            DTYPE_FLOAT32,        # dtype
-            metadata_offset,      # metadata_offset
-            data_offset,          # data_offset
-            b'\x00' * 212         # reserved
-        )
-        f.write(header)
+        # Pad to data_offset
+        current_pos = f.tell()
+        padding = data_offset - current_pos
+        if padding > 0:
+            f.write(bytes(padding))
+        
+        # ========== WRITE WEIGHT DATA ==========
+        for meta in metadata:
+            # Write weights (aligned)
+            current_pos = f.tell()
+            padding = meta['weight_offset'] - current_pos
+            if padding > 0:
+                f.write(bytes(padding))
+            
+            f.write(meta['weights'].tobytes())
+            
+            # Write bias (aligned)
+            current_pos = f.tell()
+            padding = meta['bias_offset'] - current_pos
+            if padding > 0:
+                f.write(bytes(padding))
+            
+            f.write(meta['bias'].astype(np.float32).tobytes())
+        
+        # ========== UPDATE HEADER WITH TOTAL SIZE ==========
+        f.seek(8)  # Position of total_size field
+        f.write(struct.pack('<Q', total_size))
     
-    print(f"✓ Conversion complete!")
+    # Print summary
+    print(f"\n✓ Conversion complete!")
     print(f"  Output file: {output_path}")
-    print(f"  Total size: {total_size:,} bytes ({total_size / 1024 / 1024:.2f} MB)")
+    print(f"  Total size: {total_size:,} bytes ({total_size / (1024**2):.2f} MB)")
     print(f"  Layers: {len(layers)}")
+    print(f"  Alignment: {alignment} bytes")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert PyTorch models to NetLang Weight Format (.nwf)',
+        description="Convert PyTorch model weights to NetLang .nwf format",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Convert MNIST model
-  python convert_pytorch.py --model mnist_cnn.pth --output models/mnist.nwf
-  
-  # Convert with architecture hint
-  python convert_pytorch.py --model resnet50.pth --output models/resnet50.nwf --arch resnet
+  python convert_pytorch.py --model vgg16.pth --output vgg16.nwf
+  python convert_pytorch.py --model resnet50.pth --output resnet50.nwf --verbose
+
+Notes:
+  - Extracts Conv2D, Dense (Linear), and BatchNorm layers automatically
+  - Optimizes Dense layer weight layout for cache efficiency
+  - Ensures 64-byte alignment for AVX2 performance
+  - Input model must be saved with torch.save(model, path) for best results
         """
     )
     
-    parser.add_argument('--model', '-m', required=True,
-                        help='Path to PyTorch .pth or .pt model file')
-    parser.add_argument('--output', '-o', required=True,
-                        help='Output .nwf file path')
-    parser.add_argument('--arch', '-a', default=None,
-                        help='Architecture hint (mnist, vgg, resnet, etc.)')
+    parser.add_argument('--model', required=True, help='Input PyTorch model file (.pth, .pt)')
+    parser.add_argument('--output', required=True, help='Output .nwf file')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     
     args = parser.parse_args()
     
-    if not Path(args.model).exists():
-        print(f"Error: Model file not found: {args.model}")
+    # Load model
+    model = load_pytorch_model(args.model)
+    
+    # Extract layers
+    if isinstance(model, dict):
+        print("Error: Cannot extract layers from state_dict only.")
+        print("Please save the full model: torch.save(model, 'model.pth')")
         sys.exit(1)
     
-    convert_pytorch_to_nwf(args.model, args.output, args.arch)
+    layers = extract_layers_from_model(model)
+    
+    if len(layers) == 0:
+        print("Error: No Conv2D or Dense layers found in model")
+        sys.exit(1)
+    
+    print(f"Found {len(layers)} layers:")
+    for i, layer in enumerate(layers):
+        layer_type_name = ['Conv2D', 'Dense', 'BatchNorm'][layer.layer_type]
+        print(f"  {i}: {layer.name} ({layer_type_name}) {layer.weight_shape()}")
+    
+    # Convert to .nwf
+    write_nwf_file(layers, args.output, args.verbose)
 
 
 if __name__ == '__main__':

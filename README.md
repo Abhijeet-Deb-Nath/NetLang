@@ -48,7 +48,7 @@ A domain-specific language (DSL) compiler that transforms neural network definit
 - **Runtime library:** Cross-platform mmap loader (Windows/Linux) with ~1ms startup
 - **AVX2 kernels:** Optimized Conv2D, Dense, Pooling layers with SIMD vectorization
 - **FMA support:** Fused multiply-add for 2x MAC throughput
-- **Performance target:** ~6x faster inference vs PyTorch/TensorFlow on CPU
+- **Performance target:** 15-20% faster inference vs frameworks due to optimal memory layout
 
 **See:** [PERFORMANCE_SYSTEM_COMPLETE.md](PERFORMANCE_SYSTEM_COMPLETE.md) for details
 
@@ -108,7 +108,7 @@ build\netlang.exe examples\test_errors.nlang
 ```netlang
 network MNIST {
     input(shape: [28, 28, 1])
-    weights("mnist_weights.nlw")
+    weights("mnist_weights.nwf")
     
     x = Conv2D(filters: 32, kernel: [3,3], padding: 1, activation: relu) from input
     x = MaxPool(pool: [2,2]) from x
@@ -124,27 +124,49 @@ network MNIST {
 
 ```
 src/
-├── lexer/         # Flex tokenizer (30+ tokens)
-├── parser/        # Bison grammar & AST builder
-├── ast/           # AST node definitions (15+ types)
-├── semantic/      # Symbol tables, type checker, shape inference
-└── codegen/       # LLVM IR generation (planned)
-examples/          # .nlang test files (MNIST, VGG, Inception)
-build/             # Compiled binaries
-test_results/      # Validation outputs
+├── lexer/              # Flex tokenizer (30+ tokens)
+├── parser/             # Bison grammar & AST builder
+├── ast/                # AST node definitions (15+ types)
+├── semantic/           # Symbol tables, type checker, shape inference
+└── codegen/            # Code generation & runtime library
+    ├── codegen.c       # C code generator
+    ├── runtime.c       # Weight loading (mmap-based)
+    └── kernels.c       # AVX2-optimized inference kernels
+tools/                  # Utility scripts
+├── convert_pytorch.py  # PyTorch → .nwf converter
+├── convert_onnx.py     # ONNX → .nwf converter
+├── convert_keras.py    # Keras → .nwf converter
+└── benchmark.c         # Performance testing
+examples/               # .nlang network definitions
+├── mnist.nlang         # LeNet-5 for MNIST
+├── vgg16.nlang         # VGG-16 architecture
+└── inception.nlang     # Inception modules
+models/                 # Converted weight files (.nwf)
+onnx_weight_files/      # Original ONNX model files
+build/                  # Compiler build artifacts
+├── netlang.exe         # NetLang compiler
+└── *.o, *.c            # Build intermediates
+bin/                    # Generated network executables
+generated/              # Generated C inference code
+test_results/           # Test validation outputs
+docs/                   # Documentation
+├── WEIGHT_FORMAT.md    # .nwf specification
+└── IMPLEMENTATION_GUIDE.md
 ```
 
 ## Next Steps
 
 **Phase 4:** LLVM Code Generation
-- Design `.nlw` weight file format (mmap-ready, 32-byte aligned)
-- LLVM IR generation for layer operations
-- Runtime library with AVX2-optimized kernels (Conv2D, Dense)
+- Completed .nwf weight file format (mmap-ready, 64-byte aligned) ✅
+- Runtime library with AVX2-optimized kernels (Conv2D, Dense) ✅
+- C code generation for network inference ✅
+- Weight converters: PyTorch, ONNX, Keras → .nwf ✅
 
 **Phase 5:** Optimization & Production
 - AVX2 SIMD vectorization (8-wide float operations)
 - Cache-aware memory tiling for large tensors
 - Dead code elimination and constant folding
+- Full integration testing with real models
 
 ---
 

@@ -1,307 +1,291 @@
 #!/usr/bin/env python3
 """
-TensorFlow/Keras to NetLang Weight Format (.nwf) Converter
+NetLang Weight Converter - TensorFlow/Keras to .nwf
 
-Converts Keras .h5 or SavedModel files to optimized .nwf format for NetLang compiler.
-Supports Conv2D, Dense, BatchNormalization layers.
+Converts TensorFlow/Keras model weights (.h5, SavedModel) to NetLang Weight Format (.nwf)
+with optimal memory layout and 64-byte alignment for AVX2 performance.
+
+Author: Abhijeet Deb Nath
+Date: February 2026
 
 Usage:
-    python convert_keras.py --model path/to/model.h5 --output weights.nwf
-    
-Example:
-    python convert_keras.py --model vgg16.h5 --output models/vgg16.nwf
+    python convert_keras.py --model vgg16.h5 --output vgg16.nwf
+    python convert_keras.py --model saved_model/ --output model.nwf --verbose
 """
 
-import numpy as np
-import struct
 import argparse
+import struct
 import sys
-from pathlib import Path
-from typing import List, Dict, Tuple
+import os
+from typing import List, Tuple
+import numpy as np
 
 try:
     import tensorflow as tf
     from tensorflow import keras
 except ImportError:
-    print("Error: TensorFlow not installed. Install with: pip install tensorflow")
+    print("Error: TensorFlow not installed. Run: pip install tensorflow")
     sys.exit(1)
 
-# Layer type codes
-LAYER_CONV2D = 0
-LAYER_DENSE = 1
-LAYER_BATCHNORM = 2
-LAYER_LAYERNORM = 3
 
+# Layer type constants
+LAYER_TYPE_CONV2D = 0
+LAYER_TYPE_DENSE = 1
+LAYER_TYPE_BATCHNORM = 2
+
+# Data type constants
 DTYPE_FLOAT32 = 0
-ALIGNMENT = 64
 
 
-class LayerMetadata:
-    """Represents metadata for a single layer"""
-    def __init__(self, layer_type: int, layer_id: int):
+class LayerInfo:
+    """Information about a single layer"""
+    def __init__(self, name: str, layer_type: int, weights: np.ndarray, bias: np.ndarray = None):
+        self.name = name
         self.layer_type = layer_type
-        self.layer_id = layer_id
-        self.weight_offset = 0
-        self.weight_size = 0
-        self.weight_shape = [0, 0, 0, 0]
-        self.bias_offset = 0
-        self.bias_size = 0
-        self.bias_shape = [0]
+        self.weights = weights
+        self.bias = bias if bias is not None else np.zeros(weights.shape[-1] if layer_type == LAYER_TYPE_CONV2D else weights.shape[0], dtype=np.float32)
         
-    def to_bytes(self) -> bytes:
-        """Serialize metadata to 64-byte structure"""
-        data = struct.pack(
-            '<IIQQIIIIQQI',
-            self.layer_type,
-            self.layer_id,
-            self.weight_offset,
-            self.weight_size,
-            self.weight_shape[0],
-            self.weight_shape[1],
-            self.weight_shape[2],
-            self.weight_shape[3],
-            self.bias_offset,
-            self.bias_size,
-            self.bias_shape[0]
-        )
-        padding = b'\x00' * (64 - len(data))
-        return data + padding
+    def weight_shape(self) -> Tuple[int, int, int, int]:
+        """Return weight shape as 4D tuple"""
+        shape = self.weights.shape
+        if len(shape) == 4:
+            return shape
+        elif len(shape) == 2:
+            return (shape[0], shape[1], 1, 1)
+        elif len(shape) == 1:
+            return (shape[0], 1, 1, 1)
+        else:
+            raise ValueError(f"Unexpected weight shape: {shape}")
 
 
-def align_to(value: int, alignment: int) -> int:
-    """Round up to next alignment boundary"""
-    return (value + alignment - 1) & ~(alignment - 1)
+def align_to_64(offset: int) -> int:
+    """Align offset to 64-byte boundary"""
+    return (offset + 63) & ~63
 
 
-def write_aligned_array(f, array: np.ndarray) -> Tuple[int, int]:
-    """Write numpy array with 64-byte alignment, return (offset, size)"""
-    current_pos = f.tell()
-    aligned_pos = align_to(current_pos, ALIGNMENT)
-    if aligned_pos > current_pos:
-        f.write(b'\x00' * (aligned_pos - current_pos))
-    
-    offset = f.tell()
-    data = array.astype(np.float32).tobytes()
-    f.write(data)
-    size = len(data)
-    
-    return offset, size
-
-
-def extract_keras_layers(model) -> List[Dict]:
+def extract_layers_from_keras_model(model: keras.Model) -> List[LayerInfo]:
     """
-    Extract layer weights from Keras model
-    
-    Args:
-        model: Keras model instance
-        
-    Returns:
-        List of layer dictionaries with weights, biases, types
+    Extract Conv2D and Dense layers from Keras model.
+    Handles both Sequential and Functional API models.
     """
     layers = []
-    layer_id = 0
     
     for layer in model.layers:
-        weights = layer.get_weights()
-        if not weights:
-            continue  # Skip layers without weights (e.g., activations, pooling)
-        
-        layer_name = layer.name
-        layer_class = layer.__class__.__name__
-        
-        if layer_class == 'Conv2D':
-            # Keras Conv2D weights: [kernel_h, kernel_w, in_channels, out_channels]
-            # Already in correct format for NetLang!
-            weight = weights[0]
-            bias = weights[1] if len(weights) > 1 else None
+        if isinstance(layer, keras.layers.Conv2D):
+            weights = layer.get_weights()
+            if len(weights) >= 2:
+                # Keras Conv2D weights: [kernel_h, kernel_w, in_channels, out_channels]
+                w = weights[0].astype(np.float32)
+                b = weights[1].astype(np.float32)
+            else:
+                w = weights[0].astype(np.float32)
+                b = np.zeros(w.shape[-1], dtype=np.float32)
             
-            layers.append({
-                'name': layer_name,
-                'type': LAYER_CONV2D,
-                'weight': weight,
-                'weight_shape': list(weight.shape),
-                'bias': bias,
-                'bias_shape': [len(bias)] if bias is not None else [0]
-            })
-            layer_id += 1
+            layers.append(LayerInfo(layer.name, LAYER_TYPE_CONV2D, w, b))
             
-        elif layer_class == 'Dense':
-            # Keras Dense weights: [in_features, out_features]
-            # Already in correct format for NetLang!
-            weight = weights[0]
-            bias = weights[1] if len(weights) > 1 else None
+        elif isinstance(layer, keras.layers.Dense):
+            weights = layer.get_weights()
+            if len(weights) >= 2:
+                # Keras Dense weights: [in_features, out_features]
+                # Need to transpose to [out_features, in_features] for our format
+                w = weights[0].astype(np.float32).T  # Transpose!
+                b = weights[1].astype(np.float32)
+            else:
+                w = weights[0].astype(np.float32).T
+                b = np.zeros(w.shape[0], dtype=np.float32)
             
-            layers.append({
-                'name': layer_name,
-                'type': LAYER_DENSE,
-                'weight': weight,
-                'weight_shape': list(weight.shape) + [0, 0],
-                'bias': bias,
-                'bias_shape': [len(bias)] if bias is not None else [0]
-            })
-            layer_id += 1
+            layers.append(LayerInfo(layer.name, LAYER_TYPE_DENSE, w, b))
             
-        elif layer_class == 'BatchNormalization':
-            # Keras BN: [gamma, beta, moving_mean, moving_var]
-            # We only need gamma (weight) and beta (bias) for inference
-            gamma = weights[0]  # Scale
-            beta = weights[1]   # Shift
-            
-            layers.append({
-                'name': layer_name,
-                'type': LAYER_BATCHNORM,
-                'weight': gamma,
-                'weight_shape': [len(gamma), 0, 0, 0],
-                'bias': beta,
-                'bias_shape': [len(beta)]
-            })
-            layer_id += 1
-            
-        elif layer_class == 'LayerNormalization':
-            gamma = weights[0]
-            beta = weights[1] if len(weights) > 1 else None
-            
-            layers.append({
-                'name': layer_name,
-                'type': LAYER_LAYERNORM,
-                'weight': gamma,
-                'weight_shape': [len(gamma), 0, 0, 0],
-                'bias': beta,
-                'bias_shape': [len(beta)] if beta is not None else [0]
-            })
-            layer_id += 1
-        else:
-            print(f"Warning: Skipping unsupported layer type: {layer_class} ({layer_name})")
+        elif isinstance(layer, keras.layers.BatchNormalization):
+            weights = layer.get_weights()
+            if len(weights) >= 2:
+                # BatchNorm: [gamma, beta, moving_mean, moving_variance]
+                gamma = weights[0].astype(np.float32)
+                beta = weights[1].astype(np.float32)
+                layers.append(LayerInfo(layer.name, LAYER_TYPE_BATCHNORM, gamma, beta))
     
     return layers
 
 
-def convert_keras_to_nwf(model_path: str, output_path: str):
-    """
-    Convert Keras model to .nwf format
+def load_keras_model(model_path: str) -> keras.Model:
+    """Load Keras model from file"""
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found: {model_path}")
     
-    Args:
-        model_path: Path to .h5 file or SavedModel directory
-        output_path: Output .nwf file path
-    """
     print(f"Loading Keras model: {model_path}")
     
     try:
-        model = keras.models.load_model(model_path)
+        if model_path.endswith('.h5'):
+            model = keras.models.load_model(model_path)
+        else:
+            # Try loading as SavedModel directory
+            model = keras.models.load_model(model_path)
+        
+        return model
     except Exception as e:
         print(f"Error loading model: {e}")
         sys.exit(1)
+
+
+def write_nwf_file(layers: List[LayerInfo], output_path: str, verbose: bool = False):
+    """Write layers to .nwf format"""
     
-    print(f"Model architecture: {model.name}")
-    print(f"Total layers: {len(model.layers)}")
-    
-    print(f"Extracting layers...")
-    layers = extract_keras_layers(model)
-    
-    if not layers:
-        print("Error: No valid layers found in model")
-        sys.exit(1)
-    
-    print(f"Found {len(layers)} layers with weights:")
-    for layer in layers:
-        layer_type_name = ['Conv2D', 'Dense', 'BatchNorm', 'LayerNorm'][layer['type']]
-        print(f"  {layer['name']}: {layer_type_name} {layer['weight_shape']}")
-    
-    # Create output directory
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    
-    print(f"Writing .nwf file: {output_path}")
+    print(f"\nConverting {len(layers)} layers to .nwf format...")
     
     with open(output_path, 'wb') as f:
-        # Reserve header space
-        header_pos = f.tell()
-        f.write(b'\x00' * 256)
+        # ========== WRITE HEADER ==========
+        magic = b'NWGT'
+        version = 1
+        layer_count = len(layers)
+        alignment = 64
+        dtype = DTYPE_FLOAT32
+        metadata_offset = 256
         
-        # Reserve metadata table space
-        metadata_offset = f.tell()
-        metadata_list = []
-        for idx in range(len(layers)):
-            f.write(b'\x00' * 64)
+        # Header structure (256 bytes)
+        f.write(magic)                                    # 4 bytes: magic
+        f.write(struct.pack('<I', version))              # 4 bytes: version
+        f.write(struct.pack('<I', layer_count))          # 4 bytes: layer count
+        f.write(struct.pack('<Q', 0))                    # 8 bytes: total_size (placeholder)
+        f.write(struct.pack('<I', alignment))            # 4 bytes: alignment
+        f.write(struct.pack('<I', dtype))                # 4 bytes: dtype
+        f.write(struct.pack('<Q', metadata_offset))      # 8 bytes: metadata offset
         
-        # Align data section
-        data_offset = align_to(f.tell(), ALIGNMENT)
-        f.seek(data_offset)
+        # Calculate data offset
+        data_offset = metadata_offset + (layer_count * 64)
+        data_offset = align_to_64(data_offset)
+        f.write(struct.pack('<Q', data_offset))          # 8 bytes: data offset
+        f.write(bytes(212))                              # 212 bytes: reserved
         
-        # Write weights and collect metadata
-        for idx, layer in enumerate(layers):
-            meta = LayerMetadata(layer['type'], idx)
+        # ========== PREPARE METADATA ==========
+        metadata = []
+        current_offset = data_offset
+        
+        for i, layer in enumerate(layers):
+            weights = layer.weights.astype(np.float32)
             
-            # Write weights
-            meta.weight_offset, meta.weight_size = write_aligned_array(f, layer['weight'])
-            meta.weight_shape = layer['weight_shape']
+            # Calculate sizes
+            weight_size = weights.nbytes
+            bias_size = layer.bias.nbytes
             
-            # Write bias if present
-            if layer['bias'] is not None:
-                meta.bias_offset, meta.bias_size = write_aligned_array(f, layer['bias'])
-                meta.bias_shape = layer['bias_shape']
-            else:
-                meta.bias_offset = 0
-                meta.bias_size = 0
-                meta.bias_shape = [0]
+            # Align weight offset
+            weight_offset = align_to_64(current_offset)
+            current_offset = weight_offset + weight_size
             
-            metadata_list.append(meta)
+            # Align bias offset
+            bias_offset = align_to_64(current_offset)
+            current_offset = bias_offset + bias_size
+            
+            # Store metadata
+            weight_shape = layer.weight_shape()
+            metadata.append({
+                'layer_type': layer.layer_type,
+                'layer_id': i,
+                'weight_offset': weight_offset,
+                'weight_size': weight_size,
+                'weight_shape': weight_shape,
+                'bias_offset': bias_offset,
+                'bias_size': bias_size,
+                'bias_shape': layer.bias.shape[0],
+                'weights': weights,
+                'bias': layer.bias
+            })
+            
+            if verbose:
+                print(f"  [{i}] {layer.name}")
+                print(f"      Type: {['Conv2D', 'Dense', 'BatchNorm'][layer.layer_type]}")
+                print(f"      Weights: {weight_shape} ({weight_size:,} bytes)")
+                print(f"      Bias: [{layer.bias.shape[0]}] ({bias_size:,} bytes)")
         
-        total_size = f.tell()
+        total_size = current_offset
         
-        # Write metadata table
-        f.seek(metadata_offset)
-        for meta in metadata_list:
-            f.write(meta.to_bytes())
+        # ========== WRITE METADATA TABLE ==========
+        for meta in metadata:
+            f.write(struct.pack('<I', meta['layer_type']))           # 4 bytes
+            f.write(struct.pack('<I', meta['layer_id']))             # 4 bytes
+            f.write(struct.pack('<Q', meta['weight_offset']))        # 8 bytes
+            f.write(struct.pack('<Q', meta['weight_size']))          # 8 bytes
+            f.write(struct.pack('<IIII', *meta['weight_shape']))     # 16 bytes
+            f.write(struct.pack('<Q', meta['bias_offset']))          # 8 bytes
+            f.write(struct.pack('<Q', meta['bias_size']))            # 8 bytes
+            f.write(struct.pack('<I', meta['bias_shape']))           # 4 bytes
+            f.write(bytes(16))                                        # 16 bytes: reserved
         
-        # Write header
-        f.seek(header_pos)
-        header = struct.pack(
-            '<4sIIQIIQQ212s',
-            b'NWGT',
-            1,
-            len(layers),
-            total_size,
-            ALIGNMENT,
-            DTYPE_FLOAT32,
-            metadata_offset,
-            data_offset,
-            b'\x00' * 212
-        )
-        f.write(header)
+        # Pad to data_offset
+        current_pos = f.tell()
+        padding = data_offset - current_pos
+        if padding > 0:
+            f.write(bytes(padding))
+        
+        # ========== WRITE WEIGHT DATA ==========
+        for meta in metadata:
+            # Write weights (aligned)
+            current_pos = f.tell()
+            padding = meta['weight_offset'] - current_pos
+            if padding > 0:
+                f.write(bytes(padding))
+            
+            f.write(meta['weights'].tobytes())
+            
+            # Write bias (aligned)
+            current_pos = f.tell()
+            padding = meta['bias_offset'] - current_pos
+            if padding > 0:
+                f.write(bytes(padding))
+            
+            f.write(meta['bias'].astype(np.float32).tobytes())
+        
+        # ========== UPDATE HEADER WITH TOTAL SIZE ==========
+        f.seek(8)
+        f.write(struct.pack('<Q', total_size))
     
-    print(f"✓ Conversion complete!")
+    # Print summary
+    print(f"\n✓ Conversion complete!")
     print(f"  Output file: {output_path}")
-    print(f"  Total size: {total_size:,} bytes ({total_size / 1024 / 1024:.2f} MB)")
+    print(f"  Total size: {total_size:,} bytes ({total_size / (1024**2):.2f} MB)")
     print(f"  Layers: {len(layers)}")
+    print(f"  Alignment: {alignment} bytes")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert Keras models to NetLang Weight Format (.nwf)',
+        description="Convert Keras/TensorFlow model weights to NetLang .nwf format",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Convert Keras .h5 model
-  python convert_keras.py --model vgg16.h5 --output models/vgg16.nwf
-  
-  # Convert SavedModel
-  python convert_keras.py --model saved_model/ --output models/model.nwf
+  python convert_keras.py --model vgg16.h5 --output vgg16.nwf
+  python convert_keras.py --model saved_model/ --output model.nwf --verbose
+
+Notes:
+  - Extracts Conv2D, Dense, and BatchNormalization layers
+  - Transposes Dense layer weights for cache efficiency
+  - Ensures 64-byte alignment for AVX2 performance
+  - Supports both .h5 and SavedModel formats
         """
     )
     
-    parser.add_argument('--model', '-m', required=True,
-                        help='Path to Keras .h5 file or SavedModel directory')
-    parser.add_argument('--output', '-o', required=True,
-                        help='Output .nwf file path')
+    parser.add_argument('--model', required=True, help='Input Keras model (.h5 or SavedModel directory)')
+    parser.add_argument('--output', required=True, help='Output .nwf file')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     
     args = parser.parse_args()
     
-    model_path = Path(args.model)
-    if not model_path.exists():
-        print(f"Error: Model not found: {args.model}")
+    # Load model
+    model = load_keras_model(args.model)
+    
+    # Extract layers
+    layers = extract_layers_from_keras_model(model)
+    
+    if len(layers) == 0:
+        print("Error: No Conv2D or Dense layers found in model")
         sys.exit(1)
     
-    convert_keras_to_nwf(args.model, args.output)
+    print(f"Found {len(layers)} layers:")
+    for i, layer in enumerate(layers):
+        layer_type_name = ['Conv2D', 'Dense', 'BatchNorm'][layer.layer_type]
+        print(f"  {i}: {layer.name} ({layer_type_name}) {layer.weight_shape()}")
+    
+    # Convert to .nwf
+    write_nwf_file(layers, args.output, args.verbose)
 
 
 if __name__ == '__main__':

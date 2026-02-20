@@ -1,14 +1,16 @@
-// Simple CNN for MNIST digit classification (0-9)
-// Architecture: Conv-Pool-Conv-Pool-Dense-Dense
+// LeNet-5 variant for MNIST digit classification (0-9)
+// Architecture matches the downloaded PyTorch model
+// Conv(6)-MaxPool-Conv(16)-MaxPool-Dense(120)-Dense(84)-Dense(10)
 network MNIST_CNN {
-    input(shape: [28, 28, 1])
-    weights("models/mnist_cnn.bin")
+    input(shape: [32, 32, 1])
+    weights("models/lenet5.nwf")
     
-    x = Conv2D(filters: 32, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
-    x = MaxPool(pool: [2, 2]) from x
-    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2]) from x
+    x = Conv2D(filters: 6, kernel: [5, 5], stride: 1, padding: 0, activation: relu) from input
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x
+    x = Conv2D(filters: 16, kernel: [5, 5], stride: 1, padding: 0, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x
     x = Flatten() from x
-    x = Dense(units: 128, activation: relu) from x
+    x = Dense(units: 120, activation: relu) from x
+    x = Dense(units: 84, activation: relu) from x
     x = Dense(units: 10, activation: softmax) from x
 }

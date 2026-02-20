@@ -130,7 +130,7 @@ model = MNIST_CNN()
 torch.save(model.state_dict(), 'models/mnist.pth')
 ```
 
-Convert:
+Export to .nwf:
 ```bash
 python tools/convert_pytorch.py --model models/mnist.pth --output models/mnist.nwf
 ```
@@ -140,6 +140,11 @@ python tools/convert_pytorch.py --model models/mnist.pth --output models/mnist.n
 from torchvision import models
 vgg16 = models.vgg16(pretrained=True)
 torch.save(vgg16.state_dict(), 'models/vgg16.pth')
+```
+
+Convert:
+```bash
+python tools/convert_pytorch.py --model models/vgg16.pth --output models/vgg16.nwf
 ```
 
 ### ResNet50 (Medium, ~100MB)

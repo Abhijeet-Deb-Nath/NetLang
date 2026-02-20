@@ -17,7 +17,7 @@
 // Architecture: Conv-Pool-Conv-Pool-Dense-Dense
 network MNIST_CNN {
     input(shape: [28, 28, 1])
-    weights("models/mnist_cnn.bin")
+    weights("models/mnist_cnn.nwf")
     
     x = Conv2D(filters: 32, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
     x = MaxPool(pool: [2, 2]) from x

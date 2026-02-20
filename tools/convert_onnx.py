@@ -1,348 +1,365 @@
 #!/usr/bin/env python3
 """
-ONNX to NetLang Weight Format (.nwf) Converter
+NetLang Weight Converter - ONNX to .nwf
 
-Converts ONNX .onnx model files to optimized .nwf format for NetLang compiler.
-Supports Conv, Gemm (Dense), BatchNormalization layers.
+Converts ONNX model weights (.onnx) to NetLang Weight Format (.nwf)
+with optimal memory layout and 64-byte alignment for AVX2 performance.
+
+Author: Abhijeet Deb Nath
+Date: February 2026
 
 Usage:
-    python convert_onnx.py --model path/to/model.onnx --output weights.nwf
-    
-Example:
-    python convert_onnx.py --model resnet50.onnx --output models/resnet50.nwf
+    python convert_onnx.py --model vgg16.onnx --output vgg16.nwf
+    python convert_onnx.py --model resnet50.onnx --output resnet50.nwf --verbose
 """
 
-import numpy as np
-import struct
 import argparse
+import struct
 import sys
-from pathlib import Path
-from typing import List, Dict, Tuple
+import os
+from typing import List, Tuple, Dict
+import numpy as np
 
 try:
     import onnx
     from onnx import numpy_helper
 except ImportError:
-    print("Error: ONNX not installed. Install with: pip install onnx")
+    print("Error: ONNX not installed. Run: pip install onnx")
     sys.exit(1)
 
-# Layer type codes
-LAYER_CONV2D = 0
-LAYER_DENSE = 1
-LAYER_BATCHNORM = 2
-LAYER_LAYERNORM = 3
 
+# Layer type constants
+LAYER_TYPE_CONV2D = 0
+LAYER_TYPE_DENSE = 1
+LAYER_TYPE_BATCHNORM = 2
+
+# Data type constants
 DTYPE_FLOAT32 = 0
-ALIGNMENT = 64
 
 
-class LayerMetadata:
-    """Represents metadata for a single layer"""
-    def __init__(self, layer_type: int, layer_id: int):
+class LayerInfo:
+    """Information about a single layer"""
+    def __init__(self, name: str, layer_type: int, weights: np.ndarray, bias: np.ndarray = None):
+        self.name = name
         self.layer_type = layer_type
-        self.layer_id = layer_id
-        self.weight_offset = 0
-        self.weight_size = 0
-        self.weight_shape = [0, 0, 0, 0]
-        self.bias_offset = 0
-        self.bias_size = 0
-        self.bias_shape = [0]
+        self.weights = weights
         
-    def to_bytes(self) -> bytes:
-        """Serialize metadata to 64-byte structure"""
-        data = struct.pack(
-            '<IIQQIIIIQQI',
-            self.layer_type,
-            self.layer_id,
-            self.weight_offset,
-            self.weight_size,
-            self.weight_shape[0],
-            self.weight_shape[1],
-            self.weight_shape[2],
-            self.weight_shape[3],
-            self.bias_offset,
-            self.bias_size,
-            self.bias_shape[0]
-        )
-        padding = b'\x00' * (64 - len(data))
-        return data + padding
-
-
-def align_to(value: int, alignment: int) -> int:
-    """Round up to next alignment boundary"""
-    return (value + alignment - 1) & ~(alignment - 1)
-
-
-def write_aligned_array(f, array: np.ndarray) -> Tuple[int, int]:
-    """Write numpy array with 64-byte alignment, return (offset, size)"""
-    current_pos = f.tell()
-    aligned_pos = align_to(current_pos, ALIGNMENT)
-    if aligned_pos > current_pos:
-        f.write(b'\x00' * (aligned_pos - current_pos))
-    
-    offset = f.tell()
-    data = array.astype(np.float32).tobytes()
-    f.write(data)
-    size = len(data)
-    
-    return offset, size
-
-
-def extract_onnx_layers(model) -> List[Dict]:
-    """
-    Extract layer weights from ONNX model
-    
-    Args:
-        model: ONNX ModelProto
+        # Determine bias shape based on layer type
+        if bias is None:
+            if layer_type == LAYER_TYPE_CONV2D:
+                bias_size = weights.shape[0]  # out_channels
+            elif layer_type == LAYER_TYPE_DENSE:
+                bias_size = weights.shape[0]  # out_features
+            else:
+                bias_size = weights.shape[0]
+            self.bias = np.zeros(bias_size, dtype=np.float32)
+        else:
+            self.bias = bias
         
-    Returns:
-        List of layer dictionaries with weights, biases, types
+    def weight_shape(self) -> Tuple[int, int, int, int]:
+        """Return weight shape as 4D tuple"""
+        shape = self.weights.shape
+        if len(shape) == 4:
+            return shape
+        elif len(shape) == 2:
+            return (shape[0], shape[1], 1, 1)
+        elif len(shape) == 1:
+            return (shape[0], 1, 1, 1)
+        else:
+            raise ValueError(f"Unexpected weight shape: {shape}")
+
+
+def align_to_64(offset: int) -> int:
+    """Align offset to 64-byte boundary"""
+    return (offset + 63) & ~63
+
+
+def extract_layers_from_onnx_model(model: onnx.ModelProto) -> List[LayerInfo]:
     """
-    # Build initializer lookup
+    Extract Conv2D, Gemm (Dense), and BatchNorm layers from ONNX model.
+    Handles various ONNX operator types.
+    """
+    layers = []
+    
+    # Build a map of initializers (weights and biases)
     initializers = {}
     for init in model.graph.initializer:
         initializers[init.name] = numpy_helper.to_array(init)
     
-    layers = []
-    layer_id = 0
+    # Track which initializers are used
+    used_initializers = set()
     
+    # Process each node in the graph
     for node in model.graph.node:
-        op_type = node.op_type
+        if node.op_type == 'Conv':
+            # Conv2D layer
+            # Inputs: [input, weights, bias (optional)]
+            weight_name = node.input[1]
+            bias_name = node.input[2] if len(node.input) > 2 else None
+            
+            if weight_name in initializers:
+                weights = initializers[weight_name].astype(np.float32)  # [out_ch, in_ch, kh, kw]
+                bias = initializers[bias_name].astype(np.float32) if bias_name and bias_name in initializers else None
+                
+                layers.append(LayerInfo(node.name, LAYER_TYPE_CONV2D, weights, bias))
+                used_initializers.add(weight_name)
+                if bias_name:
+                    used_initializers.add(bias_name)
         
-        if op_type == 'Conv':
-            # ONNX Conv weights: [out_channels, in_channels, kernel_h, kernel_w]
-            # Need to transpose to NetLang: [kernel_h, kernel_w, in_channels, out_channels]
+        elif node.op_type == 'Gemm':
+            # Dense/Linear layer (General Matrix Multiplication)
+            # Y = alpha * A * B + beta * C
+            # Typically: output = input @ weights + bias
+            # Inputs: [input, weights, bias (optional)]
             weight_name = node.input[1]
-            if weight_name not in initializers:
-                print(f"Warning: Weight {weight_name} not found in initializers")
-                continue
+            bias_name = node.input[2] if len(node.input) > 2 else None
             
-            weight = initializers[weight_name]
-            weight_transposed = np.transpose(weight, (2, 3, 1, 0))  # [Kh, Kw, Cin, Cout]
+            if weight_name in initializers:
+                weights = initializers[weight_name].astype(np.float32)
+                
+                # Check for transposition attributes
+                transA = False
+                transB = False
+                for attr in node.attribute:
+                    if attr.name == 'transA':
+                        transA = attr.i == 1
+                    elif attr.name == 'transB':
+                        transB = attr.i == 1
+                
+                # ONNX Gemm typically has weights as [in_features, out_features]
+                # We need [out_features, in_features]
+                if not transB:
+                    weights = weights.T
+                
+                bias = initializers[bias_name].astype(np.float32) if bias_name and bias_name in initializers else None
+                
+                layers.append(LayerInfo(node.name, LAYER_TYPE_DENSE, weights, bias))
+                used_initializers.add(weight_name)
+                if bias_name:
+                    used_initializers.add(bias_name)
+        
+        elif node.op_type == 'MatMul':
+            # Matrix multiplication (Dense without bias)
+            weight_name = node.input[1]
             
-            bias = None
-            if len(node.input) > 2:
+            if weight_name in initializers:
+                weights = initializers[weight_name].astype(np.float32)
+                
+                # MatMul output shape: [batch, in] @ [in, out] = [batch, out]
+                # We need [out, in] for our format
+                if len(weights.shape) == 2:
+                    weights = weights.T
+                
+                layers.append(LayerInfo(node.name, LAYER_TYPE_DENSE, weights, None))
+                used_initializers.add(weight_name)
+        
+        elif node.op_type == 'BatchNormalization':
+            # BatchNorm layer
+            # Inputs: [input, scale (gamma), bias (beta), mean, variance]
+            if len(node.input) >= 3:
+                scale_name = node.input[1]
                 bias_name = node.input[2]
-                if bias_name in initializers:
-                    bias = initializers[bias_name]
-            
-            layers.append({
-                'name': node.name or f'conv_{layer_id}',
-                'type': LAYER_CONV2D,
-                'weight': weight_transposed,
-                'weight_shape': list(weight_transposed.shape),
-                'bias': bias,
-                'bias_shape': [len(bias)] if bias is not None else [0]
-            })
-            layer_id += 1
-            
-        elif op_type == 'Gemm':
-            # ONNX Gemm (General Matrix Multiply) = Dense layer
-            # Weights: [in_features, out_features] or [out_features, in_features]
-            # Check transB attribute
-            weight_name = node.input[1]
-            if weight_name not in initializers:
-                print(f"Warning: Weight {weight_name} not found in initializers")
-                continue
-            
-            weight = initializers[weight_name]
-            
-            # Check if weight needs transpose (transB attribute)
-            trans_b = False
-            for attr in node.attribute:
-                if attr.name == 'transB':
-                    trans_b = bool(attr.i)
-            
-            if trans_b:
-                # Weight is [out, in], need [in, out]
-                weight = np.transpose(weight)
-            
-            bias = None
-            if len(node.input) > 2:
-                bias_name = node.input[2]
-                if bias_name in initializers:
-                    bias = initializers[bias_name]
-            
-            layers.append({
-                'name': node.name or f'dense_{layer_id}',
-                'type': LAYER_DENSE,
-                'weight': weight,
-                'weight_shape': list(weight.shape) + [0, 0],
-                'bias': bias,
-                'bias_shape': [len(bias)] if bias is not None else [0]
-            })
-            layer_id += 1
-            
-        elif op_type == 'MatMul':
-            # Alternative dense layer representation
-            weight_name = node.input[1]
-            if weight_name not in initializers:
-                continue
-            
-            weight = initializers[weight_name]
-            
-            layers.append({
-                'name': node.name or f'matmul_{layer_id}',
-                'type': LAYER_DENSE,
-                'weight': weight,
-                'weight_shape': list(weight.shape) + [0, 0],
-                'bias': None,
-                'bias_shape': [0]
-            })
-            layer_id += 1
-            
-        elif op_type == 'BatchNormalization':
-            # ONNX BN: scale (gamma), bias (beta), mean, var
-            # We need scale and bias for inference
-            scale_name = node.input[1]
-            bias_name = node.input[2]
-            
-            if scale_name not in initializers or bias_name not in initializers:
-                print(f"Warning: BatchNorm weights not found")
-                continue
-            
-            scale = initializers[scale_name]
-            bias = initializers[bias_name]
-            
-            layers.append({
-                'name': node.name or f'bn_{layer_id}',
-                'type': LAYER_BATCHNORM,
-                'weight': scale,
-                'weight_shape': [len(scale), 0, 0, 0],
-                'bias': bias,
-                'bias_shape': [len(bias)]
-            })
-            layer_id += 1
+                
+                if scale_name in initializers and bias_name in initializers:
+                    gamma = initializers[scale_name].astype(np.float32)
+                    beta = initializers[bias_name].astype(np.float32)
+                    
+                    layers.append(LayerInfo(node.name, LAYER_TYPE_BATCHNORM, gamma, beta))
+                    used_initializers.add(scale_name)
+                    used_initializers.add(bias_name)
+    
+    # Check for unused initializers (might be additional weights we missed)
+    unused = set(initializers.keys()) - used_initializers
+    if unused:
+        print(f"Warning: {len(unused)} unused initializers found (might be moving stats, etc.)")
     
     return layers
 
 
-def convert_onnx_to_nwf(model_path: str, output_path: str):
-    """
-    Convert ONNX model to .nwf format
+def load_onnx_model(model_path: str) -> onnx.ModelProto:
+    """Load ONNX model from file"""
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found: {model_path}")
     
-    Args:
-        model_path: Path to .onnx file
-        output_path: Output .nwf file path
-    """
     print(f"Loading ONNX model: {model_path}")
     
     try:
         model = onnx.load(model_path)
-        onnx.checker.check_model(model)
+        
+        # Validate model
+        try:
+            onnx.checker.check_model(model)
+            print("✓ ONNX model is valid")
+        except Exception as e:
+            print(f"Warning: ONNX model validation failed: {e}")
+            print("Continuing anyway...")
+        
+        return model
     except Exception as e:
-        print(f"Error loading ONNX model: {e}")
+        print(f"Error loading model: {e}")
         sys.exit(1)
+
+
+def write_nwf_file(layers: List[LayerInfo], output_path: str, verbose: bool = False):
+    """Write layers to .nwf format"""
     
-    print(f"Model IR version: {model.ir_version}")
-    print(f"Model producer: {model.producer_name}")
-    
-    print(f"Extracting layers...")
-    layers = extract_onnx_layers(model)
-    
-    if not layers:
-        print("Error: No valid layers found in model")
-        sys.exit(1)
-    
-    print(f"Found {len(layers)} layers with weights:")
-    for layer in layers:
-        layer_type_name = ['Conv2D', 'Dense', 'BatchNorm', 'LayerNorm'][layer['type']]
-        print(f"  {layer['name']}: {layer_type_name} {layer['weight_shape']}")
-    
-    # Create output directory
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    
-    print(f"Writing .nwf file: {output_path}")
+    print(f"\nConverting {len(layers)} layers to .nwf format...")
     
     with open(output_path, 'wb') as f:
-        # Reserve header space
-        header_pos = f.tell()
-        f.write(b'\x00' * 256)
+        # ========== WRITE HEADER ==========
+        magic = b'NWGT'
+        version = 1
+        layer_count = len(layers)
+        alignment = 64
+        dtype = DTYPE_FLOAT32
+        metadata_offset = 256
         
-        # Reserve metadata table space
-        metadata_offset = f.tell()
-        metadata_list = []
-        for idx in range(len(layers)):
-            f.write(b'\x00' * 64)
+        # Header structure (256 bytes)
+        f.write(magic)                                    # 4 bytes: magic
+        f.write(struct.pack('<I', version))              # 4 bytes: version
+        f.write(struct.pack('<I', layer_count))          # 4 bytes: layer count
+        f.write(struct.pack('<Q', 0))                    # 8 bytes: total_size (placeholder)
+        f.write(struct.pack('<I', alignment))            # 4 bytes: alignment
+        f.write(struct.pack('<I', dtype))                # 4 bytes: dtype
+        f.write(struct.pack('<Q', metadata_offset))      # 8 bytes: metadata offset
         
-        # Align data section
-        data_offset = align_to(f.tell(), ALIGNMENT)
-        f.seek(data_offset)
+        # Calculate data offset
+        data_offset = metadata_offset + (layer_count * 64)
+        data_offset = align_to_64(data_offset)
+        f.write(struct.pack('<Q', data_offset))          # 8 bytes: data offset
+        f.write(bytes(212))                              # 212 bytes: reserved
         
-        # Write weights and collect metadata
-        for idx, layer in enumerate(layers):
-            meta = LayerMetadata(layer['type'], idx)
+        # ========== PREPARE METADATA ==========
+        metadata = []
+        current_offset = data_offset
+        
+        for i, layer in enumerate(layers):
+            weights = layer.weights.astype(np.float32)
             
-            # Write weights
-            meta.weight_offset, meta.weight_size = write_aligned_array(f, layer['weight'])
-            meta.weight_shape = layer['weight_shape']
+            # Calculate sizes
+            weight_size = weights.nbytes
+            bias_size = layer.bias.nbytes
             
-            # Write bias if present
-            if layer['bias'] is not None:
-                meta.bias_offset, meta.bias_size = write_aligned_array(f, layer['bias'])
-                meta.bias_shape = layer['bias_shape']
-            else:
-                meta.bias_offset = 0
-                meta.bias_size = 0
-                meta.bias_shape = [0]
+            # Align weight offset
+            weight_offset = align_to_64(current_offset)
+            current_offset = weight_offset + weight_size
             
-            metadata_list.append(meta)
+            # Align bias offset
+            bias_offset = align_to_64(current_offset)
+            current_offset = bias_offset + bias_size
+            
+            # Store metadata
+            weight_shape = layer.weight_shape()
+            metadata.append({
+                'layer_type': layer.layer_type,
+                'layer_id': i,
+                'weight_offset': weight_offset,
+                'weight_size': weight_size,
+                'weight_shape': weight_shape,
+                'bias_offset': bias_offset,
+                'bias_size': bias_size,
+                'bias_shape': layer.bias.shape[0],
+                'weights': weights,
+                'bias': layer.bias
+            })
+            
+            if verbose:
+                print(f"  [{i}] {layer.name}")
+                print(f"      Type: {['Conv2D', 'Dense', 'BatchNorm'][layer.layer_type]}")
+                print(f"      Weights: {weight_shape} ({weight_size:,} bytes)")
+                print(f"      Bias: [{layer.bias.shape[0]}] ({bias_size:,} bytes)")
         
-        total_size = f.tell()
+        total_size = current_offset
         
-        # Write metadata table
-        f.seek(metadata_offset)
-        for meta in metadata_list:
-            f.write(meta.to_bytes())
+        # ========== WRITE METADATA TABLE ==========
+        for meta in metadata:
+            f.write(struct.pack('<I', meta['layer_type']))           # 4 bytes
+            f.write(struct.pack('<I', meta['layer_id']))             # 4 bytes
+            f.write(struct.pack('<Q', meta['weight_offset']))        # 8 bytes
+            f.write(struct.pack('<Q', meta['weight_size']))          # 8 bytes
+            f.write(struct.pack('<IIII', *meta['weight_shape']))     # 16 bytes
+            f.write(struct.pack('<Q', meta['bias_offset']))          # 8 bytes
+            f.write(struct.pack('<Q', meta['bias_size']))            # 8 bytes
+            f.write(struct.pack('<I', meta['bias_shape']))           # 4 bytes
+            f.write(bytes(16))                                        # 16 bytes: reserved
         
-        # Write header
-        f.seek(header_pos)
-        header = struct.pack(
-            '<4sIIQIIQQ212s',
-            b'NWGT',
-            1,
-            len(layers),
-            total_size,
-            ALIGNMENT,
-            DTYPE_FLOAT32,
-            metadata_offset,
-            data_offset,
-            b'\x00' * 212
-        )
-        f.write(header)
+        # Pad to data_offset
+        current_pos = f.tell()
+        padding = data_offset - current_pos
+        if padding > 0:
+            f.write(bytes(padding))
+        
+        # ========== WRITE WEIGHT DATA ==========
+        for meta in metadata:
+            # Write weights (aligned)
+            current_pos = f.tell()
+            padding = meta['weight_offset'] - current_pos
+            if padding > 0:
+                f.write(bytes(padding))
+            
+            f.write(meta['weights'].tobytes())
+            
+            # Write bias (aligned)
+            current_pos = f.tell()
+            padding = meta['bias_offset'] - current_pos
+            if padding > 0:
+                f.write(bytes(padding))
+            
+            f.write(meta['bias'].astype(np.float32).tobytes())
+        
+        # ========== UPDATE HEADER WITH TOTAL SIZE ==========
+        f.seek(8)
+        f.write(struct.pack('<Q', total_size))
     
-    print(f"✓ Conversion complete!")
+    # Print summary
+    print(f"\n✓ Conversion complete!")
     print(f"  Output file: {output_path}")
-    print(f"  Total size: {total_size:,} bytes ({total_size / 1024 / 1024:.2f} MB)")
+    print(f"  Total size: {total_size:,} bytes ({total_size / (1024**2):.2f} MB)")
     print(f"  Layers: {len(layers)}")
+    print(f"  Alignment: {alignment} bytes")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert ONNX models to NetLang Weight Format (.nwf)',
+        description="Convert ONNX model weights to NetLang .nwf format",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Convert ONNX model
-  python convert_onnx.py --model resnet50.onnx --output models/resnet50.nwf
-  
-  # Convert with verbose output
-  python convert_onnx.py --model model.onnx --output weights.nwf
+  python convert_onnx.py --model vgg16.onnx --output vgg16.nwf
+  python convert_onnx.py --model resnet50.onnx --output resnet50.nwf --verbose
+
+Notes:
+  - Extracts Conv, Gemm (Dense), MatMul, and BatchNormalization operations
+  - Optimizes Dense layer weight layout for cache efficiency
+  - Ensures 64-byte alignment for AVX2 performance
+  - Validates ONNX model before conversion
         """
     )
     
-    parser.add_argument('--model', '-m', required=True,
-                        help='Path to ONNX .onnx file')
-    parser.add_argument('--output', '-o', required=True,
-                        help='Output .nwf file path')
+    parser.add_argument('--model', required=True, help='Input ONNX model file (.onnx)')
+    parser.add_argument('--output', required=True, help='Output .nwf file')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     
     args = parser.parse_args()
     
-    if not Path(args.model).exists():
-        print(f"Error: Model file not found: {args.model}")
+    # Load model
+    model = load_onnx_model(args.model)
+    
+    # Extract layers
+    layers = extract_layers_from_onnx_model(model)
+    
+    if len(layers) == 0:
+        print("Error: No Conv, Gemm, or BatchNorm layers found in model")
+        print("Make sure the model contains weight parameters (not just the graph structure)")
         sys.exit(1)
     
-    convert_onnx_to_nwf(args.model, args.output)
+    print(f"\nFound {len(layers)} layers:")
+    for i, layer in enumerate(layers):
+        layer_type_name = ['Conv2D', 'Dense', 'BatchNorm'][layer.layer_type]
+        print(f"  {i}: {layer.name} ({layer_type_name}) {layer.weight_shape()}")
+    
+    # Convert to .nwf
+    write_nwf_file(layers, args.output, args.verbose)
 
 
 if __name__ == '__main__':

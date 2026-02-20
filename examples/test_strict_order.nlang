@@ -1,0 +1,37 @@
+// Test cases for strict network body ordering
+// This file demonstrates INVALID networks that violate ordering rules
+
+// INVALID: Empty network - no input, no statements
+network Empty {
+}
+
+// INVALID: Only input, no computational statements  
+network OnlyInput {
+    input(shape: [28, 28, 1])
+}
+
+// INVALID: Statement before input (wrong order)
+network WrongOrder {
+    x = Dense(units: 10) from input
+    input(shape: [28, 28, 1])
+}
+
+// INVALID: Weights before input (wrong order)
+network WeightsFirst {
+    weights("model.nwf")
+    input(shape: [28, 28, 1])
+    x = Dense(units: 10) from input
+}
+
+// VALID: Correct order - input, weights, statements
+network CorrectOrder {
+    input(shape: [28, 28, 1])
+    weights("model.nwf")
+    x = Dense(units: 10, activation: softmax) from input
+}
+
+// VALID: Input + statements (weights optional)
+network NoWeights {
+    input(shape: [28, 28, 1])
+    x = Dense(units: 10, activation: softmax) from input
+}

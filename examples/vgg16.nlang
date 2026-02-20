@@ -2,7 +2,7 @@
 // Deep convolutional network with small kernels
 network ImageNet_VGG {
     input(shape: [224, 224, 3])
-    weights("models/vgg16.bin")
+    weights("models/vgg16.nwf")
     
     x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
     x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x

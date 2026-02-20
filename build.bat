@@ -20,7 +20,7 @@ echo [3/4] Compiling...
 gcc -Wall -g -c -o build\lex.yy.o build\lex.yy.c -Ibuild -Isrc\ast
 if errorlevel 1 goto error
 
-gcc -Wall -g -c -o build\net_lang.tab.o build\net_lang.tab.c -Ibuild -Isrc\ast
+gcc -Wall -g -c -o build\net_lang.tab.o build\net_lang.tab.c -Ibuild -Isrc\ast -DNETLANG_NO_PARSER_MAIN
 if errorlevel 1 goto error
 
 gcc -Wall -g -c -o build\ast.o src\ast\ast.c -Isrc\ast
@@ -35,8 +35,14 @@ if errorlevel 1 goto error
 gcc -Wall -g -c -o build\type_checker.o src\semantic\type_checker.c -Isrc\ast -Isrc\semantic
 if errorlevel 1 goto error
 
+gcc -Wall -g -c -o build\codegen.o src\codegen\codegen.c -Isrc\ast -Isrc\semantic -Isrc\codegen
+if errorlevel 1 goto error
+
+gcc -Wall -g -c -o build\main.o src\main.c -Isrc
+if errorlevel 1 goto error
+
 echo [4/4] Linking...
-gcc -Wall -g -o build\netlang.exe build\lex.yy.o build\net_lang.tab.o build\ast.o build\semantic.o build\symbol_table.o build\type_checker.o
+gcc -Wall -g -o build\netlang.exe build\lex.yy.o build\net_lang.tab.o build\ast.o build\semantic.o build\symbol_table.o build\type_checker.o build\codegen.o build\main.o
 if errorlevel 1 goto error
 
 echo.

@@ -1027,27 +1027,27 @@ YY_RULE_SETUP
 case 23:
 YY_RULE_SETUP
 #line 76 "src\\lexer\\net_lang.l"
-{ yylval.sval = strdup(yytext); return RELU; }
+{ return RELU; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
 #line 77 "src\\lexer\\net_lang.l"
-{ yylval.sval = strdup(yytext); return SIGMOID; }
+{ return SIGMOID; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
 #line 78 "src\\lexer\\net_lang.l"
-{ yylval.sval = strdup(yytext); return TANH; }
+{ return TANH; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
 #line 79 "src\\lexer\\net_lang.l"
-{ yylval.sval = strdup(yytext); return SOFTMAX; }
+{ return SOFTMAX; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
 #line 80 "src\\lexer\\net_lang.l"
-{ yylval.sval = strdup(yytext); return LINEAR; }
+{ return LINEAR; }
 	YY_BREAK
 /* ========== NUMBERS ========== */
 case 28:

@@ -1,0 +1,5 @@
+// INVALID: Statement before input (wrong order)
+network WrongOrder {
+    x = Dense(units: 10) from input
+    input(shape: [28, 28, 1])
+}

@@ -82,7 +82,7 @@ ASTNode* ast_root = NULL;
 %type <node> flatten_layer concat_layer norm_layer module_call
 %type <node> expr from_clause identifier_expr
 %type <node> number array
-%type <list> module_list statement_list array_elements concat_args
+%type <list> module_list statement_list statement_list_nonempty array_elements concat_args
 %type <params> module_params param_list layer_params layer_param_list
 %type <activation> activation_value
 %type <netbody> network_body
@@ -137,23 +137,11 @@ network_def:
     ;
 
 network_body:
-    /* empty */ {
+    input_decl weights_decl statement_list_nonempty {
         $$ = (NetworkBody*)ast_alloc(sizeof(NetworkBody));
-        $$->input = NULL;
-        $$->weights = NULL;
-        $$->statements = ast_list_new();
-    }
-    | network_body input_decl {
-        $1->input = $2;
-        $$ = $1;
-    }
-    | network_body weights_decl {
-        $1->weights = $2;
-        $$ = $1;
-    }
-    | network_body statement {
-        ast_list_append($1->statements, $2);
-        $$ = $1;
+        $$->input = $1;
+        $$->weights = $2;
+        $$->statements = $3;
     }
     ;
 
@@ -217,6 +205,17 @@ statement_list:
     }
     ;
 
+statement_list_nonempty:
+    statement {
+        $$ = ast_list_new();
+        ast_list_append($$, $1);
+    }
+    | statement_list_nonempty statement {
+        ast_list_append($1, $2);
+        $$ = $1;
+    }
+    ;
+
 statement:
     assignment { $$ = $1; }
     ;
@@ -240,11 +239,6 @@ return_stmt:
         node->data.return_stmt.value = $2;
         $$ = node;
     }
-    | RETURN concat_layer {
-        ASTNode* node = ast_node_new(NODE_RETURN, @1.first_line);
-        node->data.return_stmt.value = $2;
-        $$ = node;
-    }
     ;
 
 /* ========== LAYER EXPRESSIONS ========== */
@@ -262,39 +256,27 @@ layer_expr:
 /* ========== CONV2D LAYER ========== */
 
 conv2d_layer:
-    CONV2D LPAREN layer_params RPAREN {
+    CONV2D LPAREN 
+        FILTERS COLON expr COMMA 
+        KERNEL COLON array COMMA 
+        STRIDE COLON expr COMMA 
+        PADDING COLON expr COMMA 
+        ACTIVATION COLON activation_value 
+    RPAREN {
         ASTNode* node = ast_node_new(NODE_CONV2D, @1.first_line);
-        /* Default values */
-        node->data.conv2d.filters = 1;
-        node->data.conv2d.kernel[0] = 3;
-        node->data.conv2d.kernel[1] = 3;
-        node->data.conv2d.stride = 1;
-        node->data.conv2d.padding = 0;
-        node->data.conv2d.activation = ACT_NONE;
         
-        /* Process parameters */
-        Parameter* p = $3->head;
-        while (p) {
-            if (strcmp(p->name, "filters") == 0 && p->value) {
-                node->data.conv2d.filters = p->value->data.number.ival;
-            } else if (strcmp(p->name, "kernel") == 0 && p->value) {
-                ASTNode* arr = p->value;
-                if (arr->type == NODE_ARRAY && arr->data.array.elements) {
-                    ASTNode* e = arr->data.array.elements->head;
-                    if (e) { node->data.conv2d.kernel[0] = e->data.number.ival; e = e->next; }
-                    if (e) { node->data.conv2d.kernel[1] = e->data.number.ival; }
-                }
-            } else if (strcmp(p->name, "stride") == 0 && p->value) {
-                node->data.conv2d.stride = p->value->data.number.ival;
-            } else if (strcmp(p->name, "padding") == 0 && p->value) {
-                node->data.conv2d.padding = p->value->data.number.ival;
-            } else if (strcmp(p->name, "activation") == 0 && p->value) {
-                if (p->value->type == NODE_IDENTIFIER) {
-                    node->data.conv2d.activation = activation_from_string(p->value->data.identifier.name);
-                }
-            }
-            p = p->next;
-        }
+        /* Strict positional assignment */
+        node->data.conv2d.filters = $5->data.number.ival;
+        
+        /* Parse kernel array */
+        ASTNode* e = $9->data.array.elements->head;
+        if (e) { node->data.conv2d.kernel[0] = e->data.number.ival; e = e->next; }
+        if (e) { node->data.conv2d.kernel[1] = e->data.number.ival; }
+        
+        node->data.conv2d.stride = $13->data.number.ival;
+        node->data.conv2d.padding = $17->data.number.ival;
+        node->data.conv2d.activation = $21;
+        
         $$ = node;
     }
     ;
@@ -302,22 +284,15 @@ conv2d_layer:
 /* ========== DENSE LAYER ========== */
 
 dense_layer:
-    DENSE LPAREN layer_params RPAREN {
+    DENSE LPAREN 
+        UNITS COLON expr COMMA 
+        ACTIVATION COLON activation_value 
+    RPAREN {
         ASTNode* node = ast_node_new(NODE_DENSE, @1.first_line);
-        node->data.dense.units = 1;
-        node->data.dense.activation = ACT_NONE;
         
-        Parameter* p = $3->head;
-        while (p) {
-            if (strcmp(p->name, "units") == 0 && p->value) {
-                node->data.dense.units = p->value->data.number.ival;
-            } else if (strcmp(p->name, "activation") == 0 && p->value) {
-                if (p->value->type == NODE_IDENTIFIER) {
-                    node->data.dense.activation = activation_from_string(p->value->data.identifier.name);
-                }
-            }
-            p = p->next;
-        }
+        node->data.dense.units = $5->data.number.ival;
+        node->data.dense.activation = $9;
+        
         $$ = node;
     }
     ;
@@ -325,54 +300,38 @@ dense_layer:
 /* ========== POOLING LAYERS ========== */
 
 pool_layer:
-    MAXPOOL LPAREN layer_params RPAREN {
+    MAXPOOL LPAREN 
+        POOL COLON array COMMA 
+        STRIDE COLON expr COMMA 
+        PADDING COLON expr 
+    RPAREN {
         ASTNode* node = ast_node_new(NODE_MAXPOOL, @1.first_line);
-        node->data.pooling.pool[0] = 2;
-        node->data.pooling.pool[1] = 2;
-        node->data.pooling.stride = 0;  /* 0 means same as pool size */
-        node->data.pooling.padding = 0;
         
-        Parameter* p = $3->head;
-        while (p) {
-            if (strcmp(p->name, "pool") == 0 && p->value) {
-                ASTNode* arr = p->value;
-                if (arr->type == NODE_ARRAY && arr->data.array.elements) {
-                    ASTNode* e = arr->data.array.elements->head;
-                    if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
-                    if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
-                }
-            } else if (strcmp(p->name, "stride") == 0 && p->value) {
-                node->data.pooling.stride = p->value->data.number.ival;
-            } else if (strcmp(p->name, "padding") == 0 && p->value) {
-                node->data.pooling.padding = p->value->data.number.ival;
-            }
-            p = p->next;
-        }
+        /* Parse pool array */
+        ASTNode* e = $5->data.array.elements->head;
+        if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
+        if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
+        
+        node->data.pooling.stride = $9->data.number.ival;
+        node->data.pooling.padding = $13->data.number.ival;
+        
         $$ = node;
     }
-    | AVGPOOL LPAREN layer_params RPAREN {
+    | AVGPOOL LPAREN 
+        POOL COLON array COMMA 
+        STRIDE COLON expr COMMA 
+        PADDING COLON expr 
+    RPAREN {
         ASTNode* node = ast_node_new(NODE_AVGPOOL, @1.first_line);
-        node->data.pooling.pool[0] = 2;
-        node->data.pooling.pool[1] = 2;
-        node->data.pooling.stride = 0;
-        node->data.pooling.padding = 0;
         
-        Parameter* p = $3->head;
-        while (p) {
-            if (strcmp(p->name, "pool") == 0 && p->value) {
-                ASTNode* arr = p->value;
-                if (arr->type == NODE_ARRAY && arr->data.array.elements) {
-                    ASTNode* e = arr->data.array.elements->head;
-                    if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
-                    if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
-                }
-            } else if (strcmp(p->name, "stride") == 0 && p->value) {
-                node->data.pooling.stride = p->value->data.number.ival;
-            } else if (strcmp(p->name, "padding") == 0 && p->value) {
-                node->data.pooling.padding = p->value->data.number.ival;
-            }
-            p = p->next;
-        }
+        /* Parse pool array */
+        ASTNode* e = $5->data.array.elements->head;
+        if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
+        if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
+        
+        node->data.pooling.stride = $9->data.number.ival;
+        node->data.pooling.padding = $13->data.number.ival;
+        
         $$ = node;
     }
     ;
@@ -575,6 +534,9 @@ void yyerror(const char* s) {
 
 /* ========== MAIN FUNCTION ========== */
 
+#ifndef NETLANG_NO_PARSER_MAIN
+/* Test main - only compiled when not using external main.c */
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <source.nlang>\n", argv[0]);
@@ -633,3 +595,5 @@ int main(int argc, char** argv) {
     
     return 0;
 }
+
+#endif /* NETLANG_NO_PARSER_MAIN */
