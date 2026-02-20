@@ -5,70 +5,70 @@ This guide shows how to use the complete NetLang inference system with real imag
 ## System Overview
 
 ```
-┌─────────────┐      ┌──────────────┐      ┌─────────────┐
-│   Images    │──→───│ Preprocessor │──→───│  Inference  │
-│ (.png/.jpg) │      │   (Python)   │      │     (C)     │
-└─────────────┘      └──────────────┘      └─────────────┘
-                            ↓                      ↓
-                      .bin files              Predictions
+┌─────────────┐      ┌─────────────┐
+│  MNIST IDX  │──→───│  Inference  │
+│   Download  │      │   (C/AVX2)  │
+│  + Convert  │      │   Runtime   │
+│   (Python)  │      │             │
+└─────────────┘      └─────────────┘
+       ↓                    ↓
+   .bin files          Predictions
 ```
 
-**Workflow:**
-1. **Preprocess images** (Python) → Convert to `.bin` format
-2. **Run inference** (C/AVX2) → Get predictions
+**Simplified Workflow:**
+1. **Download & Convert** (Python) → MNIST directly to `.bin` format
+2. **Run Inference** (C/AVX2) → Get predictions
+
+**Key Improvement:** No manual preprocessing needed! The download script converts
+MNIST directly from IDX format to `.bin` format in one step.
 
 ---
 
 ## Prerequisites
 
 ```bash
-# Python dependencies
-pip install Pillow numpy
-
-# Optional: For downloading MNIST samples
-pip install mnist
+# Required for downloading MNIST
+pip install torch torchvision numpy
 ```
 
 ---
 
-## Quick Start (5 minutes)
+## Quick Start (2 minutes)
 
-### Step 1: Get Test Images
-
-**Option A: Download MNIST samples**
-```bash
-python tools/download_mnist_samples.py
-```
-
-**Option B: Use your own images**
-```bash
-# Copy any 28x28 or larger grayscale/color images
-cp my_digit_7.png test_data/images/
-```
-
-### Step 2: Preprocess Images
+### Step 1: Download MNIST Test Data (direct to .bin format!)
 
 ```bash
-# Entire folder (recommended)
-python tools/preprocess.py test_data/images/ test_data/preprocessed/
-
-# Single image
-python tools/preprocess.py test_data/images/digit_7.png test_data/preprocessed/digit_7.bin
+python tools/download_mnist_for_netlang.py
 ```
+
+This downloads **all 10,000 MNIST test images** and converts them directly to `.bin` format.
 
 **Output:**
 ```
-Found 20 images in test_data/images
-Converting to test_data/preprocessed...
-------------------------------------------------------------
-✓ mnist_000_label_7.png → mnist_000_label_7.bin (4.0 KB)
-✓ mnist_001_label_2.png → mnist_001_label_2.bin (4.0 KB)
-...
-------------------------------------------------------------
-✓ Successfully converted 20/20 images
+======================================================================
+NetLang MNIST Dataset Downloader
+======================================================================
+Downloading all 10,000 MNIST test images...
+(First run downloads ~10MB from http://yann.lecun.com/exdb/mnist/)
+
+Converting to .bin format (32×32 grayscale, float32, [0,1])...
+Output: test_data/preprocessed/
+----------------------------------------------------------------------
+  Processed 1000/10000 images...
+  Processed 2000/10000 images...
+  ...
+  Processed 10000/10000 images...
+----------------------------------------------------------------------
+✓ Successfully created 10,000 .bin files (~40 MB)
+
+Quick test:
+  bin\test_network.exe test_data/preprocessed\mnist_0000_label_7.bin
+
+Cleanup tip: Delete data/ folder (55 MB cache) to save space.
+======================================================================
 ```
 
-### Step 3: Compile Test Harness (if not already done)
+### Step 2: Compile Test Harness (if not already done)
 
 ```bash
 # Windows
@@ -88,33 +88,33 @@ gcc -O3 -march=haswell -mavx2 -mfma -I. \
     -o bin/test_network
 ```
 
-### Step 4: Run Inference
+### Step 3: Run Inference
 
 ```bash
 # Single image
-bin\test_network.exe test_data\preprocessed\digit_7.bin
+bin\test_network.exe test_data\preprocessed\mnist_007_label_0.bin
 ```
 
 **Output:**
 ```
 NetLang Inference
 =================
-Input file: test_data\preprocessed\digit_7.bin
+Input file: test_data\preprocessed\mnist_007_label_0.bin
 Loading input... OK (1024 floats)
 Initializing network... OK
-Running inference... OK (4.23 ms)
+Running inference... OK (3.87 ms)
 
 =================
-RESULT: 7
+RESULT: 0
 =================
-Confidence: 98.45%
-Inference time: 4.23 ms
+Confidence: 99.23%
+Inference time: 3.87 ms
 
 Probability distribution:
-  Class 0:  0.02% |
-  Class 1:  0.15% |
-  Class 7: 98.45% |████████████████████████████████████████████████
-  Class 8:  0.80% |
+  Class 0: 99.23% |████████████████████████████████████████████████
+  Class 1:  0.12% |
+  Class 2:  0.05% |
+  Class 8:  0.34% |
   ...
 
 Done!
@@ -124,19 +124,21 @@ Done!
 
 ## Batch Testing
 
-Process multiple images for benchmarking:
+Run inference on multiple test images:
 
 ```bash
-# Preprocess entire dataset
-python tools/preprocess.py test_data/images/ test_data/preprocessed/
-
-# Run inference on all images (PowerShell)
-Get-ChildItem test_data\preprocessed\*.bin | ForEach-Object {
-    Write-Host "`n--- $_---"
+# PowerShell - test first 10 images
+Get-ChildItem test_data\preprocessed\mnist_000*.bin | ForEach-Object {
+    Write-Host "`n=== $_ ==="
     bin\test_network.exe $_.FullName
 }
 
-# Or use a simple loop (CMD)
+# Test all 10,000 images
+Get-ChildItem test_data\preprocessed\*.bin | ForEach-Object {
+    bin\test_network.exe $_.FullName
+}
+
+# CMD
 for %%f in (test_data\preprocessed\*.bin) do (
     bin\test_network.exe %%f
 )
@@ -179,36 +181,53 @@ print(f"Max: {np.max(times)*1000:.2f}ms")
 
 ```
 test_data/
-├── images/              # Original images (your input)
-│   ├── digit_0.png
-│   ├── digit_1.png
-│   └── ...
-├── preprocessed/        # Converted .bin files
-│   ├── digit_0.bin     # 4KB each (1024 floats)
-│   ├── digit_1.bin
+├── preprocessed/         # .bin files (ready for inference)
+│   ├── mnist_000_label_7.bin
+│   ├── mnist_001_label_2.bin
 │   └── ...
 └── README.md
 ```
 
+**Note:** With the new download script, you no longer need an `images/` folder!
+MNIST is converted directly to `.bin` format.
+
 ---
 
 ## File Formats
-
-### Input Images
-- **Formats:** PNG, JPG, JPEG, BMP
-- **Size:** Any (will be resized to 32×32)
-- **Color:** Any (will be converted to grayscale)
 
 ### Preprocessed Binary (.bin)
 - **Type:** Raw float32 binary
 - **Shape:** 32 × 32 × 1 = 1024 floats
 - **Size:** 4096 bytes
 - **Range:** [0.0, 1.0] (normalized pixel values)
+- **Layout:** Row-major, H×W×C format
 
 ### Output
 - **Predicted class:** 0-9 (digit)
 - **Confidence:** Probability [0.0, 1.0]
-- **Inference time:** Milliseconds
+- **Inference time:** Milliseconds (AVX2-optimized)
+
+---
+
+## Using Custom Images (Not MNIST)
+
+If you want to test with your own images (not MNIST), use the preprocessing tool:
+
+```bash
+# Single image
+python tools/preprocess.py my_digit.png test_data/preprocessed/my_digit.bin
+
+# Entire folder
+python tools/preprocess.py my_images/ test_data/preprocessed/
+```
+
+**Supported formats:** PNG, JPG, JPEG, BMP  
+**Input requirements:** Any size (resized to 32×32), any color (converted to grayscale)
+
+**Dependencies:**
+```bash
+pip install Pillow numpy
+```
 
 ---
 

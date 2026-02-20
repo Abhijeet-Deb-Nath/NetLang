@@ -1,0 +1,21 @@
+// Simple Classifier - Minimal NetLang Example
+// Dataset: Any 28×28 grayscale image classification task
+// Classes: 10
+// Architecture: Simple Dense layers only (no convolution)
+
+network SimpleClassifier {
+    input(shape: [28, 28, 1])
+    weights("models/simple_classifier.nwf")
+    
+    // Flatten input: 28×28×1 = 784
+    x = Flatten() from input
+    
+    // Hidden layer 1: 784 → 256
+    x = Dense(units: 256, activation: relu) from x
+    
+    // Hidden layer 2: 256 → 128  
+    x = Dense(units: 128, activation: relu) from x
+    
+    // Output layer: 128 → 10
+    x = Dense(units: 10, activation: softmax) from x
+}

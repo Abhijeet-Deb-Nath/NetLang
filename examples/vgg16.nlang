@@ -1,17 +1,47 @@
-// VGG-16 style architecture for ImageNet classification
-// Deep convolutional network with small kernels
-network ImageNet_VGG {
+// VGG-16 Architecture for ImageNet Classification
+// Paper: "Very Deep Convolutional Networks for Large-Scale Image Recognition" (Simonyan & Zisserman, 2014)
+// Dataset: ImageNet (1000 classes)
+// Input: 224×224 RGB images
+// Total parameters: ~138 million
+// Architecture: 13 Conv layers + 3 Dense layers
+
+network VGG16 {
     input(shape: [224, 224, 3])
-    weights("models/vgg16.nwf")
+    weights("models/vgg16_imagenet.nwf")
     
-    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
-    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2]) from x
+    // Block 1: 64 filters
+    x = Conv2D(filters: 64, kernel: [3, 3], padding: 1, activation: relu) from input
+    x = Conv2D(filters: 64, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2) from x  // 224×224 → 112×112
     
-    x = Conv2D(filters: 128, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2]) from x
+    // Block 2: 128 filters
+    x = Conv2D(filters: 128, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = Conv2D(filters: 128, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2) from x  // 112×112 → 56×56
     
+    // Block 3: 256 filters
+    x = Conv2D(filters: 256, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = Conv2D(filters: 256, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = Conv2D(filters: 256, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2) from x  // 56×56 → 28×28
+    
+    // Block 4: 512 filters
+    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2) from x  // 28×28 → 14×14
+    
+    // Block 5: 512 filters
+    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2) from x  // 14×14 → 7×7
+    
+    // Flatten: 7×7×512 = 25088
     x = Flatten() from x
+    
+    // Fully connected layers
     x = Dense(units: 4096, activation: relu) from x
-    x = Dense(units: 1000, activation: softmax) from x
+    x = Dense(units: 4096, activation: relu) from x
+    x = Dense(units: 1000, activation: softmax) from x  // ImageNet 1000 classes
 }

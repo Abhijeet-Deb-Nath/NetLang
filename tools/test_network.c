@@ -150,6 +150,8 @@ int main(int argc, char** argv) {
     printf("OK\n");
     
     // Allocate output
+    printf("Allocating output buffer... ");
+    fflush(stdout);
     float* output = (float*)malloc(OUTPUT_SIZE * sizeof(float));
     if (!output) {
         fprintf(stderr, "Error: Cannot allocate output buffer\n");
@@ -157,13 +159,20 @@ int main(int argc, char** argv) {
         free(input);
         return 1;
     }
+    printf("OK\n");
     
     // Run inference with timing
     printf("Running inference... ");
     fflush(stdout);
     
+    printf("[DEBUG: About to call clock()]\n");
+    fflush(stdout);
     clock_t start = clock();
+    printf("[DEBUG: About to call network_infer()]\n");
+    fflush(stdout);
     network_infer(net, input, output);
+    printf("[DEBUG: network_infer() returned]\n");
+    fflush(stdout);
     clock_t end = clock();
     
     double inference_time_ms = ((double)(end - start) / CLOCKS_PER_SEC) * 1000.0;

@@ -1,43 +1,31 @@
 # Test Data Directory
 
-This directory contains test images and preprocessed data for NetLang inference.
+This directory contains preprocessed test data for NetLang inference.
 
 ## Directory Structure
 
 ```
 test_data/
-├── images/          # Original test images (PNG, JPG, etc.)
-├── preprocessed/    # Converted binary files (.bin)
+├── preprocessed/    # Binary files ready for inference (.bin)
 └── README.md        # This file
 ```
 
-## Workflow
+## Quick Start Workflow
 
-### 1. Add Test Images
-
-Put your test images in `test_data/images/`:
+### 1. Download MNIST Test Data (Direct to .bin format!)
 
 ```bash
-# Download MNIST samples
-python tools/download_mnist_samples.py
-
-# Or copy your own images
-cp my_digit.png test_data/images/
+python tools/download_mnist_for_netlang.py
 ```
 
-### 2. Preprocess Images
+This downloads **all 10,000 MNIST test images** and converts directly to `.bin` format in one step!
 
-Convert images to binary format for NetLang:
-
+**Requirements:**
 ```bash
-# Single image
-python tools/preprocess.py test_data/images/digit_7.png test_data/preprocessed/digit_7.bin
-
-# Entire folder
-python tools/preprocess.py test_data/images/ test_data/preprocessed/
+pip install torch torchvision numpy
 ```
 
-### 3. Run Inference
+### 2. Run Inference
 
 Compile and run the test harness:
 
@@ -87,11 +75,6 @@ Done!
 
 ## File Formats
 
-### Input Images
-- **Supported:** PNG, JPG, JPEG, BMP
-- **Any size:** Will be resized to 32×32
-- **Any color:** Will be converted to grayscale
-
 ### Preprocessed Binary (.bin)
 - **Format:** Raw float32 binary
 - **Shape:** 32 × 32 × 1 = 1024 floats
@@ -99,19 +82,44 @@ Done!
 - **Range:** [0.0, 1.0] (normalized pixel values)
 - **Layout:** Row-major (HWC format)
 
-## Batch Processing
+## Using Custom Images (Not MNIST)
 
-For benchmarking, preprocess many images at once:
+If you want to test with your own images instead of MNIST:
 
 ```bash
-# Preprocess 1000 images
-python tools/preprocess.py test_data/images/ test_data/preprocessed/
+# Install dependencies
+pip install Pillow numpy
 
-# Benchmark inference speed
-time for f in test_data/preprocessed/*.bin; do
-    bin/test_network.exe $f
-done
+# Single image
+python tools/preprocess.py my_digit.png test_data/preprocessed/my_digit.bin
+
+# Entire folder
+python tools/preprocess.py my_images/ test_data/preprocessed/
 ```
+
+**Supported formats:** PNG, JPG, JPEG, BMP  
+**Input requirements:** Any size (resized to 32×32), any color (converted to grayscale)
+
+## Batch Processing
+
+For benchmarking with all images:
+
+```bash
+# Run inference on all 10,000 test images (PowerShell)
+Get-ChildItem test_data\preprocessed\*.bin | ForEach-Object {
+    bin\test_network.exe $_.FullName
+}
+```
+
+## Disk Space Management
+
+```
+data/                    55 MB (PyTorch cache - can be deleted)
+test_data/preprocessed/  40 MB (10,000 .bin files - needed for inference)
+```
+
+After conversion, you can delete `data/` to save 55 MB. It will re-download
+if you run the script again.
 
 ## Git Ignore
 

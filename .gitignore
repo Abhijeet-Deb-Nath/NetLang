@@ -65,6 +65,9 @@ test_data/images/*.jpg
 test_data/images/*.jpeg
 test_data/preprocessed/*.bin
 
+# Dataset cache (PyTorch/TensorFlow downloads)
+data/
+
 # Keep structure folders
 !bin/.gitkeep
 !generated/.gitkeep

@@ -1,0 +1,17 @@
+// VGG-16 style architecture for ImageNet classification
+// Deep convolutional network with small kernels
+network ImageNet_VGG {
+    input(shape: [224, 224, 3])
+    weights("models/vgg16.nwf")
+    
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2]) from x
+    
+    x = Conv2D(filters: 128, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2]) from x
+    
+    x = Flatten() from x
+    x = Dense(units: 4096, activation: relu) from x
+    x = Dense(units: 1000, activation: softmax) from x
+}

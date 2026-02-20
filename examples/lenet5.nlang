@@ -1,0 +1,39 @@
+// LeNet-5 Architecture for MNIST Dataset
+// Paper: "Gradient-Based Learning Applied to Document Recognition" (LeCun et al., 1998)
+// Dataset: MNIST (28x28 handwritten digits, resized to 32x32 for this implementation)
+// Classes: 10 (digits 0-9)
+// Input: 32×32 grayscale images
+// Architecture: Conv(6)→Pool→Conv(16)→Pool→Dense(120)→Dense(84)→Dense(10)
+
+network LeNet5 {
+    input(shape: [32, 32, 1])
+    weights("models/lenet5_mnist.nwf")
+    
+    // First convolutional layer: 32×32×1 → 28×28×6
+    // 6 filters, 5×5 kernel, stride 1, no padding
+    x = Conv2D(filters: 6, kernel: [5, 5], stride: 1, padding: 0, activation: relu) from input
+    
+    // First pooling layer: 28×28×6 → 14×14×6
+    // 2×2 max pooling, stride 2
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x
+    
+    // Second convolutional layer: 14×14×6 → 10×10×16
+    // 16 filters, 5×5 kernel, stride 1, no padding
+    x = Conv2D(filters: 16, kernel: [5, 5], stride: 1, padding: 0, activation: relu) from x
+    
+    // Second pooling layer: 10×10×16 → 5×5×16
+    // 2×2 max pooling, stride 2
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x
+    
+    // Flatten: 5×5×16 = 400 neurons
+    x = Flatten() from x
+    
+    // First fully connected layer: 400 → 120
+    x = Dense(units: 120, activation: relu) from x
+    
+    // Second fully connected layer: 120 → 84
+    x = Dense(units: 84, activation: relu) from x
+    
+    // Output layer: 84 → 10 (softmax for classification)
+    x = Dense(units: 10, activation: softmax) from x
+}
