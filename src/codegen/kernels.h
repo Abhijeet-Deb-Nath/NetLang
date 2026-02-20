@@ -141,6 +141,12 @@ void avgpool2d_forward(
 void flatten(const float* input, float* output, int size);
 
 /**
+ * Flatten HWC to CHW order for compatibility with PyTorch/ONNX dense layers
+ * Input is [H][W][C], output is [C][H][W] flattened
+ */
+void flatten_hwc_to_chw(const float* input, float* output, int H, int W, int C);
+
+/**
  * Concatenate multiple tensors along channel dimension
  */
 void concat_forward(

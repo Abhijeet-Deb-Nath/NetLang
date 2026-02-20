@@ -32,8 +32,8 @@ extern NetworkState* network_init(void);
 extern void network_infer(NetworkState* net, float* input, float* output);
 extern void network_cleanup(NetworkState* net);
 
-// Expected input size for MNIST network (32x32x1)
-#define INPUT_SIZE (32 * 32 * 1)
+// Expected input size for MNIST network (28x28x1 native MNIST)
+#define INPUT_SIZE (28 * 28 * 1)
 #define OUTPUT_SIZE 10
 
 // Helper: Get file size

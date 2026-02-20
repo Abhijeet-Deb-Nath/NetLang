@@ -101,8 +101,8 @@ void conv2d_forward_avx2(
                     
                     for (int kw = 0; kw < K_w; kw++) {
                         for (int ic = 0; ic < C_in; ic++) {
-                            /* Weight for this position */
-                            int w_idx = ((kh * K_w + kw) * C_in + ic) * C_out + oc;
+                            /* Weight layout: OIHW [out_ch][in_ch][kh][kw] */
+                            int w_idx = ((oc * C_in + ic) * K_h + kh) * K_w + kw;
                             __m256 weight_vec = _mm256_set1_ps(weights[w_idx]);
                             
                             /* Gather inputs for 8 output pixels */
@@ -272,6 +272,26 @@ void flatten(const float* input, float* output, int size) {
     memcpy(output, input, size * sizeof(float));
 }
 
+void flatten_hwc_to_chw(const float* input, float* output, int H, int W, int C) {
+    /*
+     * Convert HWC [H][W][C] layout to CHW [C][H][W] layout
+     * This is needed for compatibility with PyTorch/ONNX dense layers
+     * which expect CHW flattening
+     *
+     * Input index:  (h * W + w) * C + c
+     * Output index: c * H * W + h * W + w
+     */
+    for (int c = 0; c < C; c++) {
+        for (int h = 0; h < H; h++) {
+            for (int w = 0; w < W; w++) {
+                int in_idx = (h * W + w) * C + c;
+                int out_idx = c * H * W + h * W + w;
+                output[out_idx] = input[in_idx];
+            }
+        }
+    }
+}
+
 void concat_forward(
     const float** inputs,
     float* output,
@@ -348,7 +368,8 @@ void conv2d_relu_forward_avx2(
                     
                     for (int kw = 0; kw < K_w; kw++) {
                         for (int ic = 0; ic < C_in; ic++) {
-                            int w_idx = ((kh * K_w + kw) * C_in + ic) * C_out + oc;
+                            /* Weight layout: OIHW [out_ch][in_ch][kh][kw] */
+                            int w_idx = ((oc * C_in + ic) * K_h + kh) * K_w + kw;
                             __m256 weight_vec = _mm256_set1_ps(weights[w_idx]);
                             
                             for (int b = 0; b < batch_size; b++) {

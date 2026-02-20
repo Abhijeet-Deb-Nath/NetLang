@@ -1,17 +1,17 @@
 # NetLang Compiler
 
-**A domain-specific language for compiling neural network architectures into optimized x86-64 machine code**
+**A domain-specific language compiler for neural network inference on x86-64 CPUs.**
 
-NetLang compiles high-level CNN definitions into efficient C code with automatic shape inference, type checking, and AVX2 vectorization for fast CPU inference.
+NetLang transforms high-level CNN architectures into optimized C code with automatic shape inference, type checking, and AVX2 vectorization. Designed for fast single-image CPU inference with minimal dependencies.
 
 ---
 
 ## Quick Example
 
-**Input (NetLang):**
+**Input (NetLang DSL):**
 ```netlang
 network LeNet5 {
-    input(shape: [32, 32, 1])
+    input(shape: [28, 28, 1])
     weights("models/lenet5_mnist.nwf")
     
     x = Conv2D(filters: 6, kernel: [5, 5], activation: relu) from input
@@ -21,341 +21,197 @@ network LeNet5 {
     x = Flatten() from x
     x = Dense(units: 120, activation: relu) from x
     x = Dense(units: 84, activation: relu) from x
-    x = Dense(units: 10, activation: softmax) from x
+    output = Dense(units: 10, activation: softmax) from x
 }
 ```
 
-**Output:** Optimized C code with AVX2 intrinsics
+**Output:** Single-file C code with AVX2 SIMD → Compile to standalone executable
 
 ---
 
 ## Features
 
-- ⚡ **Fast Compilation** - Compiles .nlang to C in milliseconds
-- 🎯 **Static Optimization** - Shape specialization, operator fusion
-- 🚀 **AVX2 Vectorization** - 8-wide SIMD operations
-- 🔍 **Automatic Shape Inference** - No manual tensor size calculations
-- 🛡️ **Type Safety** - Compile-time shape mismatch detection
-- 📦 **Zero-Copy Weight Loading** - Custom .nwf format with mmap (~1ms)
-- 🔧 **Framework Interop** - Convert from PyTorch, Keras, ONNX
+- ⚡ **Ahead-of-Time Compilation** - No JIT overhead, predictable performance
+- 🎯 **Shape Specialization** - Optimized code for specific input dimensions
+- 🚀 **AVX2 Vectorization** - 8-wide SIMD for Conv2D/Dense/Pool layers
+- 🔍 **Automatic Shape Inference** - No manual tensor calculations
+- 🛡️ **Strong Type Checking** - Catch shape mismatches at compile time
+- 📦 **Fast Weight Loading** - Memory-mapped .nwf format (~1ms startup)
+- 🔧 **Framework Interop** - Import weights from PyTorch, ONNX, Keras
+- 📄 **Zero Dependencies** - Self-contained executable, no runtime libraries
+
+---
+
+## Quick Start
+
+See [QUICKSTART.md](QUICKSTART.md) for a 5-minute guide from zero to inference.
+
+**TL;DR:**
+
+```bash
+# 1. Build compiler
+build.bat
+
+# 2. Compile network
+bin/netlang_compiler architecture/lenet5.nlang -o generated/lenet5.c
+
+# 3. Build executable
+gcc -O3 -mavx2 generated/lenet5.c -o lenet5_infer -lm
+
+# 4. Run
+./lenet5_infer input.bin
+```
+
+---
+
+## Performance
+
+**Current (LeNet5 on MNIST):**
+- Compilation: ~50ms (.nlang → .c)
+- Inference: ~10-13ms per image (28×28×1)
+- Accuracy: 97% on MNIST test set
+
+**Planned Optimizations:** 10-15x speedup through operator fusion, cache blocking, and multi-threading. See [OPTIMIZATION_ROADMAP.md](docs/OPTIMIZATION_ROADMAP.md).
+
+---
+
+## Documentation
+
+**Getting Started:**
+- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick start guide
+- **[User Guide](docs/USER_GUIDE.md)** - Complete workflows and syntax reference
+
+**Understanding the System:**
+- **[Architecture](docs/ARCHITECTURE.md)** - Compiler internals and design
+- **[Weight Format](docs/WEIGHT_FORMAT.md)** - .nwf binary format specification
+
+**Performance & Development:**
+- **[Optimization Roadmap](docs/OPTIMIZATION_ROADMAP.md)** - Performance improvement plan
+- **[Implementation Guide](docs/IMPLEMENTATION_GUIDE.md)** - Extending the compiler
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
 
 ---
 
 ## Project Structure
 
 ```
-netlang/
+flex_work/
 ├── src/                   # Compiler source code (C)
 │   ├── lexer/            # Tokenization (Flex)
 │   ├── parser/           # Syntax analysis (Bison)
 │   ├── ast/              # Abstract Syntax Tree
 │   ├── semantic/         # Type checking & shape inference
-│   └── codegen/          # C code generation & runtime kernels
+│   └── codegen/          # C code generation with AVX2 kernels
 │
-├── examples/              # Example networks
-│   ├── lenet5.nlang      # LeNet-5 for MNIST (32×32, 10 classes)
-│   ├── vgg16.nlang       # VGG-16 for ImageNet (224×224, 1000 classes)
-│   └── simple_classifier.nlang  # Basic dense network
+├── architecture/          # Network definitions (.nlang files)
+│   ├── lenet5.nlang      # LeNet-5 architecture
+│   └── vgg16.nlang       # VGG-16 architecture
 │
 ├── models/                # Pretrained weights (.nwf format)
-│   ├── lenet5_mnist.nwf  # LeNet-5 trained on MNIST (~348 KB)
-│   └── mnist_cnn.nwf     # Legacy variant
+│   └── lenet5_mnist.nwf  # LeNet-5 trained on MNIST
 │
 ├── tools/                 # Utilities
-│   ├── convert_pytorch.py     # PyTorch → .nwf converter
-│   ├── convert_keras.py       # Keras → .nwf converter
-│   ├── convert_onnx.py        # ONNX → .nwf converter
-│   ├── preprocess.py          # Image → .bin preprocessor
-│   ├── download_mnist_for_netlang.py  # MNIST dataset downloader
-│   ├── test_network.c         # C test harness for inference
-│   └── benchmark.c            # Performance benchmarking
+│   ├── convert_pytorch.py         # Convert PyTorch models
+│   ├── convert_onnx.py            # Convert ONNX models
+│   ├── preprocess.py              # Image preprocessing
+│   └── test_network.c             # C test harness
 │
-├── build/                 # Compiler build artifacts (gitignored)
-│   └── netlang.exe       # The NetLang compiler
+├── docs/                  # Documentation
+│   ├── USER_GUIDE.md              # Complete usage guide
+│   ├── ARCHITECTURE.md            # Compiler internals
+│   ├── WEIGHT_FORMAT.md           # .nwf specification
+│   └── OPTIMIZATION_ROADMAP.md    # Performance plan
 │
-├── generated/             # Generated C networks (gitignored)
-├── bin/                   # Compiled network executables (gitignored)
-├── data/                  # Downloaded datasets (gitignored)
-└── test_data/             # Test images (.bin format, gitignored)
-```
-
----
-
-## Quick Start
-
-### 1. Build the Compiler
-
-**Linux/macOS:**
-```bash
-make
-```
-
-**Windows:**
-```batch
-build.bat
-```
-
-### 2. Compile a Network
-
-```bash
-# Compile LeNet-5 architecture to C code
-./build/netlang examples/lenet5.nlang -o generated/lenet5.c
-
-# Build the executable with AVX2 optimizations
-gcc -O3 -march=haswell -mavx2 -mfma \
-    generated/lenet5.c \
-    src/codegen/runtime.c \
-    src/codegen/kernels.c \
-    -o bin/lenet5_infer
-```
-
-### 3. Prepare Data
-
-```bash
-# Download and preprocess MNIST test dataset (10,000 images)
-python tools/download_mnist_for_netlang.py
-# Output: test_data/preprocessed/mnist_0000_label_7.bin ... mnist_9999_label_X.bin
-```
-
-### 4. Run Inference
-
-```bash
-# Run on a sample MNIST digit
-./bin/lenet5_infer test_data/preprocessed/mnist_0000_label_7.bin
-
-# Output: (Testing in progress)
-```
-
----
-
-## Key Concepts
-
-### Architecture vs Dataset
-
-- **Architecture** = Network structure (e.g., LeNet-5, VGG-16, ResNet-50)
-- **Dataset** = Training data (e.g., MNIST, ImageNet, CIFAR-10)
-- **Model** = Architecture + Trained Weights
-
-**Example:**
-- `lenet5.nlang` defines the **LeNet-5 architecture**
-- `lenet5_mnist.nwf` contains **weights trained on MNIST**
-- Together they form a **MNIST digit classifier model**
-
-### File Formats
-
-| Extension | Purpose | Example |
-|-----------|---------|---------|
-| `.nlang` | Network architecture definition | `examples/lenet5.nlang` |
-| `.nwf` | Binary weight file (NetLang Weight Format) | `models/lenet5_mnist.nwf` |
-| `.bin` | Preprocessed input image (raw float32) | `test_data/mnist_0000_label_7.bin` |
-| `.c` | Generated C inference code | `generated/lenet5.c` |
-
-### Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ COMPILATION PHASE (One-time)                                │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  lenet5.nlang ──┬──> NetLang Compiler ──> lenet5.c         │
-│                 │         (netlang.exe)                      │
-│  lenet5_mnist.nwf ──> (Referenced in .nlang)                │
-│                                                              │
-│  lenet5.c + runtime.c + kernels.c ──> GCC ──> lenet5_infer │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│ INFERENCE PHASE (Every prediction)                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  image.jpg ──> preprocess.py ──> image.bin                  │
-│                                                              │
-│  image.bin + lenet5_mnist.nwf ──> lenet5_infer ──> Result  │
-│                (loaded via mmap)                             │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+├── generated/             # Generated C code (output)
+├── bin/                   # Compiled executables (output)
+└── test_data/             # Test images
 ```
 
 ---
 
 ## Supported Layers
 
-| Layer | Syntax | Description |
-|-------|--------|-------------|
-| **Conv2D** | `Conv2D(filters: 64, kernel: [3,3], padding: 1, activation: relu)` | 2D Convolution with AVX2 optimization |
-| **Dense** | `Dense(units: 128, activation: relu)` | Fully connected layer |
-| **MaxPool** | `MaxPool(pool: [2,2], stride: 2)` | Max pooling |
-| **AvgPool** | `AvgPool(pool: [2,2], stride: 2)` | Average pooling |
-| **Flatten** | `Flatten()` | Reshape 3D → 1D |
-| **Concat** | `Concat(axis: 2)` | Concatenate tensors |
-
-**Activations:** `relu`, `softmax`
+| Layer | Example | Notes |
+|-------|---------|-------|
+| Conv2D | `Conv2D(filters: 64, kernel: [3,3], activation: relu)` | AVX2 optimized |
+| Dense | `Dense(units: 128, activation: relu)` | Fully connected |
+| MaxPool | `MaxPool(pool: [2,2], stride: 2)` | Max pooling |
+| AvgPool | `AvgPool(pool: [2,2])` | Average pooling |
+| Flatten | `Flatten()` | Reshape to 1D |
+| BatchNorm | `BatchNorm()` | Batch normalization |
 
 ---
 
-## Performance
+## Example: MNIST Classification
 
-**Test Machine:** Intel Core i5-5200U @ 2.2GHz (2015 laptop CPU)
+**1. Write architecture definition (already provided):**
 
-| Architecture | Dataset | Input Size | Inference Time | Throughput |
-|-------------|---------|------------|----------------|------------|
-| LeNet-5 | MNIST | 32×32×1 | TBD | TBD |
-| VGG-16 | ImageNet | 224×224×3 | TBD | TBD |
-
-**Optimizations:**
-- AVX2 SIMD (8 floats per instruction)
-- FMA (fused multiply-add)
-- Zero-copy weight loading via mmap
-- 64-byte aligned memory for cache efficiency
-
-*Performance benchmarks will be updated after testing is complete.*
-
----
-
-## Documentation
-
-- **[QUICKSTART.md](QUICKSTART.md)** - Detailed getting started guide
-- **[examples/README.md](examples/README.md)** - Example networks guide
-- **[docs/WEIGHT_FORMAT.md](docs/WEIGHT_FORMAT.md)** - .nwf format specification
-- **[docs/IMPLEMENTATION_GUIDE.md](docs/IMPLEMENTATION_GUIDE.md)** - Compiler internals
-- **[PERFORMANCE_SYSTEM_COMPLETE.md](PERFORMANCE_SYSTEM_COMPLETE.md)** - Benchmarking details
-
----
-
-## Examples
-
-### LeNet-5 for MNIST
-```bash
-# 1. Compile network
-./build/netlang examples/lenet5.nlang -o generated/lenet5.c
-
-# 2. Build executable
-gcc -O3 -mavx2 -mfma generated/lenet5.c src/codegen/runtime.c src/codegen/kernels.c -o bin/lenet5
-
-# 3. Download MNIST dataset
-python tools/download_mnist_for_netlang.py
-
-# 4. Run inference
-./bin/lenet5 test_data/preprocessed/mnist_0042_label_3.bin
+[architecture/lenet5.nlang](architecture/lenet5.nlang):
+```netlang
+network LeNet5 {
+    input(shape: [28, 28, 1])
+    weights("models/lenet5_mnist.nwf")
+    
+    x = Conv2D(filters: 6, kernel: [5, 5], activation: relu) from input
+    x = MaxPool(pool: [2, 2], stride: 2) from x
+    x = Conv2D(filters: 16, kernel: [5, 5], activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2) from x
+    x = Flatten() from x
+    x = Dense(units: 120, activation: relu) from x
+    x = Dense(units: 84, activation: relu) from x
+    output = Dense(units: 10, activation: softmax) from x
+}
 ```
 
-### VGG-16 for ImageNet
-```bash
-# 1. Convert pretrained PyTorch model
-python tools/convert_pytorch.py vgg16.pth models/vgg16_imagenet.nwf
+**2. Test the system:**
 
-# 2. Compile network
-./build/netlang examples/vgg16.nlang -o generated/vgg16.c
-
-# 3. Build executable
-gcc -O3 -mavx2 generated/vgg16.c src/codegen/runtime.c src/codegen/kernels.c -o bin/vgg16
-
-# 4. Preprocess image
-python tools/preprocess.py cat.jpg cat.bin --size 224 224
-
-# 5. Run inference
-./bin/vgg16 cat.bin
-```
-
-See [examples/README.md](examples/README.md) for more examples.
-
----
-
-## Development Status
-
-| Component | Status |
-|-----------|--------|
-| Lexical Analysis | ✅ Complete |
-| Parser & AST | ✅ Complete |
-| Semantic Analysis | ✅ Complete |
-| Shape Inference | ✅ Complete |
-| Type Checking | ✅ Complete |
-| Weight Format (.nwf) | ✅ Complete |
-| Runtime Library | ✅ Complete |
-| C Code Generator | ✅ Complete |
-| AVX2 Kernels | ✅ Complete |
-| Weight Converters | ✅ Complete |
-| Preprocessing Tools | ✅ Complete |
-| Test Infrastructure | ✅ Complete |
-
----
-
-## Converting Pretrained Models
-
-### From PyTorch
-```bash
-python tools/convert_pytorch.py model.pth models/output.nwf
-```
-
-### From Keras/TensorFlow
-```bash
-python tools/convert_keras.py model.h5 models/output.nwf
-```
-
-### From ONNX
-```bash
-python tools/convert_onnx.py model.onnx models/output.nwf
-```
+See [USER_GUIDE.md](docs/USER_GUIDE.md) for complete examples and workflow.
 
 ---
 
 ## Requirements
 
-### Compiler Build
-- **C Compiler:** GCC 6.0+ or Clang 10.0+
-- **Build Tools:** flex, bison, make
-- **CPU:** x86-64 with AVX2 support (Intel Haswell 2013+, AMD Excavator 2015+)
+**Build Requirements:**
+- GCC/Clang with AVX2 support
+- Flex 2.6+, Bison 3.0+
+- x86-64 CPU with AVX2 (Intel Haswell 2013+)
 
-### Runtime (Generated Code)
-- **C Compiler:** Any C99-compliant compiler with AVX2 intrinsics
-- **OS:** Linux, macOS, Windows (MinGW)
+**Optional (for tools):**
+- Python 3.7+
+- PyTorch / ONNX (for weight conversion)
 
-### Tools (Optional)
-- **Python 3.7+** for weight conversion and preprocessing
-- **PyTorch / TensorFlow / ONNX** (only for conversion)
+---
+
+## Current Status
+
+**Working:**
+- ✅ Full compilation pipeline (97% accuracy on MNIST)
+- ✅ LeNet5, VGG16, custom architectures
+- ✅ Weight conversion from PyTorch/ONNX
+- ✅ AVX2 vectorization
+- ✅ ~10-13ms inference time per MNIST image
+
+**Planned Optimizations:**
+- Operator fusion (Conv+ReLU): 2.5x speedup
+- Cache blocking: 3x speedup
+- Multi-threading: 2x speedup
+- FMA instructions: 1.3x speedup
+- **Target: 0.6-1ms per image (15x improvement)**
+
+See [OPTIMIZATION_ROADMAP.md](docs/OPTIMIZATION_ROADMAP.md) for details.
 
 ---
 
 ## Contributing
 
-Contributions welcome! Areas of interest:
-- Additional layer types (Batch/LayerNorm, Residual blocks)
-- ARM NEON backend for mobile/embedded
-- LLVM IR backend for multi-platform support
-- INT8/FP16 quantization for faster inference
-- Training support (backpropagation)
+Contributions welcome! See documentation for architecture details and extension points.
 
 ---
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file
+MIT License
 
 ---
 
-## References
-
-- **LeNet-5:** LeCun et al., "Gradient-Based Learning Applied to Document Recognition" (1998)
-- **VGG:** Simonyan & Zisserman, "Very Deep Convolutional Networks for Large-Scale Image Recognition" (2014)
-- **MNIST:** http://yann.lecun.com/exdb/mnist/
-
----
-
-## Citation
-
-If you use NetLang in your research, please cite:
-```bibtex
-@software{netlang2026,
-  title={NetLang: A Domain-Specific Language for CNN Compilation},
-  author={Your Name},
-  year={2026},
-  url={https://github.com/yourusername/netlang}
-}
-```
-
----
-
-**Target:** CPU inference at the edge | **Focus:** Compile-time optimization | **Philosophy:** Static is faster
-
-*"Compile once, infer fast."*
+*NetLang: Compile once, infer fast.*

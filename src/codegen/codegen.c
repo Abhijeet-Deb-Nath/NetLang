@@ -487,10 +487,16 @@ void emit_flatten(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
         return;
     }
     
-    int size = calculate_tensor_size(layer->input_shape);
+    int H = layer->input_shape->dims[0];
+    int W = layer->input_shape->dims[1];
+    int C = layer->input_shape->dims[2];
+    int size = H * W * C;
     
-    emit(ctx->output, "    /* Flatten: %d elements (no-op, just pointer) */\n", size);
-    emit(ctx->output, "    net->%s = %s;\n", layer->var_name, input_name);
+    /* Convert HWC to CHW order for ONNX/PyTorch compatibility */
+    emit(ctx->output, "    /* Flatten: HWC [%d,%d,%d] -> CHW order [%d] for dense layer compatibility */\n",
+         H, W, C, size);
+    emit(ctx->output, "    flatten_hwc_to_chw(%s, net->%s, %d, %d, %d);\n", 
+         input_name, layer->var_name, H, W, C);
 }
 
 void emit_activation(CodegenContext* ctx, LayerInfo* layer, ActivationType act) {
@@ -524,10 +530,7 @@ void emit_cleanup_function(CodegenContext* ctx) {
     /* Free tensors */
     for (int i = 0; i < ctx->layer_count; i++) {
         LayerInfo* layer = &ctx->layers[i];
-        /* Skip flatten layers (they alias other tensors) */
-        if (layer->layer_type != NODE_FLATTEN) {
-            emit(ctx->output, "    aligned_free(net->%s);\n", layer->var_name);
-        }
+        emit(ctx->output, "    aligned_free(net->%s);\n", layer->var_name);
     }
     
     emit(ctx->output, "    unload_weights(net->weights);\n");
@@ -538,6 +541,7 @@ void emit_cleanup_function(CodegenContext* ctx) {
 /* ========== MAIN FUNCTION ========== */
 
 void emit_main_function(CodegenContext* ctx) {
+    emit(ctx->output, "#ifndef NETLANG_NO_MAIN\n");
     emit(ctx->output, "/* Main: simple test harness */\n");
     emit(ctx->output, "int main() {\n");
     emit(ctx->output, "    printf(\"Initializing network: %s\\n\");\n", ctx->network_name);
@@ -576,6 +580,7 @@ void emit_main_function(CodegenContext* ctx) {
     emit(ctx->output, "    printf(\"Done!\\n\");\n");
     emit(ctx->output, "    return 0;\n");
     emit(ctx->output, "}\n");
+    emit(ctx->output, "#endif /* NETLANG_NO_MAIN */\n");
 }
 
 /* ========== MAIN ENTRY POINT ========== */

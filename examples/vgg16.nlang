@@ -10,32 +10,32 @@ network VGG16 {
     weights("models/vgg16_imagenet.nwf")
     
     // Block 1: 64 filters
-    x = Conv2D(filters: 64, kernel: [3, 3], padding: 1, activation: relu) from input
-    x = Conv2D(filters: 64, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2], stride: 2) from x  // 224×224 → 112×112
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input
+    x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x  // 224×224 → 112×112
     
     // Block 2: 128 filters
-    x = Conv2D(filters: 128, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 128, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2], stride: 2) from x  // 112×112 → 56×56
+    x = Conv2D(filters: 128, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = Conv2D(filters: 128, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x  // 112×112 → 56×56
     
     // Block 3: 256 filters
-    x = Conv2D(filters: 256, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 256, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 256, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2], stride: 2) from x  // 56×56 → 28×28
+    x = Conv2D(filters: 256, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = Conv2D(filters: 256, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = Conv2D(filters: 256, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x  // 56×56 → 28×28
     
     // Block 4: 512 filters
-    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2], stride: 2) from x  // 28×28 → 14×14
+    x = Conv2D(filters: 512, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x  // 28×28 → 14×14
     
     // Block 5: 512 filters
-    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 512, kernel: [3, 3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2, 2], stride: 2) from x  // 14×14 → 7×7
+    x = Conv2D(filters: 512, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = Conv2D(filters: 512, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from x
+    x = MaxPool(pool: [2, 2], stride: 2, padding: 0) from x  // 14×14 → 7×7
     
     // Flatten: 7×7×512 = 25088
     x = Flatten() from x

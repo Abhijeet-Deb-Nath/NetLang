@@ -224,7 +224,9 @@ def write_nwf_file(layers: List[LayerInfo], output_path: str, verbose: bool = Fa
         f.write(struct.pack('<Q', metadata_offset))      # 8 bytes: metadata offset
         
         # Calculate data offset
-        data_offset = metadata_offset + (layer_count * 64)
+        # Metadata entry size: 4+4+8+8+16+8+8+4+4 = 64 bytes per layer
+        METADATA_ENTRY_SIZE = 64
+        data_offset = metadata_offset + (layer_count * METADATA_ENTRY_SIZE)
         data_offset = align_to_64(data_offset)
         f.write(struct.pack('<Q', data_offset))          # 8 bytes: data offset
         f.write(bytes(212))                              # 212 bytes: reserved
@@ -281,7 +283,7 @@ def write_nwf_file(layers: List[LayerInfo], output_path: str, verbose: bool = Fa
             f.write(struct.pack('<Q', meta['bias_offset']))          # 8 bytes
             f.write(struct.pack('<Q', meta['bias_size']))            # 8 bytes
             f.write(struct.pack('<I', meta['bias_shape']))           # 4 bytes
-            f.write(bytes(16))                                        # 16 bytes: reserved
+            f.write(bytes(4))                                         # 4 bytes: reserved (total 64 bytes)
         
         # Pad to data_offset
         current_pos = f.tell()
@@ -308,7 +310,8 @@ def write_nwf_file(layers: List[LayerInfo], output_path: str, verbose: bool = Fa
             f.write(meta['bias'].astype(np.float32).tobytes())
         
         # ========== UPDATE HEADER WITH TOTAL SIZE ==========
-        f.seek(8)
+        # total_size is at offset 12 (4 magic + 4 version + 4 layer_count = 12)
+        f.seek(12)
         f.write(struct.pack('<Q', total_size))
     
     # Print summary

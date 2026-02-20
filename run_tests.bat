@@ -8,7 +8,7 @@ echo ============================================
 echo.
 
 echo [1/3] Testing valid network...
-build\netlang.exe examples\test_valid.nlang > test_results\valid.txt 2>&1
+build\netlang.exe architecture\test_valid.nlang > test_results\valid.txt 2>&1
 findstr /C:"passed" test_results\valid.txt >nul
 if %errorlevel%==0 (
     echo   [PASS] Valid network accepted
@@ -18,7 +18,7 @@ if %errorlevel%==0 (
 
 echo.
 echo [2/3] Testing error detection...
-build\netlang.exe examples\test_errors.nlang > test_results\errors.txt 2>&1
+build\netlang.exe architecture\test_errors.nlang > test_results\errors.txt 2>&1
 findstr /C:"failed" test_results\errors.txt >nul
 if %errorlevel%==0 (
     echo   [PASS] Errors correctly detected
@@ -28,7 +28,7 @@ if %errorlevel%==0 (
 
 echo.
 echo [3/3] Testing demo networks...
-build\netlang.exe examples\demo.nlang > test_results\demo.txt 2>&1
+build\netlang.exe architecture\demo.nlang > test_results\demo.txt 2>&1
 findstr /C:"passed" test_results\demo.txt >nul
 if %errorlevel%==0 (
     echo   [PASS] Demo networks validated

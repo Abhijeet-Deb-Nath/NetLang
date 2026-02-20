@@ -25,6 +25,11 @@
 
 /* ========== WEIGHT FORMAT STRUCTURES ========== */
 
+/* Cross-platform packing */
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+#pragma pack(push, 1)
+#endif
+
 /* File header (256 bytes) */
 typedef struct {
     char magic[4];              /* "NWGT" */
@@ -36,7 +41,11 @@ typedef struct {
     uint64_t metadata_offset;   /* Offset to metadata table */
     uint64_t data_offset;       /* Offset to weight data */
     uint8_t reserved[212];      /* Reserved for future use */
-} __attribute__((packed)) NWFHeader;
+}
+#ifdef __GNUC__
+__attribute__((packed))
+#endif
+NWFHeader;
 
 /* Layer metadata (64 bytes) */
 typedef struct {
@@ -49,7 +58,15 @@ typedef struct {
     uint64_t bias_size;         /* Bias data size */
     uint32_t bias_shape;        /* [dim0] */
     uint32_t reserved;          /* Padding to 64 bytes */
-} __attribute__((packed)) NWFLayerMeta;
+}
+#ifdef __GNUC__
+__attribute__((packed))
+#endif
+NWFLayerMeta;
+
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+#pragma pack(pop)
+#endif
 
 /* Weight file handle */
 typedef struct {

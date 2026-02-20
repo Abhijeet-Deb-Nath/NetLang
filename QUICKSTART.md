@@ -1,305 +1,189 @@
-# Quick Start: Using Pretrained Weights with NetLang
+# NetLang Quick Start
 
-Get up and running with pretrained CNN models in minutes!
+Get from zero to running inference in **5 minutes**.
 
 ---
 
-## 🚀 Quick Setup (5 minutes)
+## Prerequisites
 
-### Step 1: Install Python Dependencies
+**Windows:**
+- [MSYS2](https://www.msys2.org/) with GCC, Flex, Bison
+- Python 3.7+ (optional, for weight conversion)
+
+**Linux/macOS:**
+- GCC/Clang, flex, bison, make
+- Python 3.7+ (optional)
+
+**Verify:**
+```bash
+gcc --version
+flex --version
+bison --version
+```
+
+---
+
+## Step 1: Build the Compiler (30 seconds)
 
 ```bash
-pip install torch numpy  # For PyTorch conversion
-# OR
-pip install tensorflow   # For Keras conversion
-# OR
-pip install onnx         # For ONNX conversion
+# Windows
+build.bat
+
+# Linux/macOS
+make
 ```
 
-### Step 2: Get a Pretrained Model
+**Output:** `build/netlang.exe` (or `build/netlang` on Unix)
 
-**Option A: Download pre-trained PyTorch model**
-```python
-# download_model.py
-import torch
-import torchvision.models as models
+---
 
-# Download VGG16 pretrained on ImageNet
-model = models.vgg16(pretrained=True)
-torch.save(model.state_dict(), 'models/vgg16.pth')
-print("✓ Downloaded VGG16 (553 MB)")
-```
+## Step 2: Compile a Network (5 seconds)
 
 ```bash
-mkdir models
-python download_model.py
+# Compile LeNet-5 architecture to C code
+bin/netlang_compiler architecture/lenet5.nlang -o generated/lenet5.c
+
+# Or on Windows:
+build\netlang.exe architecture\lenet5.nlang -o generated\lenet5.c
 ```
 
-**Option B: Use your own trained model**
-```python
-# If you trained a model
-torch.save(my_model.state_dict(), 'models/my_model.pth')
-```
+**Output:** `generated/lenet5.c` (optimized C code with AVX2)
 
-### Step 3: Convert to NetLang Format
+---
+
+## Step 3: Build Executable (10 seconds)
 
 ```bash
-python tools/convert_pytorch.py \
-    --model models/vgg16.pth \
-    --output models/vgg16.nwf
-
-# Output:
-# Loading PyTorch model: models/vgg16.pth
-# Found 16 layers:
-#   features.0: Conv2D [3, 3, 3, 64]
-#   features.2: Conv2D [3, 3, 64, 64]
-#   ...
-# ✓ Conversion complete!
-#   Output file: models/vgg16.nwf
-#   Total size: 553,432,576 bytes (527.81 MB)
-#   Layers: 16
+gcc -O3 -mavx2 generated/lenet5.c -o lenet5_infer -lm
 ```
 
-### Step 4: Use in NetLang
+**Output:** `lenet5_infer` executable (or `lenet5_infer.exe`)
 
-Create your network file matching the converted weights:
+---
 
-```netlang
-// examples/vgg16_infer.nlang
-network VGG16_Inference {
-    input(shape: [224, 224, 3])
-    weights("models/vgg16.nwf")  // ← Your converted file!
-    
-    // Block 1
-    x = Conv2D(filters: 64, kernel: [3,3], padding: 1, activation: relu) from input
-    x = Conv2D(filters: 64, kernel: [3,3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2,2]) from x
-    
-    // Block 2
-    x = Conv2D(filters: 128, kernel: [3,3], padding: 1, activation: relu) from x
-    x = Conv2D(filters: 128, kernel: [3,3], padding: 1, activation: relu) from x
-    x = MaxPool(pool: [2,2]) from x
-    
-    // ... remaining blocks ...
-    
-    // Classifier
-    x = Flatten() from x
-    x = Dense(units: 4096, activation: relu) from x
-    x = Dense(units: 4096, activation: relu) from x
-    x = Dense(units: 1000, activation: softmax) from x
-}
-```
+## Step 4: Run Inference
 
-### Step 5: Compile (When codegen is ready)
+### Option A: Test with Synthetic Data
 
 ```bash
-# Future: Generate C code
-./netlang examples/vgg16_infer.nlang --output vgg16.c
-
-# Compile with optimizations
-gcc -O3 -march=haswell -mavx2 -mfma \
-    vgg16.c src/codegen/runtime.c src/codegen/kernels.c \
-    -o vgg16_infer
+# Create a simple test input (28x28 zeros)
+python -c "import numpy as np; np.zeros((28,28), dtype='float32').tofile('test_input.bin')"
 
 # Run inference
-./vgg16_infer cat.jpg
-# Output: "tabby cat (0.87 confidence)"
+./lenet5_infer test_input.bin
 ```
 
----
-
-## 📚 Common Models & Where to Get Them
-
-### MNIST (Small, great for testing)
-```python
-import torch
-import torch.nn as nn
-
-# Simple CNN for MNIST
-class MNIST_CNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
-        self.fc1 = nn.Linear(7*7*64, 128)
-        self.fc2 = nn.Linear(128, 10)
-    # ... forward method ...
-
-model = MNIST_CNN()
-# Train or load pretrained...
-torch.save(model.state_dict(), 'models/mnist.pth')
-```
-
-Export to .nwf:
-```bash
-python tools/convert_pytorch.py --model models/mnist.pth --output models/mnist.nwf
-```
-
-### VGG16 (Medium, ~550MB)
-```python
-from torchvision import models
-vgg16 = models.vgg16(pretrained=True)
-torch.save(vgg16.state_dict(), 'models/vgg16.pth')
-```
-
-Convert:
-```bash
-python tools/convert_pytorch.py --model models/vgg16.pth --output models/vgg16.nwf
-```
-
-### ResNet50 (Medium, ~100MB)
-```python
-resnet50 = models.resnet50(pretrained=True)
-torch.save(resnet50.state_dict(), 'models/resnet50.pth')
-```
-
-### MobileNetV2 (Small, ~15MB - fast!)
-```python
-mobilenet = models.mobilenet_v2(pretrained=True)
-torch.save(mobilenet.state_dict(), 'models/mobilenet.pth')
-```
-
----
-
-## 🔍 Verifying Conversions
-
-### Check File Size
-```bash
-ls -lh models/*.nwf
-
-# Should match PyTorch model size approximately:
-# mnist.nwf      ~3 MB
-# mobilenet.nwf  ~15 MB
-# resnet50.nwf   ~100 MB
-# vgg16.nwf      ~550 MB
-```
-
-### Inspect .nwf File
-```python
-# tools/inspect_nwf.py
-import struct
-
-with open('models/mnist.nwf', 'rb') as f:
-    # Read header
-    magic = f.read(4)
-    version, layer_count = struct.unpack('<II', f.read(8))
-    
-    print(f"Magic: {magic}")
-    print(f"Version: {version}")
-    print(f"Layers: {layer_count}")
-    
-# Output:
-# Magic: b'NWGT'
-# Version: 1
-# Layers: 4
-```
-
----
-
-## ⚠️ Common Issues & Solutions
-
-### Issue: "Cannot find module torch"
-```bash
-pip install torch torchvision
-```
-
-### Issue: "Invalid weight file format"
-- Check magic number is "NWGT"
-- Ensure conversion completed successfully
-- Try re-converting from source model
-
-### Issue: Layer count mismatch
-**Problem:** Your .nlang file has different number of layers than .nwf
-
-**Solution:** Make sure your NetLang architecture exactly matches the PyTorch model structure. Count Conv2D and Dense layers only (skip pooling, activation).
-
-### Issue: Shape mismatch errors
-**Problem:** Network expects different input shape
-
-**Solution:** Check pretrained model's expected input:
-```python
-# For ImageNet models: [224, 224, 3]
-# For MNIST models: [28, 28, 1]
-# For CIFAR models: [32, 32, 3]
-```
-
----
-
-## 📊 Performance Expectations
-
-### Weight Loading Time
-
-| Model | Traditional (fread) | NetLang (mmap) | Speedup |
-|-------|--------------------:|---------------:|--------:|
-| MNIST | 5 ms | **<1 ms** | **5x** |
-| MobileNet | 30 ms | **1 ms** | **30x** |
-| ResNet50 | 150 ms | **1 ms** | **150x** |
-| VGG16 | 1000 ms | **1 ms** | **1000x** ⚡ |
-
-### Inference Time (Single Image)
-
-| Model | PyTorch CPU | NetLang (AVX2) | Speedup |
-|-------|------------:|---------------:|--------:|
-| MNIST | 25 ms | **~4 ms** | **~6x** |
-| MobileNet | 45 ms | **~8 ms** | **~5.5x** |
-| ResNet50 | 120 ms | **~20 ms** | **~6x** |
-| VGG16 | 180 ms | **~30 ms** | **~6x** |
-
-*Note: Actual performance depends on your hardware and compiler optimizations*
-
----
-
-## 🎯 Next Steps
-
-1. **Convert your first model** (start with MNIST)
-2. **Verify the .nwf file** (check size, inspect header)
-3. **Create matching .nlang file** (architecture must match exactly)
-4. **Wait for codegen** (or implement it - see IMPLEMENTATION_GUIDE.md!)
-5. **Benchmark!** (use tools/benchmark.c)
-
----
-
-## 💡 Tips & Best Practices
-
-### Start Small
-- Begin with MNIST (~3MB) before VGG16 (~550MB)
-- Easier to debug with smaller models
-
-### Match Architectures Exactly
-- Count layers carefully (Conv2D, Dense)
-- Pooling/Flatten don't have weights - skip in counting
-- Activation functions are applied after layers
-
-### Use Descriptive Names
-```netlang
-// Good: Clear layer names
-conv1 = Conv2D(...) from input
-pool1 = MaxPool(...) from conv1
-
-// Bad: Confusing names
-x = Conv2D(...) from input
-x = MaxPool(...) from x  // Reused 'x'
-```
-
-### Verify Shapes
-- Use your semantic analyzer to check shapes
-- Input shape must match pretrained model expectations
-- Output shape determines number of classes
-
----
-
-## 📖 Further Reading
-
-- **[PERFORMANCE_SYSTEM_COMPLETE.md](PERFORMANCE_SYSTEM_COMPLETE.md)** - Complete system overview
-- **[docs/WEIGHT_FORMAT.md](docs/WEIGHT_FORMAT.md)** - .nwf format specification  
-- **[docs/IMPLEMENTATION_GUIDE.md](docs/IMPLEMENTATION_GUIDE.md)** - Code generation guide
-- **PyTorch Model Zoo:** https://pytorch.org/vision/stable/models.html
-- **TensorFlow Hub:** https://tfhub.dev/
-
----
-
-**Ready to convert your first model? Let's go! 🚀**
+### Option B: Test with Real MNIST Data
 
 ```bash
-python tools/convert_pytorch.py --model YOUR_MODEL.pth --output models/converted.nwf
+# Download and preprocess MNIST
+python tools/download_mnist_for_netlang.py
+
+# Run on real test image
+./lenet5_infer test_data/mnist_test_0.bin
 ```
+
+**Expected output:**
+```
+Class probabilities:
+0: 0.1234
+1: 0.0567
+...
+9: 0.0823
+
+Predicted: 7 (confidence: 95.3%)
+```
+
+---
+
+## What Just Happened?
+
+1. **NetLang compiler** parsed `.nlang` → generated optimized C code
+2. **GCC** compiled C code → created standalone executable
+3. **Executable** loaded weights via mmap → ran inference with AVX2
+
+**Performance:**
+- Compilation: ~50ms
+- Weight loading: ~1ms  
+- Inference: ~10-13ms per image
+
+---
+
+## Next Steps
+
+### Run Accuracy Test (500 images)
+
+```bash
+python test_accuracy.py \
+    --network architecture/lenet5.nlang \
+    --weights models/lenet5_mnist.nwf \
+    --num-samples 500
+```
+
+**Expected:** ~97% accuracy
+
+### Try a Different Architecture
+
+```bash
+# VGG-16 (larger network)
+bin/netlang_compiler architecture/vgg16.nlang -o generated/vgg16.c
+gcc -O3 -mavx2 generated/vgg16.c -o vgg16_infer -lm
+```
+
+### Use Your Own Model
+
+```bash
+# Convert PyTorch model
+python tools/convert_pytorch.py your_model.pth models/your_model.nwf
+
+# Create .nlang architecture file (see examples/)
+# Compile and run
+```
+
+---
+
+## Common Issues
+
+**"netlang: command not found"**
+→ Use `build/netlang.exe` or `./build/netlang`
+
+**"undefined reference to `__mm256_loadu_ps`"**
+→ Add `-mavx2` flag to gcc
+
+**"Cannot open weight file"**
+→ Ensure `.nwf` path in `.nlang` is correct and relative to execution directory
+
+---
+
+## Documentation
+
+- **[USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete workflows and syntax
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - How the compiler works
+- **[OPTIMIZATION_ROADMAP.md](docs/OPTIMIZATION_ROADMAP.md)** - Performance improvements
+
+---
+
+## Example: Complete MNIST Pipeline
+
+```bash
+# 1. Build compiler
+build.bat
+
+# 2. Download MNIST data
+python tools/download_mnist_for_netlang.py
+
+# 3. Compile network
+build\netlang.exe architecture\lenet5.nlang -o generated\lenet5.c
+
+# 4. Build executable
+gcc -O3 -mavx2 generated\lenet5.c -o lenet5_infer.exe -lm
+
+# 5. Test accuracy
+python test_accuracy.py --network architecture\lenet5.nlang --num-samples 100
+
+# Output: ~97% accuracy, ~12ms per image
+```
+
+---
+
+**You're ready!** See [USER_GUIDE.md](docs/USER_GUIDE.md) for detailed documentation.
