@@ -25,7 +25,7 @@ network LeNet5 {
 }
 ```
 
-**Output:** Optimized C code with AVX2 intrinsics (~0.8ms inference on Intel i5)
+**Output:** Optimized C code with AVX2 intrinsics
 
 ---
 
@@ -123,10 +123,7 @@ python tools/download_mnist_for_netlang.py
 # Run on a sample MNIST digit
 ./bin/lenet5_infer test_data/preprocessed/mnist_0000_label_7.bin
 
-# Output:
-# Predicted: 7
-# Confidence: 99.2%
-# Time: 0.82ms
+# Output: (Testing in progress)
 ```
 
 ---
@@ -203,14 +200,16 @@ python tools/download_mnist_for_netlang.py
 
 | Architecture | Dataset | Input Size | Inference Time | Throughput |
 |-------------|---------|------------|----------------|------------|
-| LeNet-5 | MNIST | 32×32×1 | 0.8 ms | 1,250 img/s |
-| VGG-16 | ImageNet | 224×224×3 | ~45 ms | 22 img/s |
+| LeNet-5 | MNIST | 32×32×1 | TBD | TBD |
+| VGG-16 | ImageNet | 224×224×3 | TBD | TBD |
 
 **Optimizations:**
 - AVX2 SIMD (8 floats per instruction)
 - FMA (fused multiply-add)
 - Zero-copy weight loading via mmap
 - 64-byte aligned memory for cache efficiency
+
+*Performance benchmarks will be updated after testing is complete.*
 
 ---
 

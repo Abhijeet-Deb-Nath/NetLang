@@ -234,6 +234,7 @@ void network_infer(float *input, float *output, WeightFile *weights) {
 - 64-byte alignment (AVX2 cache line size)
 - Platform-portable (little-endian float32)
 - Minimal header overhead
+- Fast loading compared to other formats
 
 **Structure:**
 ```
@@ -261,13 +262,13 @@ void network_infer(float *input, float *output, WeightFile *weights) {
 ```
 Format     | Size   | Load Time | Method
 -----------|--------|-----------|-------------------------
-ONNX       | 350 KB | ~80ms     | Protobuf parse + alloc
-HDF5       | 360 KB | ~50ms     | HDF5 library overhead
-PyTorch    | 355 KB | ~120ms    | pickle + torch.load
-.nwf       | 348 KB | ~1ms      | mmap (zero-copy) ✓
+ONNX       | 350 KB | TBD       | Protobuf parse + alloc
+HDF5       | 360 KB | TBD       | HDF5 library overhead
+PyTorch    | 355 KB | TBD       | pickle + torch.load
+.nwf       | 348 KB | TBD       | mmap (zero-copy) ✓
 ```
 
-**60-120× faster weight loading!**
+*Performance benchmarks to be measured after testing*
 
 ---
 
@@ -301,7 +302,7 @@ for (int i = 0; i < size; i += 8) {
 // Horizontal sum to get final result
 ```
 
-**Performance:** 8× throughput improvement (theoretical)
+**Performance:** Theoretical 8× throughput improvement with SIMD
 
 ---
 
@@ -411,9 +412,7 @@ with open('models/lenet5_mnist.nwf', 'wb') as f:
 │  # Run inference (no framework needed!)                               │
 │  ./lenet5_infer input.bin                                             │
 │    ↓                                                                  │
-│  Prediction: 7                                                        │
-│  Confidence: 99.2%                                                    │
-│  Time: 0.82ms                                                         │
+│  Output: (Testing in progress)                                        │
 │                                                                       │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -424,28 +423,29 @@ with open('models/lenet5_mnist.nwf', 'wb') as f:
 
 ### Inference Time Breakdown (LeNet-5, Intel i5-5200U)
 
-| Stage | Time (ms) | % Total | Notes |
-|-------|-----------|---------|-------|
-| Weight load (mmap) | 0.001 | 0.1% | One-time cost, amortized |
-| Conv2D #1 (6 filters) | 0.245 | 29.7% | Bottleneck #1 |
-| MaxPool #1 | 0.032 | 3.9% | Vectorized reduction |
-| Conv2D #2 (16 filters) | 0.398 | 48.2% | **Bottleneck #2** (largest layer) |
-| MaxPool #2 | 0.018 | 2.2% | Small input size |
-| Flatten | 0.001 | 0.1% | Pointer cast only |
-| Dense #1 (120 units) | 0.089 | 10.8% | Matrix-vector multiply |
-| Dense #2 (84 units) | 0.034 | 4.1% | Smaller matrix |
-| Dense #3 (10 units) | 0.008 | 1.0% | Output layer + softmax |
-| **Total** | **0.825** | **100%** | |
+*Performance benchmarks to be measured after testing is complete*
 
-**Observations:**
-- Conv2D layers dominate (77.9% of time)
-- Dense layers are relatively fast (15.9%)
-- Pooling/Flatten negligible (6.2%)
+| Stage | Notes |
+|-------|-------|
+| Weight load (mmap) | One-time cost, amortized |
+| Conv2D #1 (6 filters) | Expected bottleneck |
+| MaxPool #1 | Vectorized reduction |
+| Conv2D #2 (16 filters) | Largest layer |
+| MaxPool #2 | Smaller input |
+| Flatten | Pointer cast only |
+| Dense #1 (120 units) | Matrix-vector multiply |
+| Dense #2 (84 units) | Smaller matrix |
+| Dense #3 (10 units) | Output layer + softmax |
 
-**Optimization Opportunities:**
+**Expected:**
+- Conv2D layers will likely dominate compute time
+- Dense layers should be relatively fast with AVX2
+- Pooling/Flatten operations should be minimal
+
+**Optimization Opportunities (After Profiling):**
 - Further Conv2D optimization (im2col + GEMM)
 - Winograd convolution for 3×3 kernels
-- INT8 quantization (4× speedup potential)
+- INT8 quantization (potential 4× speedup)
 
 ---
 
@@ -453,22 +453,22 @@ with open('models/lenet5_mnist.nwf', 'wb') as f:
 
 **Test:** LeNet-5 inference on MNIST (single image)
 
-| Implementation | Time (ms) | Binary Size | Memory | Startup |
-|----------------|-----------|-------------|--------|---------|
-| PyTorch (Python) | 2.3 | 500 MB | ~800 MB | ~200 ms |
-| TensorFlow Lite | 1.5 | 120 MB | ~200 MB | ~50 ms |
-| ONNX Runtime | 1.2 | 80 MB | ~150 MB | ~80 ms |
-| **NetLang (AVX2)** | **0.8** | **100 KB** | **~10 MB** | **~1 ms** |
+*NetLang performance to be measured after testing*
 
-**NetLang Advantages:**
-- **1.5-2.9× faster inference**
-- **800-5000× smaller binary**
-- **15-80× smaller memory footprint**
-- **50-200× faster startup**
+| Implementation | Binary Size | Memory |
+|----------------|-------------|--------|
+| PyTorch (Python) | ~500 MB | ~800 MB |
+| TensorFlow Lite | ~120 MB | ~200 MB |
+| ONNX Runtime | ~80 MB | ~150 MB |
+| **NetLang (AVX2)** | **~100 KB** | **~10 MB (est)** |
 
----
+**NetLang Expected Advantages:**
+- Significantly smaller binary size
+- Lower memory footprint
+- Faster startup time
+- Compile-time optimizations
 
-## Design Decisions
+*Detailed performance comparison will be added after benchmarking*
 
 ### Why Custom Weight Format (.nwf)?
 

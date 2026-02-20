@@ -6,13 +6,13 @@ This directory contains example network architectures demonstrating NetLang's ca
 
 ## Quick Reference
 
-| Example | Architecture | Dataset | Input Size | Parameters | Inference Time |
-|---------|-------------|---------|------------|------------|----------------|
-| [simple_classifier.nlang](#simple-classifier) | Dense-only | Generic | 784×1 | ~100K | ~0.1ms |
-| [lenet5.nlang](#lenet-5-mnist) | LeNet-5 | MNIST | 32×32×1 | ~60K | ~0.8ms |
-| [vgg16.nlang](#vgg-16-imagenet) | VGG-16 | ImageNet | 224×224×3 | ~138M | ~45ms |
+| Example | Architecture | Dataset | Input Size | Parameters |
+|---------|-------------|---------|------------|-----------|
+| [simple_classifier.nlang](#simple-classifier) | Dense-only | Generic | 784×1 | ~100K |
+| [lenet5.nlang](#lenet-5-mnist) | LeNet-5 | MNIST | 32×32×1 | ~60K |
+| [vgg16.nlang](#vgg-16-imagenet) | VGG-16 | ImageNet | 224×224×3 | ~138M |
 
-*Inference times measured on Intel Core i5-5200U @ 2.2GHz*
+*Inference benchmarks to be measured after testing is complete*
 
 ---
 
@@ -79,7 +79,7 @@ Input (32×32×1)
 - **Input:** 32×32×1 grayscale (zero-padded from 28×28)
 - **Parameters:** ~60,000
 - **Weight File:** `models/lenet5_mnist.nwf` (~348 KB)
-- **Inference Time:** ~0.8ms
+- **Inference Time:** TBD (testing in progress)
 
 **Compile & Run:**
 ```bash
@@ -95,7 +95,7 @@ gcc -O3 -mavx2 -mfma generated/lenet5.c src/codegen/runtime.c src/codegen/kernel
 
 # 4. Run inference
 ./bin/lenet5 test_data/preprocessed/mnist_0042_label_3.bin
-# Expected output: Predicted: 3, Confidence: 98.7%, Time: 0.82ms
+# Output: (Testing in progress)
 ```
 
 **Key Concepts:**
@@ -105,8 +105,7 @@ gcc -O3 -mavx2 -mfma generated/lenet5.c src/codegen/runtime.c src/codegen/kernel
 - Zero-padding from 28×28 to 32×32 simplifies pooling math
 
 **Accuracy:**
-- MNIST Test Set: ~99.2% (with proper training)
-- Current weights: ~98.5% (converted from PyTorch)
+- MNIST Test Set: TBD (testing in progress)
 
 ---
 
@@ -161,7 +160,7 @@ Input (224×224×3)
 - **Input:** 224×224×3 RGB
 - **Parameters:** ~138 million
 - **Weight File:** `models/vgg16_imagenet.nwf` (~528 MB)
-- **Inference Time:** ~45ms (CPU), ~2ms (GPU estimated)
+- **Inference Time:** TBD (testing in progress)
 
 **Compile & Run:**
 ```bash
@@ -179,7 +178,7 @@ python tools/preprocess.py cat.jpg cat.bin --size 224 224 --normalize imagenet
 
 # 5. Run inference
 ./bin/vgg16 cat.bin
-# Expected output: Predicted: tabby_cat (class 281), Confidence: 87.3%, Time: 44.2ms
+# Output: (Testing in progress)
 ```
 
 **Key Concepts:**

@@ -6,10 +6,10 @@ Pretrained model weights in NetLang Weight Format (`.nwf`) for immediate inferen
 
 ## Available Models
 
-| Model | Architecture | Dataset | Input Size | Parameters | Size | Accuracy |
-|-------|-------------|---------|------------|------------|------|----------|
-| [lenet5_mnist.nwf](#lenet-5-mnist) | LeNet-5 | MNIST | 32×32×1 | ~60K | 348 KB | 98.5% |
-| [mnist_cnn.nwf](#mnist-cnn-legacy) | Custom CNN | MNIST | 32×32×1 | ~400K | 1.6 MB | 99.1% |
+| Model | Architecture | Dataset | Input Size | Parameters | Size |
+|-------|-------------|---------|------------|------------|------|
+| [lenet5_mnist.nwf](#lenet-5-mnist) | LeNet-5 | MNIST | 32×32×1 | ~60K | 348 KB |
+| [mnist_cnn.nwf](#mnist-cnn-legacy) | Custom CNN | MNIST | 32×32×1 | ~400K | 1.6 MB |
 
 ---
 
@@ -39,7 +39,7 @@ Total: 61,706 parameters
 - **Optimizer:** Adam (lr=0.001)
 - **Epochs:** 10
 - **Framework:** PyTorch
-- **Test Accuracy:** 98.5%
+- **Test Accuracy:** TBD (weights to be validated)
 
 **Usage:**
 ```bash
@@ -108,11 +108,11 @@ Total: 544,522 parameters (2.1 MB uncompressed)
 - **Optimizer:** SGD with momentum 0.9
 - **Epochs:** 20
 - **Framework:** PyTorch
-- **Test Accuracy:** 99.1%
+- **Test Accuracy:** TBD (weights to be validated)
 
 **Notes:**
-- Larger model with higher accuracy than LeNet-5
-- Slower inference (~1.2ms vs 0.8ms for LeNet-5)
+- Larger model with potentially higher accuracy than LeNet-5
+- More parameters for better feature extraction
 - Better feature extraction with 3×3 kernels + padding
 - Legacy file - prefer `lenet5_mnist.nwf` for standard benchmarks
 
@@ -344,23 +344,23 @@ gcc -O3 -mavx2 tools/test_network.c generated/lenet5.c \
 
 # Run on sample data
 ./bin/test_network test_data/preprocessed/mnist_0000_label_7.bin models/lenet5_mnist.nwf
-# Expected: Prediction: 7, Confidence: 99.x%
+# Output: (Testing in progress)
 ```
 
 ---
 
 ## Performance Impact
 
-### Weight Load Time
+### Loading Performance
 
 | Format | Size | Load Time | Method |
 |--------|------|-----------|--------|
-| ONNX | 350 KB | ~80ms | Protobuf parsing + allocation |
-| HDF5 | 360 KB | ~50ms | HDF5 library overhead |
-| PyTorch | 355 KB | ~120ms | pickle + torch.load |
-| **.nwf** | **348 KB** | **~1ms** | **mmap (zero-copy)** |
+| ONNX | 350 KB | TBD | Protobuf parsing + allocation |
+| HDF5 | 360 KB | TBD | HDF5 library overhead |
+| PyTorch | 355 KB | TBD | pickle + torch.load |
+| **.nwf** | **348 KB** | **TBD** | **mmap (zero-copy)** |
 
-**Speedup:** 50-120× faster loading than frameworks!
+*Performance benchmarks to be measured*
 
 ### Memory Efficiency
 

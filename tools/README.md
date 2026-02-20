@@ -314,22 +314,11 @@ Loading input from: test_data/preprocessed/mnist_0042_label_3.bin
 Input loaded: 32×32×1 = 4096 floats (16384 bytes)
 
 Running inference...
-Inference time: 0.82ms
+Inference time: TBD
 
-Output probabilities:
-  Class 0: 0.001%
-  Class 1: 0.003%
-  Class 2: 0.012%
-  Class 3: 98.745%  ← Predicted
-  Class 4: 0.089%
-  Class 5: 0.456%
-  Class 6: 0.023%
-  Class 7: 0.134%
-  Class 8: 0.321%
-  Class 9: 0.216%
+Output: (Testing in progress)
 
-Prediction: 3 (Confidence: 98.7%)
-Ground truth (from filename): 3 ✓ CORRECT
+Ground truth (from filename): 3
 ```
 
 **Features:**
@@ -385,25 +374,13 @@ Running benchmark...
 Progress: [####################] 100%
 
 === Results ===
-Total time: 82.456 seconds
-Average inference time: 0.825 ms
-Throughput: 1,212 images/second
-Min: 0.781 ms
-Max: 1.234 ms
-Median: 0.819 ms
-Std dev: 0.045 ms
+Total time: TBD
+Average inference time: TBD
+Throughput: TBD
 
-Accuracy: 9,845 / 10,000 = 98.45%
+Accuracy: TBD
 
-Layer-by-layer breakdown:
-  Conv2D_1:    0.245 ms  (29.7%)
-  MaxPool_1:   0.032 ms  ( 3.9%)
-  Conv2D_2:    0.398 ms  (48.2%)
-  MaxPool_2:   0.018 ms  ( 2.2%)
-  Flatten:     0.001 ms  ( 0.1%)
-  Dense_1:     0.089 ms  (10.8%)
-  Dense_2:     0.034 ms  ( 4.1%)
-  Dense_3:     0.008 ms  ( 1.0%)
+Layer-by-layer breakdown: (To be measured)
 ```
 
 **Features:**
