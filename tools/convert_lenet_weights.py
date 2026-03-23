@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 """
-Convert downloaded LeNet MNIST weights to .nwf format
+Convert downloaded LeNet MNIST weights to .nwf format.
 
 Usage:
-    python convert_lenet_weights.py lenet_mnist_model.pth models/lenet5.nwf
+    python convert_lenet_weights.py lenet_mnist_model.pth assets/weights/netlang/lenet5_trained.nwf
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.dirname(__file__))
 
 import torch
 import torch.nn as nn
+
 from convert_pytorch import extract_layers_from_model, write_nwf_file
 
 
 class LeNet(nn.Module):
-    """LeNet architecture matching the downloaded model"""
+    """LeNet architecture matching the downloaded model."""
+
     def __init__(self):
-        super(LeNet, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(1, 6, kernel_size=5, stride=1, padding=0)
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -54,52 +57,49 @@ class LeNet(nn.Module):
         return y
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python convert_lenet_weights.py <input.pth> <output.nwf>")
-        print("Example: python convert_lenet_weights.py lenet_mnist_model.pth models/lenet5.nwf")
+        print("Example: python convert_lenet_weights.py lenet_mnist_model.pth assets/weights/netlang/lenet5_trained.nwf")
         sys.exit(1)
-    
+
     input_path = sys.argv[1]
     output_path = sys.argv[2]
-    
-    # Create model
+
     print("Creating LeNet model...")
     model = LeNet()
     model.eval()
-    
-    # Load state dict
+
     print(f"Loading weights from {input_path}...")
-    state_dict = torch.load(input_path, map_location='cpu')
+    state_dict = torch.load(input_path, map_location="cpu")
     model.load_state_dict(state_dict)
-    
+
     print("Model loaded successfully!")
     print("\nArchitecture:")
-    print(f"  conv1: Conv2d(1, 6, kernel=5)")
-    print(f"  pool1: MaxPool2d(2, stride=2)")
-    print(f"  conv2: Conv2d(6, 16, kernel=5)")
-    print(f"  pool2: MaxPool2d(2, stride=2)")
-    print(f"  fc1: Linear(256, 120)")
-    print(f"  fc2: Linear(120, 84)")
-    print(f"  fc3: Linear(84, 10)")
-    
-    # Extract layers
+    print("  conv1: Conv2d(1, 6, kernel=5)")
+    print("  pool1: MaxPool2d(2, stride=2)")
+    print("  conv2: Conv2d(6, 16, kernel=5)")
+    print("  pool2: MaxPool2d(2, stride=2)")
+    print("  fc1: Linear(256, 120)")
+    print("  fc2: Linear(120, 84)")
+    print("  fc3: Linear(84, 10)")
+
     print("\nExtracting layers...")
     layers = extract_layers_from_model(model)
-    
+
     print(f"\nFound {len(layers)} weight layers:")
     for i, layer in enumerate(layers):
-        layer_type_name = ['Conv2D', 'Dense', 'BatchNorm'][layer.layer_type]
+        layer_type_name = ["Conv2D", "Dense", "BatchNorm"][layer.layer_type]
         print(f"  {i}: {layer.name} ({layer_type_name}) shape={layer.weight_shape()}")
-    
-    # Create output directory if needed
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    # Convert to .nwf
+
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
     write_nwf_file(layers, output_path, verbose=True)
-    
-    print("\n✓ Conversion complete!")
-    print(f"\nNext steps:")
-    print(f"  1. Compile your network: ./build/netlang.exe examples/mnist.nlang -o build/mnist.c")
-    print(f"  2. Build executable: gcc -O3 -mavx2 -I. build/mnist.c src/codegen/runtime.c src/codegen/kernels.c -o build/mnist.exe")
-    print(f"  3. Run inference: ./build/mnist.exe")
+
+    print("\nConversion complete.")
+    print("\nNext steps:")
+    print("  1. Compile your network: build\\netlang.exe examples\\lenet5.nlang -o generated\\lenet5.c")
+    print("  2. Build executable: build_network.bat generated\\lenet5.c lenet5_smoke")
+    print("  3. Run inference: bin\\lenet5_smoke.exe assets\\inputs\\preprocessed_28x28\\mnist_0000_label_7.bin")

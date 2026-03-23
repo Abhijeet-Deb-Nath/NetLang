@@ -1,7 +1,0 @@
-// VALID: Minimal complete network
-network Minimal {
-    input(shape: [1, 1, 10])
-    weights("models/minimal.nwf")
-    x = Flatten() from input
-    x = Dense(units: 5, activation: softmax) from x
-}

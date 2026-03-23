@@ -37,4 +37,4 @@ def check_nwf(filepath):
     print(f'  First 10 weights: {weights}')
 
 if __name__ == '__main__':
-    check_nwf(sys.argv[1] if len(sys.argv) > 1 else 'models/lenet5_trained.nwf')
+    check_nwf(sys.argv[1] if len(sys.argv) > 1 else 'assets/weights/netlang/lenet5_trained.nwf')

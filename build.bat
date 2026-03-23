@@ -35,6 +35,12 @@ if errorlevel 1 goto error
 gcc -Wall -g -c -o build\type_checker.o src\semantic\type_checker.c -Isrc\ast -Isrc\semantic
 if errorlevel 1 goto error
 
+gcc -Wall -g -c -o build\graph.o src\graph\graph.c -Isrc\ast -Isrc\semantic -Isrc\graph
+if errorlevel 1 goto error
+
+gcc -Wall -g -c -o build\memory_plan.o src\planner\memory_plan.c -Isrc\ast -Isrc\semantic -Isrc\graph -Isrc\planner
+if errorlevel 1 goto error
+
 gcc -Wall -g -c -o build\codegen.o src\codegen\codegen.c -Isrc\ast -Isrc\semantic -Isrc\codegen
 if errorlevel 1 goto error
 
@@ -45,7 +51,7 @@ gcc -Wall -g -c -o build\main.o src\main.c -Isrc
 if errorlevel 1 goto error
 
 echo [4/4] Linking...
-gcc -Wall -g -o build\netlang.exe build\lex.yy.o build\net_lang.tab.o build\ast.o build\semantic.o build\symbol_table.o build\type_checker.o build\codegen.o build\fusion_optimizer.o build\main.o
+gcc -Wall -g -o build\netlang.exe build\lex.yy.o build\net_lang.tab.o build\ast.o build\semantic.o build\symbol_table.o build\type_checker.o build\graph.o build\memory_plan.o build\codegen.o build\fusion_optimizer.o build\main.o
 if errorlevel 1 goto error
 
 echo.
@@ -54,7 +60,7 @@ echo BUILD SUCCESSFUL!
 echo Output: build\netlang.exe
 echo ============================================
 echo.
-echo Run with: build\netlang.exe examples\demo.nlang
+echo Run with: build\netlang.exe examples\lenet5.nlang
 goto end
 
 :error

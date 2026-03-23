@@ -1,19 +1,9 @@
 /*
  * NetLang Compiler - Main Driver
- * 
- * Compiles .nlang network definitions to high-performance C code.
- * 
+ *
+ * Compiles .nlang network definitions to C code for fixed-shape CNN inference.
+ *
  * Usage: netlang input.nlang [-o output.c]
- * 
- * Compilation stages:
- * 1. Lexical analysis (tokenization)
- * 2. Syntax analysis (parsing to AST)
- * 3. Semantic analysis (type checking, shape inference)
- * 4. Optimization (operator fusion, cache blocking)
- * 5. Code generation (optimized C output)
- * 
- * Author: Abhijeet Deb Nath
- * Date: February 2026
  */
 
 #include <stdio.h>
@@ -33,15 +23,15 @@ extern ASTNode* ast_root;      /* Set by parser */
 /* Print usage information */
 void print_usage(const char* program_name) {
     fprintf(stderr, "NetLang Compiler v1.0\n");
-    fprintf(stderr, "High-Performance CNN Inference Code Generator\n\n");
+    fprintf(stderr, "Research compiler for fixed-shape CNN inference\n\n");
     fprintf(stderr, "Usage: %s <input.nlang> [-o output.c]\n\n", program_name);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -o <file>    Output file (default: stdout)\n");
     fprintf(stderr, "  -h, --help   Show this help message\n\n");
     fprintf(stderr, "Example:\n");
-    fprintf(stderr, "  %s examples/mnist.nlang -o generated_mnist.c\n", program_name);
-    fprintf(stderr, "  gcc -O3 -march=haswell -mavx2 -mfma generated_mnist.c \\\n");
-    fprintf(stderr, "      src/codegen/runtime.c src/codegen/kernels.c -o mnist\n");
+    fprintf(stderr, "  %s examples/lenet5.nlang -o generated_lenet5.c\n", program_name);
+    fprintf(stderr, "  gcc -O3 -march=haswell -mavx2 -mfma -I. generated_lenet5.c \\\n");
+    fprintf(stderr, "      src/codegen/runtime.c src/codegen/kernels.c -o lenet5\n");
 }
 
 /* Main compiler driver */
@@ -49,7 +39,7 @@ int main(int argc, char** argv) {
     const char* input_file = NULL;
     const char* output_file = NULL;
     FILE* output = stdout;
-    
+
     /* Parse command line arguments */
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -69,53 +59,53 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    
+
     if (input_file == NULL) {
         fprintf(stderr, "ERROR: No input file specified\n\n");
         print_usage(argv[0]);
         return 1;
     }
-    
+
     /* ========== STAGE 1: LEXICAL + SYNTAX ANALYSIS ========== */
-    fprintf(stderr, "[1/4] Parsing %s...\n", input_file);
-    
+    fprintf(stderr, "[1/5] Parsing %s...\n", input_file);
+
     yyin = fopen(input_file, "r");
     if (!yyin) {
         fprintf(stderr, "ERROR: Cannot open input file: %s\n", input_file);
         return 1;
     }
-    
+
     /* Run parser (also runs lexer internally) */
     ast_root = NULL;
     int parse_result = yyparse();
     fclose(yyin);
-    
+
     if (parse_result != 0 || ast_root == NULL) {
         fprintf(stderr, "ERROR: Parsing failed\n");
         return 1;
     }
-    
-    fprintf(stderr, "      ✓ Parsing successful\n");
-    
+
+    fprintf(stderr, "      OK: parsing successful\n");
+
     /* ========== STAGE 2: SEMANTIC ANALYSIS ========== */
     fprintf(stderr, "[2/5] Running semantic analysis...\n");
-    
+
     SemanticResult sem_result = analyze_program(ast_root);
-    
+
     if (!sem_result.is_valid || sem_result.error_count > 0) {
         fprintf(stderr, "ERROR: Semantic analysis failed with %d error(s), %d warning(s)\n",
                 sem_result.error_count, sem_result.warning_count);
         return 1;
     }
-    
-    fprintf(stderr, "      ✓ Semantic analysis passed\n");
+
+    fprintf(stderr, "      OK: semantic analysis passed\n");
     if (sem_result.warning_count > 0) {
-        fprintf(stderr, "      ⚠ %d warning(s)\n", sem_result.warning_count);
+        fprintf(stderr, "      WARN: %d warning(s)\n", sem_result.warning_count);
     }
-    
-    /* ========== STAGE 3: OPTIMIZATION (Operator Fusion) ========== */
-    fprintf(stderr, "[3/5] Applying operator fusion...\n");
-    
+
+    /* ========== STAGE 3: CURRENT OPTIMIZATION PASS ========== */
+    fprintf(stderr, "[3/5] Running current optimization pass...\n");
+
     /* Find network node for optimization */
     ASTNode* network = NULL;
     if (ast_root->type == NODE_PROGRAM) {
@@ -124,7 +114,7 @@ int main(int argc, char** argv) {
             network = defs->head;
         }
     }
-    
+
     if (network && network->type == NODE_NETWORK) {
         /* Operator fusion detection */
         int fusion_count = detect_fusion_patterns(network, sem_result.global_scope);
@@ -132,13 +122,13 @@ int main(int argc, char** argv) {
     } else {
         fprintf(stderr, "      No network found for optimization\n");
     }
-    
-    /* NOTE: Cache blocking detection happens during code generation (Stage 4)
-     * because it needs accurate shape information from LayerInfo structs */
-    
+
+    /* NOTE: Cache blocking detection happens during code generation
+     * because it needs accurate shape information from LayerInfo structs. */
+
     /* ========== STAGE 4: CODE GENERATION ========== */
-    fprintf(stderr, "[4/5] Generating optimized C code...\n");
-    
+    fprintf(stderr, "[4/5] Generating C code...\n");
+
     /* Open output file if specified */
     if (output_file != NULL) {
         output = fopen(output_file, "w");
@@ -150,7 +140,7 @@ int main(int argc, char** argv) {
     } else {
         fprintf(stderr, "      Output: stdout\n");
     }
-    
+
     /* Find network node (assume first definition is a network) */
     network = NULL;
     if (ast_root->type == NODE_PROGRAM) {
@@ -163,27 +153,26 @@ int main(int argc, char** argv) {
             }
         }
     }
-    
+
     if (!network) {
         fprintf(stderr, "ERROR: No network found in input file\n");
         return 1;
     }
-    
+
     /* Generate code (includes fusion + blocking detection) */
     generate_network_code(network, sem_result.global_scope, output);
-    
+
     if (output_file != NULL) {
         fclose(output);
     }
-    
-    fprintf(stderr, "      ✓ Code generation complete\n");
-    
+
+    fprintf(stderr, "      OK: code generation complete\n");
+
     /* ========== STAGE 5: COMPILATION INSTRUCTIONS ========== */
-    fprintf(stderr, "[5/5] Next steps:\n");
-    fprintf(stderr, "\n");
+    fprintf(stderr, "[5/5] Next steps:\n\n");
     fprintf(stderr, "  Compile the generated code:\n");
     if (output_file != NULL) {
-        fprintf(stderr, "    gcc -O3 -march=haswell -mavx2 -mfma \\\n");
+        fprintf(stderr, "    gcc -O3 -march=haswell -mavx2 -mfma -I. \\\n");
         fprintf(stderr, "        %s \\\n", output_file);
         fprintf(stderr, "        src/codegen/runtime.c \\\n");
         fprintf(stderr, "        src/codegen/kernels.c \\\n");
@@ -194,8 +183,8 @@ int main(int argc, char** argv) {
         fprintf(stderr, "    Redirect output to file first:\n");
         fprintf(stderr, "      %s %s -o output.c\n", argv[0], input_file);
     }
-    
-    fprintf(stderr, "✓ Compilation successful!\n");
-    
+
+    fprintf(stderr, "OK: compilation pipeline completed\n");
+
     return 0;
 }

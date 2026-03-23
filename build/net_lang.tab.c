@@ -145,67 +145,71 @@ enum yysymbol_kind_t
   YYSYMBOL_MAXPOOL = 12,                   /* MAXPOOL  */
   YYSYMBOL_AVGPOOL = 13,                   /* AVGPOOL  */
   YYSYMBOL_FLATTEN = 14,                   /* FLATTEN  */
-  YYSYMBOL_CONCAT = 15,                    /* CONCAT  */
-  YYSYMBOL_BATCHNORM = 16,                 /* BATCHNORM  */
-  YYSYMBOL_LAYERNORM = 17,                 /* LAYERNORM  */
-  YYSYMBOL_FILTERS = 18,                   /* FILTERS  */
-  YYSYMBOL_KERNEL = 19,                    /* KERNEL  */
-  YYSYMBOL_ACTIVATION = 20,                /* ACTIVATION  */
-  YYSYMBOL_STRIDE = 21,                    /* STRIDE  */
-  YYSYMBOL_PADDING = 22,                   /* PADDING  */
-  YYSYMBOL_POOL = 23,                      /* POOL  */
-  YYSYMBOL_UNITS = 24,                     /* UNITS  */
-  YYSYMBOL_RELU = 25,                      /* RELU  */
-  YYSYMBOL_SIGMOID = 26,                   /* SIGMOID  */
-  YYSYMBOL_TANH = 27,                      /* TANH  */
-  YYSYMBOL_SOFTMAX = 28,                   /* SOFTMAX  */
-  YYSYMBOL_LINEAR = 29,                    /* LINEAR  */
-  YYSYMBOL_NUMBER = 30,                    /* NUMBER  */
-  YYSYMBOL_FLOAT_NUM = 31,                 /* FLOAT_NUM  */
-  YYSYMBOL_IDENTIFIER = 32,                /* IDENTIFIER  */
-  YYSYMBOL_STRING_LIT = 33,                /* STRING_LIT  */
-  YYSYMBOL_LBRACE = 34,                    /* LBRACE  */
-  YYSYMBOL_RBRACE = 35,                    /* RBRACE  */
-  YYSYMBOL_LBRACKET = 36,                  /* LBRACKET  */
-  YYSYMBOL_RBRACKET = 37,                  /* RBRACKET  */
-  YYSYMBOL_LPAREN = 38,                    /* LPAREN  */
-  YYSYMBOL_RPAREN = 39,                    /* RPAREN  */
-  YYSYMBOL_COLON = 40,                     /* COLON  */
-  YYSYMBOL_COMMA = 41,                     /* COMMA  */
-  YYSYMBOL_ASSIGN = 42,                    /* ASSIGN  */
-  YYSYMBOL_YYACCEPT = 43,                  /* $accept  */
-  YYSYMBOL_program = 44,                   /* program  */
-  YYSYMBOL_module_list = 45,               /* module_list  */
-  YYSYMBOL_network_def = 46,               /* network_def  */
-  YYSYMBOL_network_body = 47,              /* network_body  */
-  YYSYMBOL_module_def = 48,                /* module_def  */
-  YYSYMBOL_module_params = 49,             /* module_params  */
-  YYSYMBOL_param_list = 50,                /* param_list  */
-  YYSYMBOL_input_decl = 51,                /* input_decl  */
-  YYSYMBOL_weights_decl = 52,              /* weights_decl  */
-  YYSYMBOL_statement_list = 53,            /* statement_list  */
-  YYSYMBOL_statement_list_nonempty = 54,   /* statement_list_nonempty  */
-  YYSYMBOL_statement = 55,                 /* statement  */
-  YYSYMBOL_assignment = 56,                /* assignment  */
-  YYSYMBOL_from_clause = 57,               /* from_clause  */
-  YYSYMBOL_return_stmt = 58,               /* return_stmt  */
-  YYSYMBOL_layer_expr = 59,                /* layer_expr  */
-  YYSYMBOL_conv2d_layer = 60,              /* conv2d_layer  */
-  YYSYMBOL_dense_layer = 61,               /* dense_layer  */
-  YYSYMBOL_pool_layer = 62,                /* pool_layer  */
-  YYSYMBOL_flatten_layer = 63,             /* flatten_layer  */
-  YYSYMBOL_concat_layer = 64,              /* concat_layer  */
-  YYSYMBOL_concat_args = 65,               /* concat_args  */
-  YYSYMBOL_norm_layer = 66,                /* norm_layer  */
-  YYSYMBOL_module_call = 67,               /* module_call  */
-  YYSYMBOL_layer_params = 68,              /* layer_params  */
-  YYSYMBOL_layer_param_list = 69,          /* layer_param_list  */
-  YYSYMBOL_expr = 70,                      /* expr  */
-  YYSYMBOL_identifier_expr = 71,           /* identifier_expr  */
-  YYSYMBOL_number = 72,                    /* number  */
-  YYSYMBOL_array = 73,                     /* array  */
-  YYSYMBOL_array_elements = 74,            /* array_elements  */
-  YYSYMBOL_activation_value = 75           /* activation_value  */
+  YYSYMBOL_ADD = 15,                       /* ADD  */
+  YYSYMBOL_CONCAT = 16,                    /* CONCAT  */
+  YYSYMBOL_BATCHNORM = 17,                 /* BATCHNORM  */
+  YYSYMBOL_LAYERNORM = 18,                 /* LAYERNORM  */
+  YYSYMBOL_FILTERS = 19,                   /* FILTERS  */
+  YYSYMBOL_KERNEL = 20,                    /* KERNEL  */
+  YYSYMBOL_ACTIVATION = 21,                /* ACTIVATION  */
+  YYSYMBOL_STRIDE = 22,                    /* STRIDE  */
+  YYSYMBOL_PADDING = 23,                   /* PADDING  */
+  YYSYMBOL_POOL = 24,                      /* POOL  */
+  YYSYMBOL_UNITS = 25,                     /* UNITS  */
+  YYSYMBOL_RELU = 26,                      /* RELU  */
+  YYSYMBOL_SIGMOID = 27,                   /* SIGMOID  */
+  YYSYMBOL_TANH = 28,                      /* TANH  */
+  YYSYMBOL_SOFTMAX = 29,                   /* SOFTMAX  */
+  YYSYMBOL_LINEAR = 30,                    /* LINEAR  */
+  YYSYMBOL_NUMBER = 31,                    /* NUMBER  */
+  YYSYMBOL_FLOAT_NUM = 32,                 /* FLOAT_NUM  */
+  YYSYMBOL_IDENTIFIER = 33,                /* IDENTIFIER  */
+  YYSYMBOL_STRING_LIT = 34,                /* STRING_LIT  */
+  YYSYMBOL_LBRACE = 35,                    /* LBRACE  */
+  YYSYMBOL_RBRACE = 36,                    /* RBRACE  */
+  YYSYMBOL_LBRACKET = 37,                  /* LBRACKET  */
+  YYSYMBOL_RBRACKET = 38,                  /* RBRACKET  */
+  YYSYMBOL_LPAREN = 39,                    /* LPAREN  */
+  YYSYMBOL_RPAREN = 40,                    /* RPAREN  */
+  YYSYMBOL_COLON = 41,                     /* COLON  */
+  YYSYMBOL_COMMA = 42,                     /* COMMA  */
+  YYSYMBOL_ASSIGN = 43,                    /* ASSIGN  */
+  YYSYMBOL_YYACCEPT = 44,                  /* $accept  */
+  YYSYMBOL_program = 45,                   /* program  */
+  YYSYMBOL_module_list = 46,               /* module_list  */
+  YYSYMBOL_network_def = 47,               /* network_def  */
+  YYSYMBOL_network_body = 48,              /* network_body  */
+  YYSYMBOL_module_def = 49,                /* module_def  */
+  YYSYMBOL_module_params = 50,             /* module_params  */
+  YYSYMBOL_param_list = 51,                /* param_list  */
+  YYSYMBOL_input_decl = 52,                /* input_decl  */
+  YYSYMBOL_weights_decl = 53,              /* weights_decl  */
+  YYSYMBOL_optional_weights_decl = 54,     /* optional_weights_decl  */
+  YYSYMBOL_statement_list = 55,            /* statement_list  */
+  YYSYMBOL_statement_list_nonempty = 56,   /* statement_list_nonempty  */
+  YYSYMBOL_statement = 57,                 /* statement  */
+  YYSYMBOL_assignment = 58,                /* assignment  */
+  YYSYMBOL_optional_from_clause = 59,      /* optional_from_clause  */
+  YYSYMBOL_return_stmt = 60,               /* return_stmt  */
+  YYSYMBOL_layer_expr = 61,                /* layer_expr  */
+  YYSYMBOL_conv2d_layer = 62,              /* conv2d_layer  */
+  YYSYMBOL_dense_layer = 63,               /* dense_layer  */
+  YYSYMBOL_pool_layer = 64,                /* pool_layer  */
+  YYSYMBOL_flatten_layer = 65,             /* flatten_layer  */
+  YYSYMBOL_add_layer = 66,                 /* add_layer  */
+  YYSYMBOL_add_args = 67,                  /* add_args  */
+  YYSYMBOL_concat_layer = 68,              /* concat_layer  */
+  YYSYMBOL_concat_args = 69,               /* concat_args  */
+  YYSYMBOL_norm_layer = 70,                /* norm_layer  */
+  YYSYMBOL_module_call = 71,               /* module_call  */
+  YYSYMBOL_layer_params = 72,              /* layer_params  */
+  YYSYMBOL_layer_param_list = 73,          /* layer_param_list  */
+  YYSYMBOL_expr = 74,                      /* expr  */
+  YYSYMBOL_identifier_expr = 75,           /* identifier_expr  */
+  YYSYMBOL_number = 76,                    /* number  */
+  YYSYMBOL_array = 77,                     /* array  */
+  YYSYMBOL_array_elements = 78,            /* array_elements  */
+  YYSYMBOL_activation_value = 79           /* activation_value  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -536,19 +540,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  9
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   184
+#define YYLAST   191
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  43
+#define YYNTOKENS  44
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  33
+#define YYNNTS  36
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  74
+#define YYNRULES  81
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  207
+#define YYNSTATES  216
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   297
+#define YYMAXUTOK   298
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -591,7 +595,7 @@ static const yytype_int8 yytranslate[] =
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36,    37,    38,    39,    40,    41,    42
+      35,    36,    37,    38,    39,    40,    41,    42,    43
 };
 
 #if YYDEBUG
@@ -599,13 +603,14 @@ static const yytype_int8 yytranslate[] =
 static const yytype_int16 yyrline[] =
 {
        0,    99,    99,   106,   116,   120,   129,   140,   151,   160,
-     163,   169,   174,   184,   190,   199,   202,   209,   213,   220,
-     224,   231,   237,   247,   248,   249,   250,   251,   252,   253,
-     259,   287,   303,   320,   342,   348,   356,   360,   367,   370,
-     378,   390,   393,   399,   405,   409,   413,   417,   421,   425,
-     429,   433,   438,   442,   446,   450,   454,   458,   462,   471,
-     472,   473,   474,   481,   485,   491,   494,   500,   508,   512,
-     519,   520,   521,   522,   523
+     163,   169,   174,   184,   190,   197,   200,   208,   211,   218,
+     222,   229,   233,   240,   244,   250,   260,   261,   262,   263,
+     264,   265,   266,   267,   273,   301,   317,   334,   356,   362,
+     370,   374,   381,   389,   393,   400,   403,   411,   423,   426,
+     432,   438,   442,   446,   450,   454,   458,   462,   466,   471,
+     475,   479,   483,   487,   491,   495,   504,   505,   506,   507,
+     514,   518,   524,   527,   533,   541,   545,   552,   553,   554,
+     555,   556
 };
 #endif
 
@@ -623,19 +628,20 @@ static const char *const yytname[] =
 {
   "\"end of file\"", "error", "\"invalid token\"", "NETWORK", "MODULE",
   "RETURN", "FROM", "INPUT", "SHAPE", "WEIGHTS", "CONV2D", "DENSE",
-  "MAXPOOL", "AVGPOOL", "FLATTEN", "CONCAT", "BATCHNORM", "LAYERNORM",
-  "FILTERS", "KERNEL", "ACTIVATION", "STRIDE", "PADDING", "POOL", "UNITS",
-  "RELU", "SIGMOID", "TANH", "SOFTMAX", "LINEAR", "NUMBER", "FLOAT_NUM",
-  "IDENTIFIER", "STRING_LIT", "LBRACE", "RBRACE", "LBRACKET", "RBRACKET",
-  "LPAREN", "RPAREN", "COLON", "COMMA", "ASSIGN", "$accept", "program",
-  "module_list", "network_def", "network_body", "module_def",
-  "module_params", "param_list", "input_decl", "weights_decl",
-  "statement_list", "statement_list_nonempty", "statement", "assignment",
-  "from_clause", "return_stmt", "layer_expr", "conv2d_layer",
-  "dense_layer", "pool_layer", "flatten_layer", "concat_layer",
-  "concat_args", "norm_layer", "module_call", "layer_params",
-  "layer_param_list", "expr", "identifier_expr", "number", "array",
-  "array_elements", "activation_value", YY_NULLPTR
+  "MAXPOOL", "AVGPOOL", "FLATTEN", "ADD", "CONCAT", "BATCHNORM",
+  "LAYERNORM", "FILTERS", "KERNEL", "ACTIVATION", "STRIDE", "PADDING",
+  "POOL", "UNITS", "RELU", "SIGMOID", "TANH", "SOFTMAX", "LINEAR",
+  "NUMBER", "FLOAT_NUM", "IDENTIFIER", "STRING_LIT", "LBRACE", "RBRACE",
+  "LBRACKET", "RBRACKET", "LPAREN", "RPAREN", "COLON", "COMMA", "ASSIGN",
+  "$accept", "program", "module_list", "network_def", "network_body",
+  "module_def", "module_params", "param_list", "input_decl",
+  "weights_decl", "optional_weights_decl", "statement_list",
+  "statement_list_nonempty", "statement", "assignment",
+  "optional_from_clause", "return_stmt", "layer_expr", "conv2d_layer",
+  "dense_layer", "pool_layer", "flatten_layer", "add_layer", "add_args",
+  "concat_layer", "concat_args", "norm_layer", "module_call",
+  "layer_params", "layer_param_list", "expr", "identifier_expr", "number",
+  "array", "array_elements", "activation_value", YY_NULLPTR
 };
 
 static const char *
@@ -645,7 +651,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-171)
+#define YYPACT_NINF (-178)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -659,27 +665,28 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-      29,   -16,   -14,    42,    29,  -171,  -171,     6,    35,  -171,
-    -171,  -171,    67,    43,    38,    45,    68,  -171,    39,    51,
-      73,  -171,    55,    62,    61,    64,    57,    65,    58,    62,
-    -171,  -171,  -171,  -171,    63,    66,    -3,  -171,    -2,    16,
-      69,  -171,    71,    72,    74,    75,    76,    77,    78,    79,
-      80,    95,  -171,  -171,  -171,  -171,  -171,  -171,  -171,    -5,
-    -171,    87,  -171,  -171,  -171,     4,  -171,    84,    99,    81,
-      88,    85,    -5,    86,    89,    40,    -5,  -171,  -171,  -171,
-    -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,
-    -171,  -171,    16,    90,    91,    92,    93,  -171,   -24,  -171,
-    -171,  -171,    94,    96,    97,    98,   100,   102,   103,   104,
-     106,   105,  -171,  -171,    -5,    -5,    63,    63,  -171,    -5,
-      -5,    -5,    -5,    -5,    -5,    -5,    -5,    -5,  -171,    47,
-     107,   108,   109,   110,  -171,  -171,  -171,  -171,  -171,  -171,
-    -171,  -171,  -171,   112,   113,   114,   115,   116,   117,   118,
-     119,   120,    83,   126,   139,    -5,    -5,    -5,    -5,    -5,
-      -5,    -5,    -5,   121,   122,   123,   124,  -171,  -171,  -171,
-    -171,  -171,  -171,  -171,  -171,    63,    10,    -5,    -5,   125,
-     128,   127,   129,   144,  -171,   147,   149,   132,   133,   134,
-      -5,    -5,    -5,   135,   136,   138,   156,  -171,  -171,   140,
-      -5,   141,   159,   143,    10,   142,  -171
+       6,   -28,   -13,    62,     6,  -178,  -178,     2,    10,  -178,
+    -178,  -178,    38,    50,    32,    48,    73,  -178,    58,    43,
+      78,  -178,    60,  -178,    56,    65,    68,    61,    69,    63,
+      56,  -178,  -178,  -178,  -178,    67,    70,     1,  -178,    -1,
+      49,    71,  -178,    66,    75,    76,    77,    79,    80,    81,
+      82,    83,    84,   101,  -178,  -178,  -178,  -178,  -178,  -178,
+    -178,  -178,    -4,  -178,    72,  -178,  -178,  -178,    -7,  -178,
+      90,    92,   100,   104,    89,    -4,    -4,    91,    93,    19,
+      -4,  -178,  -178,  -178,  -178,  -178,  -178,  -178,  -178,  -178,
+    -178,  -178,  -178,  -178,  -178,  -178,    49,    95,    96,    97,
+      98,  -178,     8,  -178,    37,  -178,  -178,  -178,    99,   102,
+     103,   105,   106,   107,   109,   110,    94,    88,  -178,  -178,
+      -4,    -4,    67,    67,  -178,    -4,  -178,    -4,    -4,    -4,
+      -4,    -4,    -4,    -4,    -4,    -4,  -178,    45,   111,   112,
+     113,   114,  -178,  -178,  -178,  -178,  -178,  -178,  -178,  -178,
+    -178,  -178,   116,   117,   118,   119,   120,   121,   122,   123,
+     125,   131,   143,   144,    -4,    -4,    -4,    -4,    -4,    -4,
+      -4,    -4,   126,   127,   128,   129,  -178,  -178,  -178,  -178,
+    -178,  -178,  -178,  -178,    67,    46,    -4,    -4,   130,   133,
+     132,   134,   149,  -178,   152,   154,   137,   138,   139,    -4,
+      -4,    -4,   140,   141,   145,   160,  -178,  -178,   146,    -4,
+     142,   165,   147,    46,   150,  -178
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -688,44 +695,45 @@ static const yytype_int16 yypact[] =
 static const yytype_int8 yydefact[] =
 {
        0,     0,     0,     0,     0,     2,     4,     0,     0,     1,
-       3,     5,     0,     9,     0,     0,     0,    11,     0,    10,
-       0,     6,     0,     0,     0,     0,     0,     0,     0,     7,
-      17,    19,    15,    12,     0,     0,     0,    18,     0,     0,
-       0,    14,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,    23,    24,    25,    26,    27,    28,    29,     0,
-      16,     0,    65,    66,    68,     0,    13,     0,     0,     0,
-       0,     0,     0,     0,     0,    41,     0,    20,    64,    70,
-      71,    72,    73,    74,    63,    22,    61,    59,    60,    62,
-       8,    67,     0,     0,     0,     0,     0,    34,     0,    36,
-      38,    39,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,    42,    21,    69,     0,     0,     0,     0,    35,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,    40,     0,
-       0,     0,     0,     0,    37,    44,    45,    46,    47,    48,
-      49,    50,    43,     0,     0,     0,     0,     0,     0,     0,
+       3,     5,     0,     9,     0,     0,    15,    11,     0,    10,
+       0,     6,     0,    16,     0,     0,     0,     0,     0,     0,
+       7,    19,    21,    17,    12,     0,     0,     0,    20,     0,
+       0,     0,    14,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,    23,    26,    27,    28,    29,    30,    31,
+      32,    33,     0,    18,     0,    72,    73,    75,     0,    13,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,    48,
+       0,    22,    71,    77,    78,    79,    80,    81,    70,    25,
+      68,    66,    67,    69,     8,    74,     0,     0,     0,     0,
+       0,    38,     0,    40,     0,    43,    45,    46,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,    49,    24,    76,
+       0,     0,     0,     0,    39,     0,    42,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,    47,     0,     0,     0,
+       0,     0,    41,    44,    51,    52,    53,    54,    55,    56,
+      57,    50,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,    52,    53,    54,
-      55,    56,    57,    58,    51,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,    31,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,    32,    33,     0,
-       0,     0,     0,     0,     0,     0,    30
+       0,     0,     0,     0,     0,     0,    59,    60,    61,    62,
+      63,    64,    65,    58,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,    35,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,    36,    37,     0,     0,
+       0,     0,     0,     0,     0,    34
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-    -171,  -171,  -171,   131,  -171,   180,  -171,  -171,  -171,  -171,
-    -171,  -171,   -10,  -171,  -171,  -171,  -171,  -171,  -171,  -171,
-    -171,  -171,  -171,  -171,  -171,  -171,  -171,   -71,  -171,   -35,
-     -34,  -171,  -170
+    -178,  -178,  -178,   185,  -178,   187,  -178,  -178,  -178,  -178,
+    -178,  -178,  -178,    -9,  -178,  -178,  -178,  -178,  -178,  -178,
+    -178,  -178,  -178,  -178,  -178,  -178,  -178,  -178,  -178,  -178,
+     -74,  -178,   -33,   -35,  -178,  -177
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
        0,     3,     4,     5,    15,     6,    18,    19,    16,    23,
-      38,    29,    30,    31,    77,    61,    51,    52,    53,    54,
-      55,    56,    98,    57,    58,   110,   111,    85,    86,    87,
-      88,    65,    89
+      24,    39,    30,    31,    32,    81,    64,    53,    54,    55,
+      56,    57,    58,   102,    59,   104,    60,    61,   116,   117,
+      89,    90,    91,    92,    68,    93
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -733,101 +741,106 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint8 yytable[] =
 {
-      40,    99,    78,    59,    64,   112,   180,    42,    43,    44,
-      45,    46,    47,    48,    49,   118,     7,   119,     8,    37,
-      79,    80,    81,    82,    83,    62,    63,    84,    60,    50,
-      28,    39,     1,     2,   205,    79,    80,    81,    82,    83,
-      12,    91,     9,   130,   131,    92,    62,    63,   134,   135,
-     136,   137,   138,   139,   140,   141,   142,   113,   102,   103,
-     104,   105,   106,   107,   108,   143,   144,   145,   146,   147,
-     148,   149,   109,    13,    14,    17,    20,    22,    24,   150,
-      21,    26,   132,   133,   167,   168,   169,   170,   171,   172,
-     173,   174,    25,    27,    28,    32,    33,    34,    35,    39,
-      36,    76,    93,   164,    95,    41,   181,   182,    66,    67,
-      68,    96,    69,    70,    71,    72,    73,    74,    75,   193,
-     194,   195,    90,    94,    97,   100,     0,     0,   101,   201,
-     114,   115,   116,   117,   120,    10,   121,   122,   123,   163,
-     124,   179,   125,   126,   127,   128,   129,   165,   151,   152,
-     153,   154,   155,   156,   157,   158,   159,   160,   161,   162,
-     166,   175,   176,   177,   178,   187,   183,   184,   185,   188,
-     186,   189,   190,   191,   192,   197,   196,   198,   199,   203,
-     200,   206,   202,   204,    11
+      41,   103,   105,    82,    62,     7,   118,    67,   189,     1,
+       2,    43,    44,    45,    46,    47,    48,    49,    50,    51,
+       8,    38,    83,    84,    85,    86,    87,    65,    66,    88,
+      63,    95,    29,    40,    52,    96,   214,    12,   108,   109,
+     110,   111,   112,   113,   114,    14,   138,   139,   124,    13,
+     125,   142,   115,   143,   144,   145,   146,   147,   148,   149,
+     150,   151,     9,   119,   152,   153,   154,   155,   156,   157,
+     158,    20,    83,    84,    85,    86,    87,   126,   159,   127,
+      65,    66,    22,    17,    21,    26,    27,   140,   141,    29,
+     176,   177,   178,   179,   180,   181,   182,   183,    25,    28,
+      33,    34,    35,    36,    40,    70,    37,    80,    94,    97,
+      42,    69,   190,   191,    71,    72,    73,    98,    74,    75,
+      76,    77,    78,    79,    99,   202,   203,   204,   100,   101,
+     137,   106,     0,   107,   136,   210,   120,   121,   122,   123,
+     128,     0,     0,   129,   130,   172,   131,   132,   133,   188,
+     134,   135,   173,   160,   161,   162,   163,   164,   165,   166,
+     167,   168,   169,   170,   171,   174,   175,   184,   185,   186,
+     187,   196,   192,   193,   194,   197,   195,   198,   199,   200,
+     201,   206,   205,   208,   211,   207,   212,   209,   213,    10,
+     215,    11
 };
 
 static const yytype_int16 yycheck[] =
 {
-      34,    72,     7,     5,    39,    76,   176,    10,    11,    12,
-      13,    14,    15,    16,    17,    39,    32,    41,    32,    29,
-      25,    26,    27,    28,    29,    30,    31,    32,    38,    32,
-      32,    36,     3,     4,   204,    25,    26,    27,    28,    29,
-      34,    37,     0,   114,   115,    41,    30,    31,   119,   120,
-     121,   122,   123,   124,   125,   126,   127,    92,    18,    19,
-      20,    21,    22,    23,    24,    18,    19,    20,    21,    22,
-      23,    24,    32,    38,     7,    32,    38,     9,    39,    32,
-      35,     8,   116,   117,   155,   156,   157,   158,   159,   160,
-     161,   162,    41,    38,    32,    34,    32,    40,    33,    36,
-      42,     6,    18,    20,    23,    39,   177,   178,    39,    38,
-      38,    23,    38,    38,    38,    38,    38,    38,    38,   190,
-     191,   192,    35,    24,    39,    39,    -1,    -1,    39,   200,
-      40,    40,    40,    40,    40,     4,    40,    40,    40,    19,
-      40,   175,    40,    40,    40,    39,    41,    21,    41,    41,
-      41,    41,    40,    40,    40,    40,    40,    40,    40,    40,
-      21,    40,    40,    40,    40,    21,    41,    39,    41,    22,
-      41,    22,    40,    40,    40,    39,    41,    39,    22,    20,
-      40,    39,    41,    40,     4
+      35,    75,    76,     7,     5,    33,    80,    40,   185,     3,
+       4,    10,    11,    12,    13,    14,    15,    16,    17,    18,
+      33,    30,    26,    27,    28,    29,    30,    31,    32,    33,
+      39,    38,    33,    37,    33,    42,   213,    35,    19,    20,
+      21,    22,    23,    24,    25,     7,   120,   121,    40,    39,
+      42,   125,    33,   127,   128,   129,   130,   131,   132,   133,
+     134,   135,     0,    96,    19,    20,    21,    22,    23,    24,
+      25,    39,    26,    27,    28,    29,    30,    40,    33,    42,
+      31,    32,     9,    33,    36,    42,     8,   122,   123,    33,
+     164,   165,   166,   167,   168,   169,   170,   171,    40,    39,
+      35,    33,    41,    34,    37,    39,    43,     6,    36,    19,
+      40,    40,   186,   187,    39,    39,    39,    25,    39,    39,
+      39,    39,    39,    39,    24,   199,   200,   201,    24,    40,
+      42,    40,    -1,    40,    40,   209,    41,    41,    41,    41,
+      41,    -1,    -1,    41,    41,    20,    41,    41,    41,   184,
+      41,    41,    21,    42,    42,    42,    42,    41,    41,    41,
+      41,    41,    41,    41,    41,    22,    22,    41,    41,    41,
+      41,    22,    42,    40,    42,    23,    42,    23,    41,    41,
+      41,    40,    42,    23,    42,    40,    21,    41,    41,     4,
+      40,     4
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,     4,    44,    45,    46,    48,    32,    32,     0,
-      46,    48,    34,    38,     7,    47,    51,    32,    49,    50,
-      38,    35,     9,    52,    39,    41,     8,    38,    32,    54,
-      55,    56,    34,    32,    40,    33,    42,    55,    53,    36,
-      73,    39,    10,    11,    12,    13,    14,    15,    16,    17,
-      32,    59,    60,    61,    62,    63,    64,    66,    67,     5,
-      55,    58,    30,    31,    72,    74,    39,    38,    38,    38,
-      38,    38,    38,    38,    38,    38,     6,    57,     7,    25,
-      26,    27,    28,    29,    32,    70,    71,    72,    73,    75,
-      35,    37,    41,    18,    24,    23,    23,    39,    65,    70,
-      39,    39,    18,    19,    20,    21,    22,    23,    24,    32,
-      68,    69,    70,    72,    40,    40,    40,    40,    39,    41,
-      40,    40,    40,    40,    40,    40,    40,    40,    39,    41,
-      70,    70,    73,    73,    70,    70,    70,    70,    70,    70,
-      70,    70,    70,    18,    19,    20,    21,    22,    23,    24,
-      32,    41,    41,    41,    41,    40,    40,    40,    40,    40,
-      40,    40,    40,    19,    20,    21,    21,    70,    70,    70,
-      70,    70,    70,    70,    70,    40,    40,    40,    40,    73,
-      75,    70,    70,    41,    39,    41,    41,    21,    22,    22,
-      40,    40,    40,    70,    70,    70,    41,    39,    39,    22,
-      40,    70,    41,    20,    40,    75,    39
+       0,     3,     4,    45,    46,    47,    49,    33,    33,     0,
+      47,    49,    35,    39,     7,    48,    52,    33,    50,    51,
+      39,    36,     9,    53,    54,    40,    42,     8,    39,    33,
+      56,    57,    58,    35,    33,    41,    34,    43,    57,    55,
+      37,    77,    40,    10,    11,    12,    13,    14,    15,    16,
+      17,    18,    33,    61,    62,    63,    64,    65,    66,    68,
+      70,    71,     5,    57,    60,    31,    32,    76,    78,    40,
+      39,    39,    39,    39,    39,    39,    39,    39,    39,    39,
+       6,    59,     7,    26,    27,    28,    29,    30,    33,    74,
+      75,    76,    77,    79,    36,    38,    42,    19,    25,    24,
+      24,    40,    67,    74,    69,    74,    40,    40,    19,    20,
+      21,    22,    23,    24,    25,    33,    72,    73,    74,    76,
+      41,    41,    41,    41,    40,    42,    40,    42,    41,    41,
+      41,    41,    41,    41,    41,    41,    40,    42,    74,    74,
+      77,    77,    74,    74,    74,    74,    74,    74,    74,    74,
+      74,    74,    19,    20,    21,    22,    23,    24,    25,    33,
+      42,    42,    42,    42,    41,    41,    41,    41,    41,    41,
+      41,    41,    20,    21,    22,    22,    74,    74,    74,    74,
+      74,    74,    74,    74,    41,    41,    41,    41,    77,    79,
+      74,    74,    42,    40,    42,    42,    22,    23,    23,    41,
+      41,    41,    74,    74,    74,    42,    40,    40,    23,    41,
+      74,    42,    21,    41,    79,    40
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    43,    44,    44,    45,    45,    46,    47,    48,    49,
-      49,    50,    50,    51,    52,    53,    53,    54,    54,    55,
-      56,    57,    58,    59,    59,    59,    59,    59,    59,    59,
-      60,    61,    62,    62,    63,    64,    65,    65,    66,    66,
-      67,    68,    68,    69,    69,    69,    69,    69,    69,    69,
-      69,    69,    69,    69,    69,    69,    69,    69,    69,    70,
-      70,    70,    70,    71,    71,    72,    72,    73,    74,    74,
-      75,    75,    75,    75,    75
+       0,    44,    45,    45,    46,    46,    47,    48,    49,    50,
+      50,    51,    51,    52,    53,    54,    54,    55,    55,    56,
+      56,    57,    58,    59,    59,    60,    61,    61,    61,    61,
+      61,    61,    61,    61,    62,    63,    64,    64,    65,    66,
+      67,    67,    68,    69,    69,    70,    70,    71,    72,    72,
+      73,    73,    73,    73,    73,    73,    73,    73,    73,    73,
+      73,    73,    73,    73,    73,    73,    74,    74,    74,    74,
+      75,    75,    76,    76,    77,    78,    78,    79,    79,    79,
+      79,    79
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
        0,     2,     1,     2,     1,     2,     5,     3,     9,     0,
-       1,     1,     3,     6,     4,     0,     2,     1,     2,     1,
-       4,     2,     2,     1,     1,     1,     1,     1,     1,     1,
-      22,    10,    14,    14,     3,     4,     1,     3,     3,     3,
-       4,     0,     1,     3,     3,     3,     3,     3,     3,     3,
-       3,     5,     5,     5,     5,     5,     5,     5,     5,     1,
-       1,     1,     1,     1,     1,     1,     1,     3,     1,     3,
-       1,     1,     1,     1,     1
+       1,     1,     3,     6,     4,     0,     1,     0,     2,     1,
+       2,     1,     4,     0,     2,     2,     1,     1,     1,     1,
+       1,     1,     1,     1,    22,    10,    14,    14,     3,     4,
+       1,     3,     4,     1,     3,     3,     3,     4,     0,     1,
+       3,     3,     3,     3,     3,     3,     3,     3,     5,     5,
+       5,     5,     5,     5,     5,     5,     1,     1,     1,     1,
+       1,     1,     1,     1,     3,     1,     3,     1,     1,     1,
+       1,     1
 };
 
 
@@ -1683,7 +1696,7 @@ yyreduce:
         ast_root->data.program.definitions = defs;
         (yyval.node) = ast_root;
     }
-#line 1687 "build\\net_lang.tab.c"
+#line 1700 "build\\net_lang.tab.c"
     break;
 
   case 3: /* program: module_list network_def  */
@@ -1694,7 +1707,7 @@ yyreduce:
         ast_root->data.program.definitions = (yyvsp[-1].list);
         (yyval.node) = ast_root;
     }
-#line 1698 "build\\net_lang.tab.c"
+#line 1711 "build\\net_lang.tab.c"
     break;
 
   case 4: /* module_list: module_def  */
@@ -1703,7 +1716,7 @@ yyreduce:
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 1707 "build\\net_lang.tab.c"
+#line 1720 "build\\net_lang.tab.c"
     break;
 
   case 5: /* module_list: module_list module_def  */
@@ -1712,7 +1725,7 @@ yyreduce:
         ast_list_append((yyvsp[-1].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-1].list);
     }
-#line 1716 "build\\net_lang.tab.c"
+#line 1729 "build\\net_lang.tab.c"
     break;
 
   case 6: /* network_def: NETWORK IDENTIFIER LBRACE network_body RBRACE  */
@@ -1725,18 +1738,18 @@ yyreduce:
         (yyval.node)->data.network.statements = (yyvsp[-1].netbody)->statements;
         free((yyvsp[-1].netbody));  /* Free the temporary NetworkBody struct only */
     }
-#line 1729 "build\\net_lang.tab.c"
+#line 1742 "build\\net_lang.tab.c"
     break;
 
-  case 7: /* network_body: input_decl weights_decl statement_list_nonempty  */
+  case 7: /* network_body: input_decl optional_weights_decl statement_list_nonempty  */
 #line 140 "src\\parser\\net_lang.y"
-                                                    {
+                                                             {
         (yyval.netbody) = (NetworkBody*)ast_alloc(sizeof(NetworkBody));
         (yyval.netbody)->input = (yyvsp[-2].node);
         (yyval.netbody)->weights = (yyvsp[-1].node);
         (yyval.netbody)->statements = (yyvsp[0].list);
     }
-#line 1740 "build\\net_lang.tab.c"
+#line 1753 "build\\net_lang.tab.c"
     break;
 
   case 8: /* module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE  */
@@ -1747,7 +1760,7 @@ yyreduce:
         (yyval.node)->data.module.return_stmt = (yyvsp[-1].node);
         free((yyvsp[-7].sval));
     }
-#line 1751 "build\\net_lang.tab.c"
+#line 1764 "build\\net_lang.tab.c"
     break;
 
   case 9: /* module_params: %empty  */
@@ -1755,7 +1768,7 @@ yyreduce:
                 {
         (yyval.params) = param_list_new();
     }
-#line 1759 "build\\net_lang.tab.c"
+#line 1772 "build\\net_lang.tab.c"
     break;
 
   case 10: /* module_params: param_list  */
@@ -1763,7 +1776,7 @@ yyreduce:
                  {
         (yyval.params) = (yyvsp[0].params);
     }
-#line 1767 "build\\net_lang.tab.c"
+#line 1780 "build\\net_lang.tab.c"
     break;
 
   case 11: /* param_list: IDENTIFIER  */
@@ -1773,7 +1786,7 @@ yyreduce:
         param_list_add((yyval.params), (yyvsp[0].sval), NULL);
         free((yyvsp[0].sval));
     }
-#line 1777 "build\\net_lang.tab.c"
+#line 1790 "build\\net_lang.tab.c"
     break;
 
   case 12: /* param_list: param_list COMMA IDENTIFIER  */
@@ -1783,7 +1796,7 @@ yyreduce:
         (yyval.params) = (yyvsp[-2].params);
         free((yyvsp[0].sval));
     }
-#line 1787 "build\\net_lang.tab.c"
+#line 1800 "build\\net_lang.tab.c"
     break;
 
   case 13: /* input_decl: INPUT LPAREN SHAPE COLON array RPAREN  */
@@ -1791,7 +1804,7 @@ yyreduce:
                                           {
         (yyval.node) = ast_input((yyvsp[-1].node), (yylsp[-5]).first_line);
     }
-#line 1795 "build\\net_lang.tab.c"
+#line 1808 "build\\net_lang.tab.c"
     break;
 
   case 14: /* weights_decl: WEIGHTS LPAREN STRING_LIT RPAREN  */
@@ -1800,121 +1813,151 @@ yyreduce:
         (yyval.node) = ast_weights((yyvsp[-1].sval), (yylsp[-3]).first_line);
         free((yyvsp[-1].sval));
     }
-#line 1804 "build\\net_lang.tab.c"
+#line 1817 "build\\net_lang.tab.c"
     break;
 
-  case 15: /* statement_list: %empty  */
-#line 199 "src\\parser\\net_lang.y"
+  case 15: /* optional_weights_decl: %empty  */
+#line 197 "src\\parser\\net_lang.y"
+                {
+        (yyval.node) = NULL;
+    }
+#line 1825 "build\\net_lang.tab.c"
+    break;
+
+  case 16: /* optional_weights_decl: weights_decl  */
+#line 200 "src\\parser\\net_lang.y"
+                   {
+        (yyval.node) = (yyvsp[0].node);
+    }
+#line 1833 "build\\net_lang.tab.c"
+    break;
+
+  case 17: /* statement_list: %empty  */
+#line 208 "src\\parser\\net_lang.y"
                 {
         (yyval.list) = ast_list_new();
     }
-#line 1812 "build\\net_lang.tab.c"
+#line 1841 "build\\net_lang.tab.c"
     break;
 
-  case 16: /* statement_list: statement_list statement  */
-#line 202 "src\\parser\\net_lang.y"
+  case 18: /* statement_list: statement_list statement  */
+#line 211 "src\\parser\\net_lang.y"
                                {
         ast_list_append((yyvsp[-1].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-1].list);
     }
-#line 1821 "build\\net_lang.tab.c"
+#line 1850 "build\\net_lang.tab.c"
     break;
 
-  case 17: /* statement_list_nonempty: statement  */
-#line 209 "src\\parser\\net_lang.y"
+  case 19: /* statement_list_nonempty: statement  */
+#line 218 "src\\parser\\net_lang.y"
               {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 1830 "build\\net_lang.tab.c"
+#line 1859 "build\\net_lang.tab.c"
     break;
 
-  case 18: /* statement_list_nonempty: statement_list_nonempty statement  */
-#line 213 "src\\parser\\net_lang.y"
+  case 20: /* statement_list_nonempty: statement_list_nonempty statement  */
+#line 222 "src\\parser\\net_lang.y"
                                         {
         ast_list_append((yyvsp[-1].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-1].list);
     }
-#line 1839 "build\\net_lang.tab.c"
+#line 1868 "build\\net_lang.tab.c"
     break;
 
-  case 19: /* statement: assignment  */
-#line 220 "src\\parser\\net_lang.y"
+  case 21: /* statement: assignment  */
+#line 229 "src\\parser\\net_lang.y"
                { (yyval.node) = (yyvsp[0].node); }
-#line 1845 "build\\net_lang.tab.c"
+#line 1874 "build\\net_lang.tab.c"
     break;
 
-  case 20: /* assignment: IDENTIFIER ASSIGN layer_expr from_clause  */
-#line 224 "src\\parser\\net_lang.y"
-                                             {
+  case 22: /* assignment: IDENTIFIER ASSIGN layer_expr optional_from_clause  */
+#line 233 "src\\parser\\net_lang.y"
+                                                      {
         (yyval.node) = ast_assignment((yyvsp[-3].sval), (yyvsp[-1].node), (yyvsp[0].node), (yylsp[-3]).first_line);
         free((yyvsp[-3].sval));
     }
-#line 1854 "build\\net_lang.tab.c"
+#line 1883 "build\\net_lang.tab.c"
     break;
 
-  case 21: /* from_clause: FROM expr  */
-#line 231 "src\\parser\\net_lang.y"
+  case 23: /* optional_from_clause: %empty  */
+#line 240 "src\\parser\\net_lang.y"
+                {
+        (yyval.node) = NULL;
+    }
+#line 1891 "build\\net_lang.tab.c"
+    break;
+
+  case 24: /* optional_from_clause: FROM expr  */
+#line 244 "src\\parser\\net_lang.y"
               {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1862 "build\\net_lang.tab.c"
+#line 1899 "build\\net_lang.tab.c"
     break;
 
-  case 22: /* return_stmt: RETURN expr  */
-#line 237 "src\\parser\\net_lang.y"
+  case 25: /* return_stmt: RETURN expr  */
+#line 250 "src\\parser\\net_lang.y"
                 {
         ASTNode* node = ast_node_new(NODE_RETURN, (yylsp[-1]).first_line);
         node->data.return_stmt.value = (yyvsp[0].node);
         (yyval.node) = node;
     }
-#line 1872 "build\\net_lang.tab.c"
+#line 1909 "build\\net_lang.tab.c"
     break;
 
-  case 23: /* layer_expr: conv2d_layer  */
-#line 247 "src\\parser\\net_lang.y"
+  case 26: /* layer_expr: conv2d_layer  */
+#line 260 "src\\parser\\net_lang.y"
                  { (yyval.node) = (yyvsp[0].node); }
-#line 1878 "build\\net_lang.tab.c"
+#line 1915 "build\\net_lang.tab.c"
     break;
 
-  case 24: /* layer_expr: dense_layer  */
-#line 248 "src\\parser\\net_lang.y"
+  case 27: /* layer_expr: dense_layer  */
+#line 261 "src\\parser\\net_lang.y"
                   { (yyval.node) = (yyvsp[0].node); }
-#line 1884 "build\\net_lang.tab.c"
+#line 1921 "build\\net_lang.tab.c"
     break;
 
-  case 25: /* layer_expr: pool_layer  */
-#line 249 "src\\parser\\net_lang.y"
+  case 28: /* layer_expr: pool_layer  */
+#line 262 "src\\parser\\net_lang.y"
                  { (yyval.node) = (yyvsp[0].node); }
-#line 1890 "build\\net_lang.tab.c"
+#line 1927 "build\\net_lang.tab.c"
     break;
 
-  case 26: /* layer_expr: flatten_layer  */
-#line 250 "src\\parser\\net_lang.y"
+  case 29: /* layer_expr: flatten_layer  */
+#line 263 "src\\parser\\net_lang.y"
                     { (yyval.node) = (yyvsp[0].node); }
-#line 1896 "build\\net_lang.tab.c"
+#line 1933 "build\\net_lang.tab.c"
     break;
 
-  case 27: /* layer_expr: concat_layer  */
-#line 251 "src\\parser\\net_lang.y"
-                   { (yyval.node) = (yyvsp[0].node); }
-#line 1902 "build\\net_lang.tab.c"
+  case 30: /* layer_expr: add_layer  */
+#line 264 "src\\parser\\net_lang.y"
+                { (yyval.node) = (yyvsp[0].node); }
+#line 1939 "build\\net_lang.tab.c"
     break;
 
-  case 28: /* layer_expr: norm_layer  */
-#line 252 "src\\parser\\net_lang.y"
-                 { (yyval.node) = (yyvsp[0].node); }
-#line 1908 "build\\net_lang.tab.c"
-    break;
-
-  case 29: /* layer_expr: module_call  */
-#line 253 "src\\parser\\net_lang.y"
-                  { (yyval.node) = (yyvsp[0].node); }
-#line 1914 "build\\net_lang.tab.c"
-    break;
-
-  case 30: /* conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN  */
+  case 31: /* layer_expr: concat_layer  */
 #line 265 "src\\parser\\net_lang.y"
+                   { (yyval.node) = (yyvsp[0].node); }
+#line 1945 "build\\net_lang.tab.c"
+    break;
+
+  case 32: /* layer_expr: norm_layer  */
+#line 266 "src\\parser\\net_lang.y"
+                 { (yyval.node) = (yyvsp[0].node); }
+#line 1951 "build\\net_lang.tab.c"
+    break;
+
+  case 33: /* layer_expr: module_call  */
+#line 267 "src\\parser\\net_lang.y"
+                  { (yyval.node) = (yyvsp[0].node); }
+#line 1957 "build\\net_lang.tab.c"
+    break;
+
+  case 34: /* conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN  */
+#line 279 "src\\parser\\net_lang.y"
            {
         ASTNode* node = ast_node_new(NODE_CONV2D, (yylsp[-21]).first_line);
         
@@ -1932,11 +1975,11 @@ yyreduce:
         
         (yyval.node) = node;
     }
-#line 1936 "build\\net_lang.tab.c"
+#line 1979 "build\\net_lang.tab.c"
     break;
 
-  case 31: /* dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN  */
-#line 290 "src\\parser\\net_lang.y"
+  case 35: /* dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN  */
+#line 304 "src\\parser\\net_lang.y"
            {
         ASTNode* node = ast_node_new(NODE_DENSE, (yylsp[-9]).first_line);
         
@@ -1945,11 +1988,11 @@ yyreduce:
         
         (yyval.node) = node;
     }
-#line 1949 "build\\net_lang.tab.c"
+#line 1992 "build\\net_lang.tab.c"
     break;
 
-  case 32: /* pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
-#line 307 "src\\parser\\net_lang.y"
+  case 36: /* pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
+#line 321 "src\\parser\\net_lang.y"
            {
         ASTNode* node = ast_node_new(NODE_MAXPOOL, (yylsp[-13]).first_line);
         
@@ -1963,11 +2006,11 @@ yyreduce:
         
         (yyval.node) = node;
     }
-#line 1967 "build\\net_lang.tab.c"
+#line 2010 "build\\net_lang.tab.c"
     break;
 
-  case 33: /* pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
-#line 324 "src\\parser\\net_lang.y"
+  case 37: /* pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
+#line 338 "src\\parser\\net_lang.y"
            {
         ASTNode* node = ast_node_new(NODE_AVGPOOL, (yylsp[-13]).first_line);
         
@@ -1981,63 +2024,91 @@ yyreduce:
         
         (yyval.node) = node;
     }
-#line 1985 "build\\net_lang.tab.c"
+#line 2028 "build\\net_lang.tab.c"
     break;
 
-  case 34: /* flatten_layer: FLATTEN LPAREN RPAREN  */
-#line 342 "src\\parser\\net_lang.y"
+  case 38: /* flatten_layer: FLATTEN LPAREN RPAREN  */
+#line 356 "src\\parser\\net_lang.y"
                           {
         (yyval.node) = ast_node_new(NODE_FLATTEN, (yylsp[-2]).first_line);
     }
-#line 1993 "build\\net_lang.tab.c"
+#line 2036 "build\\net_lang.tab.c"
     break;
 
-  case 35: /* concat_layer: CONCAT LPAREN concat_args RPAREN  */
-#line 348 "src\\parser\\net_lang.y"
+  case 39: /* add_layer: ADD LPAREN add_args RPAREN  */
+#line 362 "src\\parser\\net_lang.y"
+                               {
+        ASTNode* node = ast_node_new(NODE_ADD, (yylsp[-3]).first_line);
+        node->data.add.inputs = (yyvsp[-1].list);
+        (yyval.node) = node;
+    }
+#line 2046 "build\\net_lang.tab.c"
+    break;
+
+  case 40: /* add_args: expr  */
+#line 370 "src\\parser\\net_lang.y"
+         {
+        (yyval.list) = ast_list_new();
+        ast_list_append((yyval.list), (yyvsp[0].node));
+    }
+#line 2055 "build\\net_lang.tab.c"
+    break;
+
+  case 41: /* add_args: add_args COMMA expr  */
+#line 374 "src\\parser\\net_lang.y"
+                          {
+        ast_list_append((yyvsp[-2].list), (yyvsp[0].node));
+        (yyval.list) = (yyvsp[-2].list);
+    }
+#line 2064 "build\\net_lang.tab.c"
+    break;
+
+  case 42: /* concat_layer: CONCAT LPAREN concat_args RPAREN  */
+#line 381 "src\\parser\\net_lang.y"
                                      {
         ASTNode* node = ast_node_new(NODE_CONCAT, (yylsp[-3]).first_line);
         node->data.concat.inputs = (yyvsp[-1].list);
         (yyval.node) = node;
     }
-#line 2003 "build\\net_lang.tab.c"
+#line 2074 "build\\net_lang.tab.c"
     break;
 
-  case 36: /* concat_args: expr  */
-#line 356 "src\\parser\\net_lang.y"
+  case 43: /* concat_args: expr  */
+#line 389 "src\\parser\\net_lang.y"
          {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 2012 "build\\net_lang.tab.c"
+#line 2083 "build\\net_lang.tab.c"
     break;
 
-  case 37: /* concat_args: concat_args COMMA expr  */
-#line 360 "src\\parser\\net_lang.y"
+  case 44: /* concat_args: concat_args COMMA expr  */
+#line 393 "src\\parser\\net_lang.y"
                              {
         ast_list_append((yyvsp[-2].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-2].list);
     }
-#line 2021 "build\\net_lang.tab.c"
+#line 2092 "build\\net_lang.tab.c"
     break;
 
-  case 38: /* norm_layer: BATCHNORM LPAREN RPAREN  */
-#line 367 "src\\parser\\net_lang.y"
+  case 45: /* norm_layer: BATCHNORM LPAREN RPAREN  */
+#line 400 "src\\parser\\net_lang.y"
                             {
         (yyval.node) = ast_node_new(NODE_BATCHNORM, (yylsp[-2]).first_line);
     }
-#line 2029 "build\\net_lang.tab.c"
+#line 2100 "build\\net_lang.tab.c"
     break;
 
-  case 39: /* norm_layer: LAYERNORM LPAREN RPAREN  */
-#line 370 "src\\parser\\net_lang.y"
+  case 46: /* norm_layer: LAYERNORM LPAREN RPAREN  */
+#line 403 "src\\parser\\net_lang.y"
                               {
         (yyval.node) = ast_node_new(NODE_LAYERNORM, (yylsp[-2]).first_line);
     }
-#line 2037 "build\\net_lang.tab.c"
+#line 2108 "build\\net_lang.tab.c"
     break;
 
-  case 40: /* module_call: IDENTIFIER LPAREN layer_params RPAREN  */
-#line 378 "src\\parser\\net_lang.y"
+  case 47: /* module_call: IDENTIFIER LPAREN layer_params RPAREN  */
+#line 411 "src\\parser\\net_lang.y"
                                           {
         ASTNode* node = ast_node_new(NODE_MODULE_CALL, (yylsp[-3]).first_line);
         node->data.module_call.module_name = strdup((yyvsp[-3].sval));
@@ -2045,291 +2116,291 @@ yyreduce:
         free((yyvsp[-3].sval));
         (yyval.node) = node;
     }
-#line 2049 "build\\net_lang.tab.c"
+#line 2120 "build\\net_lang.tab.c"
     break;
 
-  case 41: /* layer_params: %empty  */
-#line 390 "src\\parser\\net_lang.y"
+  case 48: /* layer_params: %empty  */
+#line 423 "src\\parser\\net_lang.y"
                 {
         (yyval.params) = param_list_new();
     }
-#line 2057 "build\\net_lang.tab.c"
+#line 2128 "build\\net_lang.tab.c"
     break;
 
-  case 42: /* layer_params: layer_param_list  */
-#line 393 "src\\parser\\net_lang.y"
+  case 49: /* layer_params: layer_param_list  */
+#line 426 "src\\parser\\net_lang.y"
                        {
         (yyval.params) = (yyvsp[0].params);
     }
-#line 2065 "build\\net_lang.tab.c"
+#line 2136 "build\\net_lang.tab.c"
     break;
 
-  case 43: /* layer_param_list: IDENTIFIER COLON expr  */
-#line 399 "src\\parser\\net_lang.y"
+  case 50: /* layer_param_list: IDENTIFIER COLON expr  */
+#line 432 "src\\parser\\net_lang.y"
                           {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), (yyvsp[-2].sval), (yyvsp[0].node));
         free((yyvsp[-2].sval));
     }
-#line 2075 "build\\net_lang.tab.c"
+#line 2146 "build\\net_lang.tab.c"
     break;
 
-  case 44: /* layer_param_list: FILTERS COLON expr  */
-#line 405 "src\\parser\\net_lang.y"
+  case 51: /* layer_param_list: FILTERS COLON expr  */
+#line 438 "src\\parser\\net_lang.y"
                          {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "filters", (yyvsp[0].node));
     }
-#line 2084 "build\\net_lang.tab.c"
+#line 2155 "build\\net_lang.tab.c"
     break;
 
-  case 45: /* layer_param_list: KERNEL COLON expr  */
-#line 409 "src\\parser\\net_lang.y"
+  case 52: /* layer_param_list: KERNEL COLON expr  */
+#line 442 "src\\parser\\net_lang.y"
                         {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "kernel", (yyvsp[0].node));
     }
-#line 2093 "build\\net_lang.tab.c"
+#line 2164 "build\\net_lang.tab.c"
     break;
 
-  case 46: /* layer_param_list: ACTIVATION COLON expr  */
-#line 413 "src\\parser\\net_lang.y"
+  case 53: /* layer_param_list: ACTIVATION COLON expr  */
+#line 446 "src\\parser\\net_lang.y"
                             {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "activation", (yyvsp[0].node));
     }
-#line 2102 "build\\net_lang.tab.c"
+#line 2173 "build\\net_lang.tab.c"
     break;
 
-  case 47: /* layer_param_list: STRIDE COLON expr  */
-#line 417 "src\\parser\\net_lang.y"
+  case 54: /* layer_param_list: STRIDE COLON expr  */
+#line 450 "src\\parser\\net_lang.y"
                         {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "stride", (yyvsp[0].node));
     }
-#line 2111 "build\\net_lang.tab.c"
+#line 2182 "build\\net_lang.tab.c"
     break;
 
-  case 48: /* layer_param_list: PADDING COLON expr  */
-#line 421 "src\\parser\\net_lang.y"
+  case 55: /* layer_param_list: PADDING COLON expr  */
+#line 454 "src\\parser\\net_lang.y"
                          {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "padding", (yyvsp[0].node));
     }
-#line 2120 "build\\net_lang.tab.c"
+#line 2191 "build\\net_lang.tab.c"
     break;
 
-  case 49: /* layer_param_list: POOL COLON expr  */
-#line 425 "src\\parser\\net_lang.y"
+  case 56: /* layer_param_list: POOL COLON expr  */
+#line 458 "src\\parser\\net_lang.y"
                       {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "pool", (yyvsp[0].node));
     }
-#line 2129 "build\\net_lang.tab.c"
+#line 2200 "build\\net_lang.tab.c"
     break;
 
-  case 50: /* layer_param_list: UNITS COLON expr  */
-#line 429 "src\\parser\\net_lang.y"
+  case 57: /* layer_param_list: UNITS COLON expr  */
+#line 462 "src\\parser\\net_lang.y"
                        {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "units", (yyvsp[0].node));
     }
-#line 2138 "build\\net_lang.tab.c"
+#line 2209 "build\\net_lang.tab.c"
     break;
 
-  case 51: /* layer_param_list: layer_param_list COMMA IDENTIFIER COLON expr  */
-#line 433 "src\\parser\\net_lang.y"
+  case 58: /* layer_param_list: layer_param_list COMMA IDENTIFIER COLON expr  */
+#line 466 "src\\parser\\net_lang.y"
                                                    {
         param_list_add((yyvsp[-4].params), (yyvsp[-2].sval), (yyvsp[0].node));
         free((yyvsp[-2].sval));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2148 "build\\net_lang.tab.c"
+#line 2219 "build\\net_lang.tab.c"
     break;
 
-  case 52: /* layer_param_list: layer_param_list COMMA FILTERS COLON expr  */
-#line 438 "src\\parser\\net_lang.y"
+  case 59: /* layer_param_list: layer_param_list COMMA FILTERS COLON expr  */
+#line 471 "src\\parser\\net_lang.y"
                                                 {
         param_list_add((yyvsp[-4].params), "filters", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2157 "build\\net_lang.tab.c"
+#line 2228 "build\\net_lang.tab.c"
     break;
 
-  case 53: /* layer_param_list: layer_param_list COMMA KERNEL COLON expr  */
-#line 442 "src\\parser\\net_lang.y"
+  case 60: /* layer_param_list: layer_param_list COMMA KERNEL COLON expr  */
+#line 475 "src\\parser\\net_lang.y"
                                                {
         param_list_add((yyvsp[-4].params), "kernel", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2166 "build\\net_lang.tab.c"
+#line 2237 "build\\net_lang.tab.c"
     break;
 
-  case 54: /* layer_param_list: layer_param_list COMMA ACTIVATION COLON expr  */
-#line 446 "src\\parser\\net_lang.y"
+  case 61: /* layer_param_list: layer_param_list COMMA ACTIVATION COLON expr  */
+#line 479 "src\\parser\\net_lang.y"
                                                    {
         param_list_add((yyvsp[-4].params), "activation", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2175 "build\\net_lang.tab.c"
+#line 2246 "build\\net_lang.tab.c"
     break;
 
-  case 55: /* layer_param_list: layer_param_list COMMA STRIDE COLON expr  */
-#line 450 "src\\parser\\net_lang.y"
+  case 62: /* layer_param_list: layer_param_list COMMA STRIDE COLON expr  */
+#line 483 "src\\parser\\net_lang.y"
                                                {
         param_list_add((yyvsp[-4].params), "stride", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2184 "build\\net_lang.tab.c"
+#line 2255 "build\\net_lang.tab.c"
     break;
 
-  case 56: /* layer_param_list: layer_param_list COMMA PADDING COLON expr  */
-#line 454 "src\\parser\\net_lang.y"
+  case 63: /* layer_param_list: layer_param_list COMMA PADDING COLON expr  */
+#line 487 "src\\parser\\net_lang.y"
                                                 {
         param_list_add((yyvsp[-4].params), "padding", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2193 "build\\net_lang.tab.c"
+#line 2264 "build\\net_lang.tab.c"
     break;
 
-  case 57: /* layer_param_list: layer_param_list COMMA POOL COLON expr  */
-#line 458 "src\\parser\\net_lang.y"
+  case 64: /* layer_param_list: layer_param_list COMMA POOL COLON expr  */
+#line 491 "src\\parser\\net_lang.y"
                                              {
         param_list_add((yyvsp[-4].params), "pool", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2202 "build\\net_lang.tab.c"
+#line 2273 "build\\net_lang.tab.c"
     break;
 
-  case 58: /* layer_param_list: layer_param_list COMMA UNITS COLON expr  */
-#line 462 "src\\parser\\net_lang.y"
+  case 65: /* layer_param_list: layer_param_list COMMA UNITS COLON expr  */
+#line 495 "src\\parser\\net_lang.y"
                                               {
         param_list_add((yyvsp[-4].params), "units", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2211 "build\\net_lang.tab.c"
+#line 2282 "build\\net_lang.tab.c"
     break;
 
-  case 59: /* expr: number  */
-#line 471 "src\\parser\\net_lang.y"
+  case 66: /* expr: number  */
+#line 504 "src\\parser\\net_lang.y"
            { (yyval.node) = (yyvsp[0].node); }
-#line 2217 "build\\net_lang.tab.c"
+#line 2288 "build\\net_lang.tab.c"
     break;
 
-  case 60: /* expr: array  */
-#line 472 "src\\parser\\net_lang.y"
+  case 67: /* expr: array  */
+#line 505 "src\\parser\\net_lang.y"
             { (yyval.node) = (yyvsp[0].node); }
-#line 2223 "build\\net_lang.tab.c"
+#line 2294 "build\\net_lang.tab.c"
     break;
 
-  case 61: /* expr: identifier_expr  */
-#line 473 "src\\parser\\net_lang.y"
+  case 68: /* expr: identifier_expr  */
+#line 506 "src\\parser\\net_lang.y"
                       { (yyval.node) = (yyvsp[0].node); }
-#line 2229 "build\\net_lang.tab.c"
+#line 2300 "build\\net_lang.tab.c"
     break;
 
-  case 62: /* expr: activation_value  */
-#line 474 "src\\parser\\net_lang.y"
+  case 69: /* expr: activation_value  */
+#line 507 "src\\parser\\net_lang.y"
                        {
         /* Convert activation token to identifier node */
         (yyval.node) = ast_identifier(activation_to_string((yyvsp[0].activation)), (yylsp[0]).first_line);
     }
-#line 2238 "build\\net_lang.tab.c"
+#line 2309 "build\\net_lang.tab.c"
     break;
 
-  case 63: /* identifier_expr: IDENTIFIER  */
-#line 481 "src\\parser\\net_lang.y"
+  case 70: /* identifier_expr: IDENTIFIER  */
+#line 514 "src\\parser\\net_lang.y"
                {
         (yyval.node) = ast_identifier((yyvsp[0].sval), (yylsp[0]).first_line);
         free((yyvsp[0].sval));
     }
-#line 2247 "build\\net_lang.tab.c"
+#line 2318 "build\\net_lang.tab.c"
     break;
 
-  case 64: /* identifier_expr: INPUT  */
-#line 485 "src\\parser\\net_lang.y"
+  case 71: /* identifier_expr: INPUT  */
+#line 518 "src\\parser\\net_lang.y"
             {
         (yyval.node) = ast_identifier("input", (yylsp[0]).first_line);
     }
-#line 2255 "build\\net_lang.tab.c"
+#line 2326 "build\\net_lang.tab.c"
     break;
 
-  case 65: /* number: NUMBER  */
-#line 491 "src\\parser\\net_lang.y"
+  case 72: /* number: NUMBER  */
+#line 524 "src\\parser\\net_lang.y"
            {
         (yyval.node) = ast_number_int((yyvsp[0].ival), (yylsp[0]).first_line);
     }
-#line 2263 "build\\net_lang.tab.c"
+#line 2334 "build\\net_lang.tab.c"
     break;
 
-  case 66: /* number: FLOAT_NUM  */
-#line 494 "src\\parser\\net_lang.y"
+  case 73: /* number: FLOAT_NUM  */
+#line 527 "src\\parser\\net_lang.y"
                 {
         (yyval.node) = ast_number_float((yyvsp[0].fval), (yylsp[0]).first_line);
     }
-#line 2271 "build\\net_lang.tab.c"
+#line 2342 "build\\net_lang.tab.c"
     break;
 
-  case 67: /* array: LBRACKET array_elements RBRACKET  */
-#line 500 "src\\parser\\net_lang.y"
+  case 74: /* array: LBRACKET array_elements RBRACKET  */
+#line 533 "src\\parser\\net_lang.y"
                                      {
         ASTNode* node = ast_array((yylsp[-2]).first_line);
         node->data.array.elements = (yyvsp[-1].list);
         (yyval.node) = node;
     }
-#line 2281 "build\\net_lang.tab.c"
+#line 2352 "build\\net_lang.tab.c"
     break;
 
-  case 68: /* array_elements: number  */
-#line 508 "src\\parser\\net_lang.y"
+  case 75: /* array_elements: number  */
+#line 541 "src\\parser\\net_lang.y"
            {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 2290 "build\\net_lang.tab.c"
+#line 2361 "build\\net_lang.tab.c"
     break;
 
-  case 69: /* array_elements: array_elements COMMA number  */
-#line 512 "src\\parser\\net_lang.y"
+  case 76: /* array_elements: array_elements COMMA number  */
+#line 545 "src\\parser\\net_lang.y"
                                   {
         ast_list_append((yyvsp[-2].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-2].list);
     }
-#line 2299 "build\\net_lang.tab.c"
+#line 2370 "build\\net_lang.tab.c"
     break;
 
-  case 70: /* activation_value: RELU  */
-#line 519 "src\\parser\\net_lang.y"
+  case 77: /* activation_value: RELU  */
+#line 552 "src\\parser\\net_lang.y"
          { (yyval.activation) = ACT_RELU; }
-#line 2305 "build\\net_lang.tab.c"
+#line 2376 "build\\net_lang.tab.c"
     break;
 
-  case 71: /* activation_value: SIGMOID  */
-#line 520 "src\\parser\\net_lang.y"
+  case 78: /* activation_value: SIGMOID  */
+#line 553 "src\\parser\\net_lang.y"
               { (yyval.activation) = ACT_SIGMOID; }
-#line 2311 "build\\net_lang.tab.c"
+#line 2382 "build\\net_lang.tab.c"
     break;
 
-  case 72: /* activation_value: TANH  */
-#line 521 "src\\parser\\net_lang.y"
+  case 79: /* activation_value: TANH  */
+#line 554 "src\\parser\\net_lang.y"
            { (yyval.activation) = ACT_TANH; }
-#line 2317 "build\\net_lang.tab.c"
+#line 2388 "build\\net_lang.tab.c"
     break;
 
-  case 73: /* activation_value: SOFTMAX  */
-#line 522 "src\\parser\\net_lang.y"
+  case 80: /* activation_value: SOFTMAX  */
+#line 555 "src\\parser\\net_lang.y"
               { (yyval.activation) = ACT_SOFTMAX; }
-#line 2323 "build\\net_lang.tab.c"
+#line 2394 "build\\net_lang.tab.c"
     break;
 
-  case 74: /* activation_value: LINEAR  */
-#line 523 "src\\parser\\net_lang.y"
+  case 81: /* activation_value: LINEAR  */
+#line 556 "src\\parser\\net_lang.y"
              { (yyval.activation) = ACT_LINEAR; }
-#line 2329 "build\\net_lang.tab.c"
+#line 2400 "build\\net_lang.tab.c"
     break;
 
 
-#line 2333 "build\\net_lang.tab.c"
+#line 2404 "build\\net_lang.tab.c"
 
       default: break;
     }
@@ -2558,7 +2629,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 526 "src\\parser\\net_lang.y"
+#line 559 "src\\parser\\net_lang.y"
 
 
 /* ========== ERROR HANDLING ========== */

@@ -5,7 +5,7 @@
 
 network SimpleClassifier {
     input(shape: [28, 28, 1])
-    weights("models/simple_classifier.nwf")
+    weights("assets/weights/examples/simple_classifier.nwf")  // placeholder path
     
     // Flatten input: 28×28×1 = 784
     x = Flatten() from input

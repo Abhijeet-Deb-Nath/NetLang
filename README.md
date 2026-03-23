@@ -1,120 +1,146 @@
-# NetLang Compiler
+# NetLang
 
-**DSL compiler transforming neural network architectures into optimized C code with AVX2 vectorization.**
+NetLang is a research compiler prototype for fixed-shape CNN inference.
 
----
+The repo is now centered on one thesis:
 
-## Quick Example
+> build a static CNN compiler that lowers a restricted network description to C, then evolve it into a true DAG compiler with compile-time activation memory planning and low-overhead deployment
 
-```netlang
-network LeNet5 {
-    input(shape: [28, 28, 1])
-    weights("models/lenet5_mnist.nwf")
-    
-    x = Conv2D(filters: 6, kernel: [5, 5], activation: relu) from input
-    x = MaxPool(pool: [2, 2], stride: 2) from x
-    x = Conv2D(filters: 16, kernel: [5, 5], activation: relu) from x
-    x = MaxPool(pool: [2, 2], stride: 2) from x
-    x = Flatten() from x
-    x = Dense(units: 120, activation: relu) from x
-    output = Dense(units: 10, activation: softmax) from x
-}
-```
-**Output:** Optimized C code → Standalone executable
+This is the current research direction. It is the only direction this repo should optimize for.
 
----
+## Current Reality
 
-## Features
+What works today:
 
-- Ahead-of-time compilation with shape specialization
-- AVX2 vectorization for Conv2D/Dense/Pool layers
-- Automatic shape inference and type checking
-- Memory-mapped weight loading (~1ms)
-- Import weights from PyTorch/ONNX/Keras
-- Zero runtime dependencies
+- lexing, parsing, and semantic checks for `.nlang` network files
+- weight-file declarations via `.nwf`
+- C code generation for a sequential subset
+- runtime support for external weights and aligned activation buffers
 
----
+What is stable for code generation today:
+
+- `Conv2D`
+- `Dense`
+- `MaxPool`
+- `AvgPool`
+- `Flatten`
+- graph lowering with explicit value dependencies
+- planner-backed static activation arena
+- generated planner metadata for arena size and slot count
+
+What is available but still experimental:
+
+- `Add` for residual-style branch merge
+- `Concat` for branch merge in fixed-shape graphs
+
+What is not yet an honest end-to-end feature:
+
+- general DAG execution
+- detailed planner reporting and final benchmark harness integration
+- publication-grade benchmarking
+
+The repo previously mixed assignment-era documentation, inflated optimization claims, and parser-only features with actual compiler support. That drift has been removed from the top-level docs.
+
+## Research Target
+
+NetLang is being reorganized around this target system:
+
+- fixed-shape CNN graphs
+- ahead-of-time lowering to C
+- explicit graph IR
+- topological scheduling
+- compile-time activation lifetime analysis
+- static arena allocation and buffer reuse
+- late-bound external weights
+- deployment evaluation on CPU and edge-like constraints
+
+The goal is not "beat every existing runtime on generic throughput."
+
+The goal is:
+
+- lower overhead deployment
+- stronger resource predictability
+- compile-time memory planning
+- honest, narrow compiler contributions
+
+## Repo Guide
+
+- [Quick Start](QUICKSTART.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Current Status](docs/STATUS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Graph IR](docs/GRAPH_IR.md)
+- [Memory Planning](docs/MEMORY_PLANNING.md)
+- [Syntax](docs/SYNTAX.md)
+- [Benchmarking](docs/BENCHMARKING.md)
+- [Weight Format](docs/WEIGHT_FORMAT.md)
+- [Examples](examples/README.md)
 
 ## Quick Start
 
-```bash
-# 1. Build compiler
+Build the compiler:
+
+```powershell
 build.bat
-
-# 2. Compile network to C
-bin/netlang_compiler architecture/lenet5.nlang -o generated/lenet5.c
-
-# 3. Build executable
-gcc -O3 -mavx2 generated/lenet5.c -o lenet5_infer -lm
-
-# 4. Run inference
-./lenet5_infer input.bin
 ```
 
-**See [QUICKSTART.md](QUICKSTART.md) for detailed 5-minute guide.**
+Compile the reference sequential example:
 
----
-
-## Performance
-
-**LeNet5 on MNIST (Intel i5-5200U):**
-- Inference: 4.43ms per image (with optimizations)
-- Throughput: 0.98 GFLOPS
-- Accuracy: 100% on 100 test images
-
-**Optimizations applied:** Operator fusion, L1 cache blocking  
-**Gap vs ONNX Runtime:** 15× (expected for research compiler)
-
-**See [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) for detailed analysis.**
-
----
-
-## Documentation
-
-- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide
-- **[BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md)** - Performance analysis
-- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete syntax reference
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Compiler internals
-- **[docs/OPTIMIZATION_RESULTS.md](docs/OPTIMIZATION_RESULTS.md)** - Detailed optimization results
-
----
-
-## Project Structure
-
-```
-flex_work/
-├── src/                   # Compiler (Lex/Bison/C)
-│   ├── lexer/            # Tokenization
-│   ├── parser/           # Syntax analysis
-│   ├── ast/              # Abstract Syntax Tree
-│   ├── semantic/         # Type checking & shape inference
-│   └── codegen/          # Code generation + optimizations
-│
-├── architecture/          # Network definitions (.nlang)
-├── models/                # Pretrained weights (.nwf)
-├── tools/                 # PyTorch/ONNX converters
-├── docs/                  # Documentation
-├── generated/             # Generated C code (output)
-└── bin/                   # Compiled executables (output)
+```powershell
+build\netlang.exe examples\lenet5.nlang -o generated\lenet5.c
+build_network.bat generated\lenet5.c lenet5_smoke
+bin\lenet5_smoke.exe assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin
 ```
 
----
+This smoke path is useful for correctness checks. It is not the final benchmark methodology for the research target.
 
-## Supported Layers
+Build the in-process benchmark harness:
 
-Conv2D, Dense, MaxPool, AvgPool, Flatten, BatchNorm, ReLU, Softmax
+```powershell
+build_benchmark.bat generated\lenet5.c lenet5_bench
+bin\lenet5_bench.exe --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin --warmup 25 --runs 200
+```
 
----
+Run the end-to-end evaluation driver:
 
-## Requirements
+```powershell
+python tools\run_eval.py ^
+  --network examples\lenet5.nlang ^
+  --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin ^
+  --onnx assets\models\onnx\lenet_mnist.onnx ^
+  --warmup 25 ^
+  --runs 200
+```
 
-- GCC/Clang with AVX2 support
-- Flex 2.6+, Bison 3.0+
-- x86-64 CPU with AVX2 (Intel Haswell 2013+)
-- Python 3.7+ (optional, for weight conversion)
+Run the multi-sample matrix:
 
----
+```powershell
+python tools\run_eval_matrix.py ^
+  --network examples\lenet5.nlang ^
+  --input-glob assets\inputs\preprocessed_28x28\*.bin ^
+  --onnx assets\models\onnx\lenet_mnist.onnx ^
+  --warmup 5 ^
+  --runs 20 ^
+  --sample-limit 25
+```
 
-## License
+## Repository Layout
 
-MIT License
+```text
+assets/         sample inputs, weights, ONNX models, and dataset assets
+fixtures/       parser fixtures and legacy internal network inputs
+src/            compiler implementation
+examples/       public example networks
+tools/          converters, preprocessing, and smoke-test helpers
+generated/      generated C output
+bin/            built executables and DLLs
+docs/           research and implementation docs
+results/        evaluation outputs
+```
+
+## Ground Rules
+
+- parser support is not the same as codegen support
+- performance claims must follow `docs/BENCHMARKING.md`
+- public docs should describe the codegen-ready subset first
+- new language features are secondary to graph IR, scheduling, and memory planning

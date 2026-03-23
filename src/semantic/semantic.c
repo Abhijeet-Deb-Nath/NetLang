@@ -220,9 +220,30 @@ void analyze_statement(TypeChecker* tc, ASTNode* stmt) {
                                "Redefining variable '%s'", target);
             }
             
+            int requires_from = (value->type == NODE_CONV2D ||
+                                 value->type == NODE_DENSE ||
+                                 value->type == NODE_MAXPOOL ||
+                                 value->type == NODE_AVGPOOL ||
+                                 value->type == NODE_FLATTEN ||
+                                 value->type == NODE_MODULE_CALL);
+            int ignores_from = (value->type == NODE_ADD ||
+                                value->type == NODE_CONCAT);
+
             // Validate 'from' source exists
             TensorType* input_type = NULL;
-            if (from_source) {
+            if (requires_from && !from_source) {
+                semantic_error(tc, stmt->line_number,
+                             "Layer '%s' requires a 'from' source",
+                             target);
+                break;
+            }
+
+            if (ignores_from && from_source) {
+                semantic_warning(tc, stmt->line_number,
+                               "Ignoring redundant 'from' source for multi-input operator");
+            }
+
+            if (from_source && !ignores_from) {
                 if (from_source->type == NODE_IDENTIFIER) {
                     Symbol* src_sym = scope_lookup(tc->current_scope, 
                                                    from_source->data.identifier.name, 1);
@@ -251,6 +272,9 @@ void analyze_statement(TypeChecker* tc, ASTNode* stmt) {
                     break;
                 case NODE_FLATTEN:
                     output_type = infer_flatten_shape(input_type);
+                    break;
+                case NODE_ADD:
+                    output_type = infer_add_shape(tc, value->data.add.inputs);
                     break;
                 case NODE_CONCAT:
                     output_type = infer_concat_shape(tc, value->data.concat.inputs);

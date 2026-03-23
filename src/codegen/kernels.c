@@ -292,6 +292,21 @@ void flatten_hwc_to_chw(const float* input, float* output, int H, int W, int C) 
     }
 }
 
+void add_forward(
+    const float** inputs,
+    float* output,
+    int num_inputs,
+    int size
+) {
+    for (int idx = 0; idx < size; idx++) {
+        float sum = 0.0f;
+        for (int input_idx = 0; input_idx < num_inputs; input_idx++) {
+            sum += inputs[input_idx][idx];
+        }
+        output[idx] = sum;
+    }
+}
+
 void concat_forward(
     const float** inputs,
     float* output,

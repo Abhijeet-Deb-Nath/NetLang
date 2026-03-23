@@ -58,6 +58,7 @@ SLCOMMENT   "//"[^\n]*
 "MaxPool"     { return MAXPOOL; }
 "AvgPool"     { return AVGPOOL; }
 "Flatten"     { return FLATTEN; }
+"Add"         { return ADD; }
 "Concat"      { return CONCAT; }
 "BatchNorm"   { return BATCHNORM; }
 "LayerNorm"   { return LAYERNORM; }

@@ -57,7 +57,7 @@ ASTNode* ast_root = NULL;
 %token NETWORK MODULE RETURN FROM INPUT SHAPE WEIGHTS
 
 /* Layer types */
-%token CONV2D DENSE MAXPOOL AVGPOOL FLATTEN CONCAT BATCHNORM LAYERNORM
+%token CONV2D DENSE MAXPOOL AVGPOOL FLATTEN ADD CONCAT BATCHNORM LAYERNORM
 
 /* Parameter keywords */
 %token FILTERS KERNEL ACTIVATION STRIDE PADDING POOL UNITS
@@ -76,13 +76,13 @@ ASTNode* ast_root = NULL;
 
 /* ========== NON-TERMINAL TYPES ========== */
 %type <node> program network_def module_def
-%type <node> input_decl weights_decl
+%type <node> input_decl weights_decl optional_weights_decl
 %type <node> statement assignment return_stmt
 %type <node> layer_expr conv2d_layer dense_layer pool_layer
-%type <node> flatten_layer concat_layer norm_layer module_call
-%type <node> expr from_clause identifier_expr
+%type <node> flatten_layer add_layer concat_layer norm_layer module_call
+%type <node> expr optional_from_clause identifier_expr
 %type <node> number array
-%type <list> module_list statement_list statement_list_nonempty array_elements concat_args
+%type <list> module_list statement_list statement_list_nonempty array_elements add_args concat_args
 %type <params> module_params param_list layer_params layer_param_list
 %type <activation> activation_value
 %type <netbody> network_body
@@ -137,7 +137,7 @@ network_def:
     ;
 
 network_body:
-    input_decl weights_decl statement_list_nonempty {
+    input_decl optional_weights_decl statement_list_nonempty {
         $$ = (NetworkBody*)ast_alloc(sizeof(NetworkBody));
         $$->input = $1;
         $$->weights = $2;
@@ -193,6 +193,15 @@ weights_decl:
     }
     ;
 
+optional_weights_decl:
+    /* empty */ {
+        $$ = NULL;
+    }
+    | weights_decl {
+        $$ = $1;
+    }
+    ;
+
 /* ========== STATEMENTS ========== */
 
 statement_list:
@@ -221,13 +230,17 @@ statement:
     ;
 
 assignment:
-    IDENTIFIER ASSIGN layer_expr from_clause {
+    IDENTIFIER ASSIGN layer_expr optional_from_clause {
         $$ = ast_assignment($1, $3, $4, @1.first_line);
         free($1);
     }
     ;
 
-from_clause:
+optional_from_clause:
+    /* empty */ {
+        $$ = NULL;
+    }
+    |
     FROM expr {
         $$ = $2;
     }
@@ -248,6 +261,7 @@ layer_expr:
     | dense_layer { $$ = $1; }
     | pool_layer { $$ = $1; }
     | flatten_layer { $$ = $1; }
+    | add_layer { $$ = $1; }
     | concat_layer { $$ = $1; }
     | norm_layer { $$ = $1; }
     | module_call { $$ = $1; }
@@ -341,6 +355,25 @@ pool_layer:
 flatten_layer:
     FLATTEN LPAREN RPAREN {
         $$ = ast_node_new(NODE_FLATTEN, @1.first_line);
+    }
+    ;
+
+add_layer:
+    ADD LPAREN add_args RPAREN {
+        ASTNode* node = ast_node_new(NODE_ADD, @1.first_line);
+        node->data.add.inputs = $3;
+        $$ = node;
+    }
+    ;
+
+add_args:
+    expr {
+        $$ = ast_list_new();
+        ast_list_append($$, $1);
+    }
+    | add_args COMMA expr {
+        ast_list_append($1, $3);
+        $$ = $1;
     }
     ;
 

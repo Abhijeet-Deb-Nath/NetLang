@@ -10,7 +10,7 @@ Usage:
     python tools/preprocess.py image.png output.bin
     
     # Entire folder
-    python tools/preprocess.py test_data/images/ test_data/preprocessed/
+    python tools/preprocess.py assets/inputs/raw/ assets/inputs/preprocessed_custom/
 
 Author: NetLang Compiler Project
 Date: February 2026
@@ -123,7 +123,7 @@ def print_usage():
     print("  python tools/preprocess.py digit_7.png output.bin")
     print()
     print("  # Convert entire folder")
-    print("  python tools/preprocess.py test_data/images/ test_data/preprocessed/")
+    print("  python tools/preprocess.py assets/inputs/raw/ assets/inputs/preprocessed_custom/")
     print()
     print("Supported formats: PNG, JPG, JPEG, BMP")
     print("Output: 32×32 grayscale float32 binary (.bin)")

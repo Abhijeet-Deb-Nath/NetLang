@@ -20,7 +20,7 @@ except ImportError as e:
 
 
 def main():
-    output_dir = Path('test_data/preprocessed_28x28')
+    output_dir = Path('assets/inputs/preprocessed_28x28')
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print("=" * 70)
@@ -28,7 +28,7 @@ def main():
     print("=" * 70)
     
     # Load MNIST test set
-    mnist_test = datasets.MNIST(root='./data', train=False, download=True)
+    mnist_test = datasets.MNIST(root='./assets/datasets', train=False, download=True)
     
     print(f"Converting to .bin format (28×28 grayscale, float32, [0,1])...")
     print(f"Output: {output_dir}/")

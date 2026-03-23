@@ -11,7 +11,8 @@ Usage:
     Default: 28x28 (native MNIST size, matches ONNX models)
 
 Output:
-    test_data/preprocessed/*.bin files ready for inference
+    assets/inputs/preprocessed_28x28/*.bin or assets/inputs/preprocessed_32x32/*.bin
+    files ready for inference
 
 Requirements:
     pip install torch torchvision numpy
@@ -39,7 +40,7 @@ def main():
     args = parser.parse_args()
     
     img_size = args.size
-    output_dir = Path('test_data/preprocessed')
+    output_dir = Path(f'assets/inputs/preprocessed_{img_size}x{img_size}')
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print("=" * 70)
@@ -50,7 +51,7 @@ def main():
     print()
     
     # Download MNIST test set
-    mnist_test = datasets.MNIST(root='./data', train=False, download=True)
+    mnist_test = datasets.MNIST(root='./assets/datasets', train=False, download=True)
     
     print(f"Converting to .bin format ({img_size}×{img_size} grayscale, float32, [0,1])...")
     print(f"Output: {output_dir}/")
@@ -79,10 +80,14 @@ def main():
     print(f"✓ Successfully created 10,000 .bin files (~{file_size_mb:.0f} MB)")
     print(f"  Format: {img_size}×{img_size}×1 float32")
     print()
-    print("Quick test:")
-    print(f"  bin\\test_network.exe {output_dir}\\mnist_0000_label_7.bin")
-    print()
-    print("Cleanup tip: Delete data/ folder (55 MB cache) to save space.")
+    if img_size == 28:
+        print("Quick test:")
+        print(f"  bin\\lenet5_smoke.exe {output_dir}\\mnist_0000_label_7.bin")
+        print()
+    else:
+        print("Use these files with a network that expects 32x32 inputs.")
+        print()
+    print("Dataset cache lives under assets/datasets/.")
     print("=" * 70)
 
 

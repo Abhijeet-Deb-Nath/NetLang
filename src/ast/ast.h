@@ -45,6 +45,7 @@ typedef enum {
     NODE_MAXPOOL,           /* MaxPool(pool:, stride:) */
     NODE_AVGPOOL,           /* AvgPool(pool:, stride:) */
     NODE_FLATTEN,           /* Flatten() */
+    NODE_ADD,               /* Add(x, y, ...) */
     NODE_CONCAT,            /* Concat(b1, b2, ...) */
     NODE_BATCHNORM,         /* BatchNorm() */
     NODE_LAYERNORM,         /* LayerNorm() */
@@ -174,6 +175,11 @@ struct ASTNode {
             int padding;
         } pooling;
         
+        /* NODE_ADD */
+        struct {
+            ASTList* inputs;        /* List of tensors to add elementwise */
+        } add;
+
         /* NODE_CONCAT */
         struct {
             ASTList* inputs;        /* List of tensors to concatenate */

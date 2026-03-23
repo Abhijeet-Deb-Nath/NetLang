@@ -24,6 +24,7 @@ TensorType* infer_dense_shape(TypeChecker* tc, ASTNode* dense,
 TensorType* infer_pool_shape(TypeChecker* tc, ASTNode* pool, 
                              const TensorType* input);
 TensorType* infer_flatten_shape(const TensorType* input);
+TensorType* infer_add_shape(TypeChecker* tc, ASTList* inputs);
 TensorType* infer_concat_shape(TypeChecker* tc, ASTList* inputs);
 
 // Validation

@@ -1,58 +1,40 @@
-# NetLang Tools
+# Tools
 
-Utility scripts for weight conversion, preprocessing, and testing.
+Utility scripts and helper programs for conversion, preprocessing, and smoke testing.
 
----
+## Conversion Tools
 
-## Weight Converters
+Current practical order of trust:
 
-**Convert PyTorch models:**
-```bash
-python tools/convert_pytorch.py model.pth output.nwf
-pip install torch numpy
-```
+1. `convert_onnx.py`
+2. `convert_pytorch.py`
+3. `convert_keras.py`
 
-**Convert ONNX models:**
-```bash
-python tools/convert_onnx.py model.onnx output.nwf
-pip install onnx numpy
-```
+The repo is being centered on compiler work first, so converter breadth is not the main research story.
 
-**Convert Keras models:**
-```bash
-python tools/convert_keras.py model.h5 output.nwf
-pip install tensorflow numpy
-```
+## Data Helpers
 
----
+- `download_mnist_for_netlang.py`
+- `preprocess.py`
+- `regenerate_mnist_28x28.py`
 
-## Data Preprocessing
+## Smoke-Test Helpers
 
-**Download MNIST dataset:**
-```bash
-python tools/download_mnist_for_netlang.py
-# Downloads 10,000 preprocessed test images to test_data/
-```
+- `test_network.c`
+- `benchmark.c`
+- `check_nwf.py`
+- `convert_lenet_weights.py`
 
-**Preprocess images:**
-```bash
-python tools/preprocess.py input.jpg output.bin
-# Converts image to raw float32 binary format
-```
+Current split:
 
----
+- `test_network.c` is the MNIST-oriented correctness and smoke runner
+- `benchmark.c` is the generic in-process benchmark harness for generated networks
+- `run_eval.py` is the orchestration layer for compile timing, NetLang runtime timing, ONNX Runtime comparison, and JSON result export
+- `run_eval_matrix.py` is the multi-sample evaluation runner for aggregated CSV/JSON summaries
+- `legacy/` is reserved for intentionally retired helper scripts that are no longer part of the supported workflow
 
-## Testing & Benchmarking
+## Weight Files
 
-**test_network.c** - C test harness for inference  
-**benchmark.c** - Performance profiling  
-**create_test_weights.c** - Generate random weights for testing
+All converters target `.nwf`.
 
----
-
-## Weight Format
-
-All converters output NetLang `.nwf` format (binary weight files).  
-See [docs/WEIGHT_FORMAT.md](../docs/WEIGHT_FORMAT.md) for specification.
-
-**Format:** 64-byte aligned, little-endian, magic header `NWF0`
+See [Weight Format](../docs/WEIGHT_FORMAT.md) for the implementation-aligned format notes.

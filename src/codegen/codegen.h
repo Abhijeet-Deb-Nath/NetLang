@@ -16,7 +16,8 @@
 #define NETLANG_CODEGEN_H
 
 #include "../ast/ast.h"
-#include "../semantic/symbol_table.h"
+#include "../graph/graph.h"
+#include "../planner/memory_plan.h"
 #include <stdio.h>
 
 /* ========== CODE GENERATION CONTEXT ========== */
@@ -25,6 +26,7 @@ typedef struct LayerInfo {
     char* var_name;         /* Variable name (x, b1, etc.) */
     NodeType layer_type;    /* Layer type */
     ASTNode* layer_node;    /* AST node */
+    GraphNode* graph_node;  /* Graph node */
     TensorType* input_shape;  /* Input tensor shape */
     TensorType* output_shape; /* Output tensor shape */
     int layer_index;        /* Index in .nwf file (for Conv2D/Dense) */
@@ -33,7 +35,8 @@ typedef struct LayerInfo {
 
 typedef struct CodegenContext {
     FILE* output;           /* Output file stream */
-    Scope* scope;           /* Symbol table */
+    NetGraph* graph;        /* Graph IR */
+    MemoryPlan* plan;       /* Activation memory plan */
     LayerInfo* layers;      /* Array of layer information */
     int layer_count;        /* Number of layers */
     int weight_layer_count; /* Number of weight-bearing layers */
@@ -61,6 +64,7 @@ void detect_blocking_opportunities(CodegenContext* ctx);
 /* Code generation phases */
 void emit_includes(CodegenContext* ctx);
 void emit_network_struct(CodegenContext* ctx);
+void emit_metadata_functions(CodegenContext* ctx);
 void emit_init_function(CodegenContext* ctx);
 void emit_infer_function(CodegenContext* ctx);
 void emit_cleanup_function(CodegenContext* ctx);
@@ -72,6 +76,8 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx);
 void emit_dense(CodegenContext* ctx, LayerInfo* layer, int layer_idx);
 void emit_pooling(CodegenContext* ctx, LayerInfo* layer, int layer_idx);
 void emit_flatten(CodegenContext* ctx, LayerInfo* layer, int layer_idx);
+void emit_add(CodegenContext* ctx, LayerInfo* layer, int layer_idx);
+void emit_concat(CodegenContext* ctx, LayerInfo* layer, int layer_idx);
 void emit_activation(CodegenContext* ctx, LayerInfo* layer, ActivationType act);
 
 /* Helper functions */

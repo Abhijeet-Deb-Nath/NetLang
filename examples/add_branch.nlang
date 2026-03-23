@@ -1,0 +1,11 @@
+// Experimental graph example for branch merge support.
+// Demonstrates branch fan-out and residual-style Add merge without any weight-bearing layers.
+
+network AddBranch {
+    input(shape: [28, 28, 4])
+
+    left = MaxPool(pool: [2, 2], stride: 2, padding: 0) from input
+    right = AvgPool(pool: [2, 2], stride: 2, padding: 0) from input
+    merged = Add(left, right)
+    output = Flatten() from merged
+}

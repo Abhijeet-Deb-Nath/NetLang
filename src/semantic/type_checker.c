@@ -125,19 +125,94 @@ TensorType* infer_flatten_shape(const TensorType* input) {
     return output;
 }
 
+TensorType* infer_add_shape(TypeChecker* tc, ASTList* inputs) {
+    if (!inputs || !inputs->head) {
+        fprintf(tc->error_stream, "Add requires at least one input\n");
+        tc->error_count++;
+        return NULL;
+    }
+
+    ASTNode* input_expr = inputs->head;
+    TensorType* base_type = NULL;
+
+    while (input_expr) {
+        if (input_expr->type != NODE_IDENTIFIER) {
+            fprintf(tc->error_stream, "Add inputs must be identifiers\n");
+            tc->error_count++;
+            return NULL;
+        }
+
+        Symbol* sym = scope_lookup(tc->current_scope,
+                                   input_expr->data.identifier.name, 1);
+        if (!sym || !sym->tensor_type) {
+            fprintf(tc->error_stream, "Undefined tensor '%s' in Add\n",
+                    input_expr->data.identifier.name);
+            tc->error_count++;
+            return NULL;
+        }
+
+        if (!base_type) {
+            base_type = sym->tensor_type;
+        } else if (!check_tensor_compatible(base_type, sym->tensor_type, "Add", input_expr->line_number)) {
+            tc->error_count++;
+            return NULL;
+        }
+
+        input_expr = input_expr->next;
+    }
+
+    return tensor_type_clone(base_type);
+}
+
 TensorType* infer_concat_shape(TypeChecker* tc, ASTList* inputs) {
     if (!inputs || !inputs->head) {
         fprintf(tc->error_stream, "Concat requires at least one input\n");
         tc->error_count++;
         return NULL;
     }
-    
-    // For CNN, concat along channel dimension (dim 3)
-    // All inputs must have same [batch, H, W]
-    
-    // TODO: Lookup actual tensor types from symbols
-    // For now, return NULL (will implement in analyze_statement)
-    return NULL;
+
+    int dims[3] = {0, 0, 0};
+    ASTNode* input_expr = inputs->head;
+    int total_channels = 0;
+
+    while (input_expr) {
+        if (input_expr->type != NODE_IDENTIFIER) {
+            fprintf(tc->error_stream, "Concat inputs must be identifiers\n");
+            tc->error_count++;
+            return NULL;
+        }
+
+        Symbol* sym = scope_lookup(tc->current_scope,
+                                   input_expr->data.identifier.name, 1);
+        if (!sym || !sym->tensor_type) {
+            fprintf(tc->error_stream, "Undefined tensor '%s' in Concat\n",
+                    input_expr->data.identifier.name);
+            tc->error_count++;
+            return NULL;
+        }
+
+        TensorType* type = sym->tensor_type;
+        if (type->rank != 3) {
+            fprintf(tc->error_stream, "Concat currently requires 3D inputs [H,W,C]\n");
+            tc->error_count++;
+            return NULL;
+        }
+
+        if (total_channels == 0) {
+            dims[0] = type->dims[0];
+            dims[1] = type->dims[1];
+        } else if (type->dims[0] != dims[0] || type->dims[1] != dims[1]) {
+            fprintf(tc->error_stream, "Concat inputs must have matching H and W dimensions\n");
+            tc->error_count++;
+            return NULL;
+        }
+
+        total_channels += type->dims[2];
+        input_expr = input_expr->next;
+    }
+
+    dims[2] = total_channels;
+    return tensor_type_create(3, dims);
 }
 
 /* ========== VALIDATION ========== */

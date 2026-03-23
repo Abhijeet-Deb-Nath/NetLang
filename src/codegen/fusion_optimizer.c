@@ -12,47 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Helper: Check if an activation is a standalone ReLU layer */
-static bool is_relu_activation(ASTNode* node) {
-    if (node == NULL) return false;
-    
-    // Check if it's a Conv2D/Dense with inline ReLU activation
-    if (node->type == NODE_CONV2D) {
-        return node->data.conv2d.activation == ACT_RELU;
-    }
-    if (node->type == NODE_DENSE) {
-        return node->data.dense.activation == ACT_RELU;
-    }
-    
-    // TODO: Add support for standalone ReLU layer when syntax added
-    return false;
-}
-
-/* Helper: Get the source layer a node depends on */
-static ASTNode* get_source_layer(ASTNode* assignment, Scope* scope) {
-    if (assignment == NULL || assignment->type != NODE_ASSIGNMENT) {
-        return NULL;
-    }
-    
-    // Check if this assignment has a "from" source
-    if (assignment->data.assignment.from_source != NULL) {
-        ASTNode* from = assignment->data.assignment.from_source;
-        
-        // If it's an identifier, look it up in symbol table
-        if (from->type == NODE_IDENTIFIER) {
-            const char* source_name = from->data.identifier.name;
-            
-            // Search for the symbol (simplified - actual implementation may differ)
-            // For now, we'll just return NULL and detect inline activations
-            return NULL;
-        }
-    }
-    
-    return NULL;
-}
-
 /* Detect Conv2D + ReLU fusion */
 static int detect_conv_relu_fusion(ASTNode* network, Scope* scope) {
+    (void)scope;
     int fusion_count = 0;
     
     if (network->type != NODE_NETWORK) return 0;

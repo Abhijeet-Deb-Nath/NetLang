@@ -1,35 +1,24 @@
-# Compiled binaries
+# Native build products
 *.exe
 *.out
 *.o
 *.obj
+*.lib
 
-# Build artifacts
-build/*.o
-build/*.exe
-build/lex.yy.c
-build/net_lang.tab.c
-build/net_lang.tab.h
-build/net_lang.output
-build/*.s
+# Build and generated artifacts
+build/
+generated/**
+!generated/README.md
+!generated/.gitkeep
+bin/**
+!bin/README.md
+!bin/.gitkeep
+results/**
+!results/README.md
 
-# Generated files
-generated/*.c
-generated/*.h
-
-# Binary executables (network inference)
-bin/*.exe
-
-# IDE and editor files
-.vscode/
-.vs/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Python cache
+# Python cache and packaging
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -37,42 +26,23 @@ __pycache__/
 *.so
 *.egg-info/
 dist/
-build/
 *.egg
 
-# Test outputs
-test_results/*.txt
+# Dataset download caches
+assets/datasets/MNIST/raw/
+data/
 
 # Temporary files
 *.tmp
 *.log
 .cache/
 
-# OS files
+# IDE, editor, and OS files
+.vscode/
+.vs/
+*.swp
+*.swo
+*~
+.DS_Store
 Thumbs.db
 desktop.ini
-
-# Keep README files in directories
-!**/README.md
-
-# Model files (optional - uncomment if models are large)
-# models/*.nwf
-# onnx_weight_files/*.onnx
-
-# Test data
-test_data/images/*.png
-test_data/images/*.jpg
-test_data/images/*.jpeg
-test_data/preprocessed/*.bin
-
-# Dataset cache (PyTorch/TensorFlow downloads)
-data/
-
-# Keep structure folders
-!bin/.gitkeep
-!generated/.gitkeep
-!models/.gitkeep
-!onnx_weight_files/.gitkeep
-!test_data/.gitkeep
-!test_data/images/.gitkeep
-!test_data/preprocessed/.gitkeep

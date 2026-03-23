@@ -181,6 +181,16 @@ void flatten(const float* input, float* output, int size);
 void flatten_hwc_to_chw(const float* input, float* output, int H, int W, int C);
 
 /**
+ * Elementwise sum of multiple tensors with identical shapes.
+ */
+void add_forward(
+    const float** inputs,
+    float* output,
+    int num_inputs,
+    int size
+);
+
+/**
  * Concatenate multiple tensors along channel dimension
  */
 void concat_forward(

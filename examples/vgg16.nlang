@@ -7,7 +7,7 @@
 
 network VGG16 {
     input(shape: [224, 224, 3])
-    weights("models/vgg16_imagenet.nwf")
+    weights("assets/weights/imagenet/vgg16_imagenet.nwf")  // placeholder path
     
     // Block 1: 64 filters
     x = Conv2D(filters: 64, kernel: [3, 3], stride: 1, padding: 1, activation: relu) from input

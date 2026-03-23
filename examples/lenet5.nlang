@@ -14,7 +14,7 @@
 
 network LeNet5 {
     input(shape: [28, 28, 1])
-    weights("netlang_weight_format/lenet5_trained.nwf")
+    weights("assets/weights/netlang/lenet5_trained.nwf")
     
     // First convolutional layer: 28×28×1 → 24×24×32
     // 32 filters, 5×5 kernel, stride 1, no padding

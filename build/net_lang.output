@@ -10,11 +10,11 @@ Grammar
 
     5 network_def: NETWORK IDENTIFIER LBRACE network_body RBRACE
 
-    6 network_body: input_decl weights_decl statement_list_nonempty
+    6 network_body: input_decl optional_weights_decl statement_list_nonempty
 
     7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE
 
-    8 module_params: ε
+    8 module_params: %empty
     9              | param_list
 
    10 param_list: IDENTIFIER
@@ -24,88 +24,98 @@ Grammar
 
    13 weights_decl: WEIGHTS LPAREN STRING_LIT RPAREN
 
-   14 statement_list: ε
-   15               | statement_list statement
+   14 optional_weights_decl: %empty
+   15                      | weights_decl
 
-   16 statement_list_nonempty: statement
-   17                        | statement_list_nonempty statement
+   16 statement_list: %empty
+   17               | statement_list statement
 
-   18 statement: assignment
+   18 statement_list_nonempty: statement
+   19                        | statement_list_nonempty statement
 
-   19 assignment: IDENTIFIER ASSIGN layer_expr from_clause
+   20 statement: assignment
 
-   20 from_clause: FROM expr
+   21 assignment: IDENTIFIER ASSIGN layer_expr optional_from_clause
 
-   21 return_stmt: RETURN expr
+   22 optional_from_clause: %empty
+   23                     | FROM expr
 
-   22 layer_expr: conv2d_layer
-   23           | dense_layer
-   24           | pool_layer
-   25           | flatten_layer
-   26           | concat_layer
-   27           | norm_layer
-   28           | module_call
+   24 return_stmt: RETURN expr
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   25 layer_expr: conv2d_layer
+   26           | dense_layer
+   27           | pool_layer
+   28           | flatten_layer
+   29           | add_layer
+   30           | concat_layer
+   31           | norm_layer
+   32           | module_call
 
-   30 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
-   32           | AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   34 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-   33 flatten_layer: FLATTEN LPAREN RPAREN
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   36           | AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
-   34 concat_layer: CONCAT LPAREN concat_args RPAREN
+   37 flatten_layer: FLATTEN LPAREN RPAREN
 
-   35 concat_args: expr
-   36            | concat_args COMMA expr
+   38 add_layer: ADD LPAREN add_args RPAREN
 
-   37 norm_layer: BATCHNORM LPAREN RPAREN
-   38           | LAYERNORM LPAREN RPAREN
+   39 add_args: expr
+   40         | add_args COMMA expr
 
-   39 module_call: IDENTIFIER LPAREN layer_params RPAREN
+   41 concat_layer: CONCAT LPAREN concat_args RPAREN
 
-   40 layer_params: ε
-   41             | layer_param_list
+   42 concat_args: expr
+   43            | concat_args COMMA expr
 
-   42 layer_param_list: IDENTIFIER COLON expr
-   43                 | FILTERS COLON expr
-   44                 | KERNEL COLON expr
-   45                 | ACTIVATION COLON expr
-   46                 | STRIDE COLON expr
-   47                 | PADDING COLON expr
-   48                 | POOL COLON expr
-   49                 | UNITS COLON expr
-   50                 | layer_param_list COMMA IDENTIFIER COLON expr
-   51                 | layer_param_list COMMA FILTERS COLON expr
-   52                 | layer_param_list COMMA KERNEL COLON expr
-   53                 | layer_param_list COMMA ACTIVATION COLON expr
-   54                 | layer_param_list COMMA STRIDE COLON expr
-   55                 | layer_param_list COMMA PADDING COLON expr
-   56                 | layer_param_list COMMA POOL COLON expr
-   57                 | layer_param_list COMMA UNITS COLON expr
+   44 norm_layer: BATCHNORM LPAREN RPAREN
+   45           | LAYERNORM LPAREN RPAREN
 
-   58 expr: number
-   59     | array
-   60     | identifier_expr
-   61     | activation_value
+   46 module_call: IDENTIFIER LPAREN layer_params RPAREN
 
-   62 identifier_expr: IDENTIFIER
-   63                | INPUT
+   47 layer_params: %empty
+   48             | layer_param_list
 
-   64 number: NUMBER
-   65       | FLOAT_NUM
+   49 layer_param_list: IDENTIFIER COLON expr
+   50                 | FILTERS COLON expr
+   51                 | KERNEL COLON expr
+   52                 | ACTIVATION COLON expr
+   53                 | STRIDE COLON expr
+   54                 | PADDING COLON expr
+   55                 | POOL COLON expr
+   56                 | UNITS COLON expr
+   57                 | layer_param_list COMMA IDENTIFIER COLON expr
+   58                 | layer_param_list COMMA FILTERS COLON expr
+   59                 | layer_param_list COMMA KERNEL COLON expr
+   60                 | layer_param_list COMMA ACTIVATION COLON expr
+   61                 | layer_param_list COMMA STRIDE COLON expr
+   62                 | layer_param_list COMMA PADDING COLON expr
+   63                 | layer_param_list COMMA POOL COLON expr
+   64                 | layer_param_list COMMA UNITS COLON expr
 
-   66 array: LBRACKET array_elements RBRACKET
+   65 expr: number
+   66     | array
+   67     | identifier_expr
+   68     | activation_value
 
-   67 array_elements: number
-   68               | array_elements COMMA number
+   69 identifier_expr: IDENTIFIER
+   70                | INPUT
 
-   69 activation_value: RELU
-   70                 | SIGMOID
-   71                 | TANH
-   72                 | SOFTMAX
-   73                 | LINEAR
+   71 number: NUMBER
+   72       | FLOAT_NUM
+
+   73 array: LBRACKET array_elements RBRACKET
+
+   74 array_elements: number
+   75               | array_elements COMMA number
+
+   76 activation_value: RELU
+   77                 | SIGMOID
+   78                 | TANH
+   79                 | SOFTMAX
+   80                 | LINEAR
 
 
 Terminals, with rules where they appear
@@ -114,151 +124,161 @@ Terminals, with rules where they appear
     error (256)
     NETWORK (258) 5
     MODULE (259) 7
-    RETURN (260) 21
-    FROM (261) 20
-    INPUT (262) 12 63
+    RETURN (260) 24
+    FROM (261) 23
+    INPUT (262) 12 70
     SHAPE (263) 12
     WEIGHTS (264) 13
-    CONV2D (265) 29
-    DENSE (266) 30
-    MAXPOOL (267) 31
-    AVGPOOL (268) 32
-    FLATTEN (269) 33
-    CONCAT (270) 34
-    BATCHNORM (271) 37
-    LAYERNORM (272) 38
-    FILTERS (273) 29 43 51
-    KERNEL (274) 29 44 52
-    ACTIVATION (275) 29 30 45 53
-    STRIDE (276) 29 31 32 46 54
-    PADDING (277) 29 31 32 47 55
-    POOL (278) 31 32 48 56
-    UNITS (279) 30 49 57
-    RELU (280) 69
-    SIGMOID (281) 70
-    TANH (282) 71
-    SOFTMAX (283) 72
-    LINEAR (284) 73
-    NUMBER <ival> (285) 64
-    FLOAT_NUM <fval> (286) 65
-    IDENTIFIER <sval> (287) 5 7 10 11 19 39 42 50 62
-    STRING_LIT <sval> (288) 13
-    LBRACE (289) 5 7
-    RBRACE (290) 5 7
-    LBRACKET (291) 66
-    RBRACKET (292) 66
-    LPAREN (293) 7 12 13 29 30 31 32 33 34 37 38 39
-    RPAREN (294) 7 12 13 29 30 31 32 33 34 37 38 39
-    COLON (295) 12 29 30 31 32 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57
-    COMMA (296) 11 29 30 31 32 36 50 51 52 53 54 55 56 57 68
-    ASSIGN (297) 19
+    CONV2D (265) 33
+    DENSE (266) 34
+    MAXPOOL (267) 35
+    AVGPOOL (268) 36
+    FLATTEN (269) 37
+    ADD (270) 38
+    CONCAT (271) 41
+    BATCHNORM (272) 44
+    LAYERNORM (273) 45
+    FILTERS (274) 33 50 58
+    KERNEL (275) 33 51 59
+    ACTIVATION (276) 33 34 52 60
+    STRIDE (277) 33 35 36 53 61
+    PADDING (278) 33 35 36 54 62
+    POOL (279) 35 36 55 63
+    UNITS (280) 34 56 64
+    RELU (281) 76
+    SIGMOID (282) 77
+    TANH (283) 78
+    SOFTMAX (284) 79
+    LINEAR (285) 80
+    NUMBER <ival> (286) 71
+    FLOAT_NUM <fval> (287) 72
+    IDENTIFIER <sval> (288) 5 7 10 11 21 46 49 57 69
+    STRING_LIT <sval> (289) 13
+    LBRACE (290) 5 7
+    RBRACE (291) 5 7
+    LBRACKET (292) 73
+    RBRACKET (293) 73
+    LPAREN (294) 7 12 13 33 34 35 36 37 38 41 44 45 46
+    RPAREN (295) 7 12 13 33 34 35 36 37 38 41 44 45 46
+    COLON (296) 12 33 34 35 36 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64
+    COMMA (297) 11 33 34 35 36 40 43 57 58 59 60 61 62 63 64 75
+    ASSIGN (298) 21
 
 
 Nonterminals, with rules where they appear
 
-    $accept (43)
+    $accept (44)
         on left: 0
-    program <node> (44)
+    program <node> (45)
         on left: 1 2
         on right: 0
-    module_list <list> (45)
+    module_list <list> (46)
         on left: 3 4
         on right: 2 4
-    network_def <node> (46)
+    network_def <node> (47)
         on left: 5
         on right: 1 2
-    network_body <netbody> (47)
+    network_body <netbody> (48)
         on left: 6
         on right: 5
-    module_def <node> (48)
+    module_def <node> (49)
         on left: 7
         on right: 3 4
-    module_params <params> (49)
+    module_params <params> (50)
         on left: 8 9
         on right: 7
-    param_list <params> (50)
+    param_list <params> (51)
         on left: 10 11
         on right: 9 11
-    input_decl <node> (51)
+    input_decl <node> (52)
         on left: 12
         on right: 6
-    weights_decl <node> (52)
+    weights_decl <node> (53)
         on left: 13
-        on right: 6
-    statement_list <list> (53)
+        on right: 15
+    optional_weights_decl <node> (54)
         on left: 14 15
-        on right: 7 15
-    statement_list_nonempty <list> (54)
+        on right: 6
+    statement_list <list> (55)
         on left: 16 17
-        on right: 6 17
-    statement <node> (55)
-        on left: 18
-        on right: 15 16 17
-    assignment <node> (56)
-        on left: 19
-        on right: 18
-    from_clause <node> (57)
+        on right: 7 17
+    statement_list_nonempty <list> (56)
+        on left: 18 19
+        on right: 6 19
+    statement <node> (57)
         on left: 20
-        on right: 19
-    return_stmt <node> (58)
+        on right: 17 18 19
+    assignment <node> (58)
         on left: 21
+        on right: 20
+    optional_from_clause <node> (59)
+        on left: 22 23
+        on right: 21
+    return_stmt <node> (60)
+        on left: 24
         on right: 7
-    layer_expr <node> (59)
-        on left: 22 23 24 25 26 27 28
-        on right: 19
-    conv2d_layer <node> (60)
-        on left: 29
-        on right: 22
-    dense_layer <node> (61)
-        on left: 30
-        on right: 23
-    pool_layer <node> (62)
-        on left: 31 32
-        on right: 24
-    flatten_layer <node> (63)
+    layer_expr <node> (61)
+        on left: 25 26 27 28 29 30 31 32
+        on right: 21
+    conv2d_layer <node> (62)
         on left: 33
         on right: 25
-    concat_layer <node> (64)
+    dense_layer <node> (63)
         on left: 34
         on right: 26
-    concat_args <list> (65)
+    pool_layer <node> (64)
         on left: 35 36
-        on right: 34 36
-    norm_layer <node> (66)
-        on left: 37 38
         on right: 27
-    module_call <node> (67)
-        on left: 39
+    flatten_layer <node> (65)
+        on left: 37
         on right: 28
-    layer_params <params> (68)
-        on left: 40 41
-        on right: 39
-    layer_param_list <params> (69)
-        on left: 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57
-        on right: 41 50 51 52 53 54 55 56 57
-    expr <node> (70)
-        on left: 58 59 60 61
-        on right: 20 21 29 30 31 32 35 36 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57
-    identifier_expr <node> (71)
-        on left: 62 63
-        on right: 60
-    number <node> (72)
-        on left: 64 65
-        on right: 58 67 68
-    array <node> (73)
-        on left: 66
-        on right: 12 29 31 32 59
-    array_elements <list> (74)
-        on left: 67 68
-        on right: 66 68
-    activation_value <activation> (75)
-        on left: 69 70 71 72 73
-        on right: 29 30 61
+    add_layer <node> (66)
+        on left: 38
+        on right: 29
+    add_args <list> (67)
+        on left: 39 40
+        on right: 38 40
+    concat_layer <node> (68)
+        on left: 41
+        on right: 30
+    concat_args <list> (69)
+        on left: 42 43
+        on right: 41 43
+    norm_layer <node> (70)
+        on left: 44 45
+        on right: 31
+    module_call <node> (71)
+        on left: 46
+        on right: 32
+    layer_params <params> (72)
+        on left: 47 48
+        on right: 46
+    layer_param_list <params> (73)
+        on left: 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64
+        on right: 48 57 58 59 60 61 62 63 64
+    expr <node> (74)
+        on left: 65 66 67 68
+        on right: 23 24 33 34 35 36 39 40 42 43 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64
+    identifier_expr <node> (75)
+        on left: 69 70
+        on right: 67
+    number <node> (76)
+        on left: 71 72
+        on right: 65 74 75
+    array <node> (77)
+        on left: 73
+        on right: 12 33 35 36 66
+    array_elements <list> (78)
+        on left: 74 75
+        on right: 73 75
+    activation_value <activation> (79)
+        on left: 76 77 78 79 80
+        on right: 33 34 68
 
 
 State 0
 
-    0 $accept: • program $end
+    0 $accept: . program $end
 
     NETWORK  shift, and go to state 1
     MODULE   shift, and go to state 2
@@ -271,29 +291,29 @@ State 0
 
 State 1
 
-    5 network_def: NETWORK • IDENTIFIER LBRACE network_body RBRACE
+    5 network_def: NETWORK . IDENTIFIER LBRACE network_body RBRACE
 
     IDENTIFIER  shift, and go to state 7
 
 
 State 2
 
-    7 module_def: MODULE • IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE
+    7 module_def: MODULE . IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE
 
     IDENTIFIER  shift, and go to state 8
 
 
 State 3
 
-    0 $accept: program • $end
+    0 $accept: program . $end
 
     $end  shift, and go to state 9
 
 
 State 4
 
-    2 program: module_list • network_def
-    4 module_list: module_list • module_def
+    2 program: module_list . network_def
+    4 module_list: module_list . module_def
 
     NETWORK  shift, and go to state 1
     MODULE   shift, and go to state 2
@@ -304,56 +324,56 @@ State 4
 
 State 5
 
-    1 program: network_def •
+    1 program: network_def .
 
     $default  reduce using rule 1 (program)
 
 
 State 6
 
-    3 module_list: module_def •
+    3 module_list: module_def .
 
     $default  reduce using rule 3 (module_list)
 
 
 State 7
 
-    5 network_def: NETWORK IDENTIFIER • LBRACE network_body RBRACE
+    5 network_def: NETWORK IDENTIFIER . LBRACE network_body RBRACE
 
     LBRACE  shift, and go to state 12
 
 
 State 8
 
-    7 module_def: MODULE IDENTIFIER • LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE
+    7 module_def: MODULE IDENTIFIER . LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE
 
     LPAREN  shift, and go to state 13
 
 
 State 9
 
-    0 $accept: program $end •
+    0 $accept: program $end .
 
     $default  accept
 
 
 State 10
 
-    2 program: module_list network_def •
+    2 program: module_list network_def .
 
     $default  reduce using rule 2 (program)
 
 
 State 11
 
-    4 module_list: module_list module_def •
+    4 module_list: module_list module_def .
 
     $default  reduce using rule 4 (module_list)
 
 
 State 12
 
-    5 network_def: NETWORK IDENTIFIER LBRACE • network_body RBRACE
+    5 network_def: NETWORK IDENTIFIER LBRACE . network_body RBRACE
 
     INPUT  shift, and go to state 14
 
@@ -363,7 +383,7 @@ State 12
 
 State 13
 
-    7 module_def: MODULE IDENTIFIER LPAREN • module_params RPAREN LBRACE statement_list return_stmt RBRACE
+    7 module_def: MODULE IDENTIFIER LPAREN . module_params RPAREN LBRACE statement_list return_stmt RBRACE
 
     IDENTIFIER  shift, and go to state 17
 
@@ -375,1880 +395,1983 @@ State 13
 
 State 14
 
-   12 input_decl: INPUT • LPAREN SHAPE COLON array RPAREN
+   12 input_decl: INPUT . LPAREN SHAPE COLON array RPAREN
 
     LPAREN  shift, and go to state 20
 
 
 State 15
 
-    5 network_def: NETWORK IDENTIFIER LBRACE network_body • RBRACE
+    5 network_def: NETWORK IDENTIFIER LBRACE network_body . RBRACE
 
     RBRACE  shift, and go to state 21
 
 
 State 16
 
-    6 network_body: input_decl • weights_decl statement_list_nonempty
+    6 network_body: input_decl . optional_weights_decl statement_list_nonempty
 
     WEIGHTS  shift, and go to state 22
 
-    weights_decl  go to state 23
+    $default  reduce using rule 14 (optional_weights_decl)
+
+    weights_decl           go to state 23
+    optional_weights_decl  go to state 24
 
 
 State 17
 
-   10 param_list: IDENTIFIER •
+   10 param_list: IDENTIFIER .
 
     $default  reduce using rule 10 (param_list)
 
 
 State 18
 
-    7 module_def: MODULE IDENTIFIER LPAREN module_params • RPAREN LBRACE statement_list return_stmt RBRACE
+    7 module_def: MODULE IDENTIFIER LPAREN module_params . RPAREN LBRACE statement_list return_stmt RBRACE
 
-    RPAREN  shift, and go to state 24
+    RPAREN  shift, and go to state 25
 
 
 State 19
 
-    9 module_params: param_list •
-   11 param_list: param_list • COMMA IDENTIFIER
+    9 module_params: param_list .
+   11 param_list: param_list . COMMA IDENTIFIER
 
-    COMMA  shift, and go to state 25
+    COMMA  shift, and go to state 26
 
     $default  reduce using rule 9 (module_params)
 
 
 State 20
 
-   12 input_decl: INPUT LPAREN • SHAPE COLON array RPAREN
+   12 input_decl: INPUT LPAREN . SHAPE COLON array RPAREN
 
-    SHAPE  shift, and go to state 26
+    SHAPE  shift, and go to state 27
 
 
 State 21
 
-    5 network_def: NETWORK IDENTIFIER LBRACE network_body RBRACE •
+    5 network_def: NETWORK IDENTIFIER LBRACE network_body RBRACE .
 
     $default  reduce using rule 5 (network_def)
 
 
 State 22
 
-   13 weights_decl: WEIGHTS • LPAREN STRING_LIT RPAREN
+   13 weights_decl: WEIGHTS . LPAREN STRING_LIT RPAREN
 
-    LPAREN  shift, and go to state 27
+    LPAREN  shift, and go to state 28
 
 
 State 23
 
-    6 network_body: input_decl weights_decl • statement_list_nonempty
+   15 optional_weights_decl: weights_decl .
 
-    IDENTIFIER  shift, and go to state 28
-
-    statement_list_nonempty  go to state 29
-    statement                go to state 30
-    assignment               go to state 31
+    $default  reduce using rule 15 (optional_weights_decl)
 
 
 State 24
 
-    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN • LBRACE statement_list return_stmt RBRACE
+    6 network_body: input_decl optional_weights_decl . statement_list_nonempty
 
-    LBRACE  shift, and go to state 32
+    IDENTIFIER  shift, and go to state 29
+
+    statement_list_nonempty  go to state 30
+    statement                go to state 31
+    assignment               go to state 32
 
 
 State 25
 
-   11 param_list: param_list COMMA • IDENTIFIER
+    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN . LBRACE statement_list return_stmt RBRACE
 
-    IDENTIFIER  shift, and go to state 33
+    LBRACE  shift, and go to state 33
 
 
 State 26
 
-   12 input_decl: INPUT LPAREN SHAPE • COLON array RPAREN
+   11 param_list: param_list COMMA . IDENTIFIER
 
-    COLON  shift, and go to state 34
+    IDENTIFIER  shift, and go to state 34
 
 
 State 27
 
-   13 weights_decl: WEIGHTS LPAREN • STRING_LIT RPAREN
+   12 input_decl: INPUT LPAREN SHAPE . COLON array RPAREN
 
-    STRING_LIT  shift, and go to state 35
+    COLON  shift, and go to state 35
 
 
 State 28
 
-   19 assignment: IDENTIFIER • ASSIGN layer_expr from_clause
+   13 weights_decl: WEIGHTS LPAREN . STRING_LIT RPAREN
 
-    ASSIGN  shift, and go to state 36
+    STRING_LIT  shift, and go to state 36
 
 
 State 29
 
-    6 network_body: input_decl weights_decl statement_list_nonempty •
-   17 statement_list_nonempty: statement_list_nonempty • statement
+   21 assignment: IDENTIFIER . ASSIGN layer_expr optional_from_clause
 
-    IDENTIFIER  shift, and go to state 28
-
-    $default  reduce using rule 6 (network_body)
-
-    statement   go to state 37
-    assignment  go to state 31
+    ASSIGN  shift, and go to state 37
 
 
 State 30
 
-   16 statement_list_nonempty: statement •
+    6 network_body: input_decl optional_weights_decl statement_list_nonempty .
+   19 statement_list_nonempty: statement_list_nonempty . statement
 
-    $default  reduce using rule 16 (statement_list_nonempty)
+    IDENTIFIER  shift, and go to state 29
+
+    $default  reduce using rule 6 (network_body)
+
+    statement   go to state 38
+    assignment  go to state 32
 
 
 State 31
 
-   18 statement: assignment •
+   18 statement_list_nonempty: statement .
 
-    $default  reduce using rule 18 (statement)
+    $default  reduce using rule 18 (statement_list_nonempty)
 
 
 State 32
 
-    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE • statement_list return_stmt RBRACE
+   20 statement: assignment .
 
-    $default  reduce using rule 14 (statement_list)
-
-    statement_list  go to state 38
+    $default  reduce using rule 20 (statement)
 
 
 State 33
 
-   11 param_list: param_list COMMA IDENTIFIER •
+    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE . statement_list return_stmt RBRACE
 
-    $default  reduce using rule 11 (param_list)
+    $default  reduce using rule 16 (statement_list)
+
+    statement_list  go to state 39
 
 
 State 34
 
-   12 input_decl: INPUT LPAREN SHAPE COLON • array RPAREN
+   11 param_list: param_list COMMA IDENTIFIER .
 
-    LBRACKET  shift, and go to state 39
-
-    array  go to state 40
+    $default  reduce using rule 11 (param_list)
 
 
 State 35
 
-   13 weights_decl: WEIGHTS LPAREN STRING_LIT • RPAREN
+   12 input_decl: INPUT LPAREN SHAPE COLON . array RPAREN
 
-    RPAREN  shift, and go to state 41
+    LBRACKET  shift, and go to state 40
+
+    array  go to state 41
 
 
 State 36
 
-   19 assignment: IDENTIFIER ASSIGN • layer_expr from_clause
+   13 weights_decl: WEIGHTS LPAREN STRING_LIT . RPAREN
 
-    CONV2D      shift, and go to state 42
-    DENSE       shift, and go to state 43
-    MAXPOOL     shift, and go to state 44
-    AVGPOOL     shift, and go to state 45
-    FLATTEN     shift, and go to state 46
-    CONCAT      shift, and go to state 47
-    BATCHNORM   shift, and go to state 48
-    LAYERNORM   shift, and go to state 49
-    IDENTIFIER  shift, and go to state 50
-
-    layer_expr     go to state 51
-    conv2d_layer   go to state 52
-    dense_layer    go to state 53
-    pool_layer     go to state 54
-    flatten_layer  go to state 55
-    concat_layer   go to state 56
-    norm_layer     go to state 57
-    module_call    go to state 58
+    RPAREN  shift, and go to state 42
 
 
 State 37
 
-   17 statement_list_nonempty: statement_list_nonempty statement •
+   21 assignment: IDENTIFIER ASSIGN . layer_expr optional_from_clause
 
-    $default  reduce using rule 17 (statement_list_nonempty)
+    CONV2D      shift, and go to state 43
+    DENSE       shift, and go to state 44
+    MAXPOOL     shift, and go to state 45
+    AVGPOOL     shift, and go to state 46
+    FLATTEN     shift, and go to state 47
+    ADD         shift, and go to state 48
+    CONCAT      shift, and go to state 49
+    BATCHNORM   shift, and go to state 50
+    LAYERNORM   shift, and go to state 51
+    IDENTIFIER  shift, and go to state 52
+
+    layer_expr     go to state 53
+    conv2d_layer   go to state 54
+    dense_layer    go to state 55
+    pool_layer     go to state 56
+    flatten_layer  go to state 57
+    add_layer      go to state 58
+    concat_layer   go to state 59
+    norm_layer     go to state 60
+    module_call    go to state 61
 
 
 State 38
 
-    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list • return_stmt RBRACE
-   15 statement_list: statement_list • statement
+   19 statement_list_nonempty: statement_list_nonempty statement .
 
-    RETURN      shift, and go to state 59
-    IDENTIFIER  shift, and go to state 28
-
-    statement    go to state 60
-    assignment   go to state 31
-    return_stmt  go to state 61
+    $default  reduce using rule 19 (statement_list_nonempty)
 
 
 State 39
 
-   66 array: LBRACKET • array_elements RBRACKET
+    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list . return_stmt RBRACE
+   17 statement_list: statement_list . statement
 
-    NUMBER     shift, and go to state 62
-    FLOAT_NUM  shift, and go to state 63
+    RETURN      shift, and go to state 62
+    IDENTIFIER  shift, and go to state 29
 
-    number          go to state 64
-    array_elements  go to state 65
+    statement    go to state 63
+    assignment   go to state 32
+    return_stmt  go to state 64
 
 
 State 40
 
-   12 input_decl: INPUT LPAREN SHAPE COLON array • RPAREN
+   73 array: LBRACKET . array_elements RBRACKET
 
-    RPAREN  shift, and go to state 66
+    NUMBER     shift, and go to state 65
+    FLOAT_NUM  shift, and go to state 66
+
+    number          go to state 67
+    array_elements  go to state 68
 
 
 State 41
 
-   13 weights_decl: WEIGHTS LPAREN STRING_LIT RPAREN •
+   12 input_decl: INPUT LPAREN SHAPE COLON array . RPAREN
 
-    $default  reduce using rule 13 (weights_decl)
+    RPAREN  shift, and go to state 69
 
 
 State 42
 
-   29 conv2d_layer: CONV2D • LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   13 weights_decl: WEIGHTS LPAREN STRING_LIT RPAREN .
 
-    LPAREN  shift, and go to state 67
+    $default  reduce using rule 13 (weights_decl)
 
 
 State 43
 
-   30 dense_layer: DENSE • LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN
-
-    LPAREN  shift, and go to state 68
-
-
-State 44
-
-   31 pool_layer: MAXPOOL • LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
-
-    LPAREN  shift, and go to state 69
-
-
-State 45
-
-   32 pool_layer: AVGPOOL • LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   33 conv2d_layer: CONV2D . LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
     LPAREN  shift, and go to state 70
 
 
-State 46
+State 44
 
-   33 flatten_layer: FLATTEN • LPAREN RPAREN
+   34 dense_layer: DENSE . LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
     LPAREN  shift, and go to state 71
 
 
-State 47
+State 45
 
-   34 concat_layer: CONCAT • LPAREN concat_args RPAREN
+   35 pool_layer: MAXPOOL . LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
     LPAREN  shift, and go to state 72
 
 
-State 48
+State 46
 
-   37 norm_layer: BATCHNORM • LPAREN RPAREN
+   36 pool_layer: AVGPOOL . LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
     LPAREN  shift, and go to state 73
 
 
-State 49
+State 47
 
-   38 norm_layer: LAYERNORM • LPAREN RPAREN
+   37 flatten_layer: FLATTEN . LPAREN RPAREN
 
     LPAREN  shift, and go to state 74
 
 
-State 50
+State 48
 
-   39 module_call: IDENTIFIER • LPAREN layer_params RPAREN
+   38 add_layer: ADD . LPAREN add_args RPAREN
 
     LPAREN  shift, and go to state 75
 
 
+State 49
+
+   41 concat_layer: CONCAT . LPAREN concat_args RPAREN
+
+    LPAREN  shift, and go to state 76
+
+
+State 50
+
+   44 norm_layer: BATCHNORM . LPAREN RPAREN
+
+    LPAREN  shift, and go to state 77
+
+
 State 51
 
-   19 assignment: IDENTIFIER ASSIGN layer_expr • from_clause
+   45 norm_layer: LAYERNORM . LPAREN RPAREN
 
-    FROM  shift, and go to state 76
-
-    from_clause  go to state 77
+    LPAREN  shift, and go to state 78
 
 
 State 52
 
-   22 layer_expr: conv2d_layer •
+   46 module_call: IDENTIFIER . LPAREN layer_params RPAREN
 
-    $default  reduce using rule 22 (layer_expr)
+    LPAREN  shift, and go to state 79
 
 
 State 53
 
-   23 layer_expr: dense_layer •
+   21 assignment: IDENTIFIER ASSIGN layer_expr . optional_from_clause
 
-    $default  reduce using rule 23 (layer_expr)
+    FROM  shift, and go to state 80
+
+    $default  reduce using rule 22 (optional_from_clause)
+
+    optional_from_clause  go to state 81
 
 
 State 54
 
-   24 layer_expr: pool_layer •
-
-    $default  reduce using rule 24 (layer_expr)
-
-
-State 55
-
-   25 layer_expr: flatten_layer •
+   25 layer_expr: conv2d_layer .
 
     $default  reduce using rule 25 (layer_expr)
 
 
-State 56
+State 55
 
-   26 layer_expr: concat_layer •
+   26 layer_expr: dense_layer .
 
     $default  reduce using rule 26 (layer_expr)
 
 
-State 57
+State 56
 
-   27 layer_expr: norm_layer •
+   27 layer_expr: pool_layer .
 
     $default  reduce using rule 27 (layer_expr)
 
 
-State 58
+State 57
 
-   28 layer_expr: module_call •
+   28 layer_expr: flatten_layer .
 
     $default  reduce using rule 28 (layer_expr)
 
 
+State 58
+
+   29 layer_expr: add_layer .
+
+    $default  reduce using rule 29 (layer_expr)
+
+
 State 59
 
-   21 return_stmt: RETURN • expr
+   30 layer_expr: concat_layer .
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 85
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    $default  reduce using rule 30 (layer_expr)
 
 
 State 60
 
-   15 statement_list: statement_list statement •
+   31 layer_expr: norm_layer .
 
-    $default  reduce using rule 15 (statement_list)
+    $default  reduce using rule 31 (layer_expr)
 
 
 State 61
 
-    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt • RBRACE
+   32 layer_expr: module_call .
 
-    RBRACE  shift, and go to state 90
+    $default  reduce using rule 32 (layer_expr)
 
 
 State 62
 
-   64 number: NUMBER •
+   24 return_stmt: RETURN . expr
 
-    $default  reduce using rule 64 (number)
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 89
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 63
 
-   65 number: FLOAT_NUM •
+   17 statement_list: statement_list statement .
 
-    $default  reduce using rule 65 (number)
+    $default  reduce using rule 17 (statement_list)
 
 
 State 64
 
-   67 array_elements: number •
+    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt . RBRACE
 
-    $default  reduce using rule 67 (array_elements)
+    RBRACE  shift, and go to state 94
 
 
 State 65
 
-   66 array: LBRACKET array_elements • RBRACKET
-   68 array_elements: array_elements • COMMA number
+   71 number: NUMBER .
 
-    RBRACKET  shift, and go to state 91
-    COMMA     shift, and go to state 92
+    $default  reduce using rule 71 (number)
 
 
 State 66
 
-   12 input_decl: INPUT LPAREN SHAPE COLON array RPAREN •
+   72 number: FLOAT_NUM .
 
-    $default  reduce using rule 12 (input_decl)
+    $default  reduce using rule 72 (number)
 
 
 State 67
 
-   29 conv2d_layer: CONV2D LPAREN • FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   74 array_elements: number .
 
-    FILTERS  shift, and go to state 93
+    $default  reduce using rule 74 (array_elements)
 
 
 State 68
 
-   30 dense_layer: DENSE LPAREN • UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   73 array: LBRACKET array_elements . RBRACKET
+   75 array_elements: array_elements . COMMA number
 
-    UNITS  shift, and go to state 94
+    RBRACKET  shift, and go to state 95
+    COMMA     shift, and go to state 96
 
 
 State 69
 
-   31 pool_layer: MAXPOOL LPAREN • POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   12 input_decl: INPUT LPAREN SHAPE COLON array RPAREN .
 
-    POOL  shift, and go to state 95
+    $default  reduce using rule 12 (input_decl)
 
 
 State 70
 
-   32 pool_layer: AVGPOOL LPAREN • POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   33 conv2d_layer: CONV2D LPAREN . FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    POOL  shift, and go to state 96
+    FILTERS  shift, and go to state 97
 
 
 State 71
 
-   33 flatten_layer: FLATTEN LPAREN • RPAREN
+   34 dense_layer: DENSE LPAREN . UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    RPAREN  shift, and go to state 97
+    UNITS  shift, and go to state 98
 
 
 State 72
 
-   34 concat_layer: CONCAT LPAREN • concat_args RPAREN
+   35 pool_layer: MAXPOOL LPAREN . POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    concat_args       go to state 98
-    expr              go to state 99
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    POOL  shift, and go to state 99
 
 
 State 73
 
-   37 norm_layer: BATCHNORM LPAREN • RPAREN
+   36 pool_layer: AVGPOOL LPAREN . POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
-    RPAREN  shift, and go to state 100
+    POOL  shift, and go to state 100
 
 
 State 74
 
-   38 norm_layer: LAYERNORM LPAREN • RPAREN
+   37 flatten_layer: FLATTEN LPAREN . RPAREN
 
     RPAREN  shift, and go to state 101
 
 
 State 75
 
-   39 module_call: IDENTIFIER LPAREN • layer_params RPAREN
+   38 add_layer: ADD LPAREN . add_args RPAREN
 
-    FILTERS     shift, and go to state 102
-    KERNEL      shift, and go to state 103
-    ACTIVATION  shift, and go to state 104
-    STRIDE      shift, and go to state 105
-    PADDING     shift, and go to state 106
-    POOL        shift, and go to state 107
-    UNITS       shift, and go to state 108
-    IDENTIFIER  shift, and go to state 109
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
 
-    $default  reduce using rule 40 (layer_params)
-
-    layer_params      go to state 110
-    layer_param_list  go to state 111
+    add_args          go to state 102
+    expr              go to state 103
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 76
 
-   20 from_clause: FROM • expr
+   41 concat_layer: CONCAT LPAREN . concat_args RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
 
-    expr              go to state 112
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    concat_args       go to state 104
+    expr              go to state 105
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 77
 
-   19 assignment: IDENTIFIER ASSIGN layer_expr from_clause •
+   44 norm_layer: BATCHNORM LPAREN . RPAREN
 
-    $default  reduce using rule 19 (assignment)
+    RPAREN  shift, and go to state 106
 
 
 State 78
 
-   63 identifier_expr: INPUT •
+   45 norm_layer: LAYERNORM LPAREN . RPAREN
 
-    $default  reduce using rule 63 (identifier_expr)
+    RPAREN  shift, and go to state 107
 
 
 State 79
 
-   69 activation_value: RELU •
+   46 module_call: IDENTIFIER LPAREN . layer_params RPAREN
 
-    $default  reduce using rule 69 (activation_value)
+    FILTERS     shift, and go to state 108
+    KERNEL      shift, and go to state 109
+    ACTIVATION  shift, and go to state 110
+    STRIDE      shift, and go to state 111
+    PADDING     shift, and go to state 112
+    POOL        shift, and go to state 113
+    UNITS       shift, and go to state 114
+    IDENTIFIER  shift, and go to state 115
+
+    $default  reduce using rule 47 (layer_params)
+
+    layer_params      go to state 116
+    layer_param_list  go to state 117
 
 
 State 80
 
-   70 activation_value: SIGMOID •
+   23 optional_from_clause: FROM . expr
 
-    $default  reduce using rule 70 (activation_value)
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 118
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 81
 
-   71 activation_value: TANH •
+   21 assignment: IDENTIFIER ASSIGN layer_expr optional_from_clause .
 
-    $default  reduce using rule 71 (activation_value)
+    $default  reduce using rule 21 (assignment)
 
 
 State 82
 
-   72 activation_value: SOFTMAX •
+   70 identifier_expr: INPUT .
 
-    $default  reduce using rule 72 (activation_value)
+    $default  reduce using rule 70 (identifier_expr)
 
 
 State 83
 
-   73 activation_value: LINEAR •
+   76 activation_value: RELU .
 
-    $default  reduce using rule 73 (activation_value)
+    $default  reduce using rule 76 (activation_value)
 
 
 State 84
 
-   62 identifier_expr: IDENTIFIER •
+   77 activation_value: SIGMOID .
 
-    $default  reduce using rule 62 (identifier_expr)
+    $default  reduce using rule 77 (activation_value)
 
 
 State 85
 
-   21 return_stmt: RETURN expr •
+   78 activation_value: TANH .
 
-    $default  reduce using rule 21 (return_stmt)
+    $default  reduce using rule 78 (activation_value)
 
 
 State 86
 
-   60 expr: identifier_expr •
+   79 activation_value: SOFTMAX .
 
-    $default  reduce using rule 60 (expr)
+    $default  reduce using rule 79 (activation_value)
 
 
 State 87
 
-   58 expr: number •
+   80 activation_value: LINEAR .
 
-    $default  reduce using rule 58 (expr)
+    $default  reduce using rule 80 (activation_value)
 
 
 State 88
 
-   59 expr: array •
+   69 identifier_expr: IDENTIFIER .
 
-    $default  reduce using rule 59 (expr)
+    $default  reduce using rule 69 (identifier_expr)
 
 
 State 89
 
-   61 expr: activation_value •
+   24 return_stmt: RETURN expr .
 
-    $default  reduce using rule 61 (expr)
+    $default  reduce using rule 24 (return_stmt)
 
 
 State 90
 
-    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE •
+   67 expr: identifier_expr .
 
-    $default  reduce using rule 7 (module_def)
+    $default  reduce using rule 67 (expr)
 
 
 State 91
 
-   66 array: LBRACKET array_elements RBRACKET •
+   65 expr: number .
 
-    $default  reduce using rule 66 (array)
+    $default  reduce using rule 65 (expr)
 
 
 State 92
 
-   68 array_elements: array_elements COMMA • number
+   66 expr: array .
 
-    NUMBER     shift, and go to state 62
-    FLOAT_NUM  shift, and go to state 63
-
-    number  go to state 113
+    $default  reduce using rule 66 (expr)
 
 
 State 93
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS • COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   68 expr: activation_value .
 
-    COLON  shift, and go to state 114
+    $default  reduce using rule 68 (expr)
 
 
 State 94
 
-   30 dense_layer: DENSE LPAREN UNITS • COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+    7 module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE .
 
-    COLON  shift, and go to state 115
+    $default  reduce using rule 7 (module_def)
 
 
 State 95
 
-   31 pool_layer: MAXPOOL LPAREN POOL • COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   73 array: LBRACKET array_elements RBRACKET .
 
-    COLON  shift, and go to state 116
+    $default  reduce using rule 73 (array)
 
 
 State 96
 
-   32 pool_layer: AVGPOOL LPAREN POOL • COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   75 array_elements: array_elements COMMA . number
 
-    COLON  shift, and go to state 117
+    NUMBER     shift, and go to state 65
+    FLOAT_NUM  shift, and go to state 66
+
+    number  go to state 119
 
 
 State 97
 
-   33 flatten_layer: FLATTEN LPAREN RPAREN •
-
-    $default  reduce using rule 33 (flatten_layer)
-
-
-State 98
-
-   34 concat_layer: CONCAT LPAREN concat_args • RPAREN
-   36 concat_args: concat_args • COMMA expr
-
-    RPAREN  shift, and go to state 118
-    COMMA   shift, and go to state 119
-
-
-State 99
-
-   35 concat_args: expr •
-
-    $default  reduce using rule 35 (concat_args)
-
-
-State 100
-
-   37 norm_layer: BATCHNORM LPAREN RPAREN •
-
-    $default  reduce using rule 37 (norm_layer)
-
-
-State 101
-
-   38 norm_layer: LAYERNORM LPAREN RPAREN •
-
-    $default  reduce using rule 38 (norm_layer)
-
-
-State 102
-
-   43 layer_param_list: FILTERS • COLON expr
+   33 conv2d_layer: CONV2D LPAREN FILTERS . COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
     COLON  shift, and go to state 120
 
 
-State 103
+State 98
 
-   44 layer_param_list: KERNEL • COLON expr
+   34 dense_layer: DENSE LPAREN UNITS . COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
     COLON  shift, and go to state 121
 
 
-State 104
+State 99
 
-   45 layer_param_list: ACTIVATION • COLON expr
+   35 pool_layer: MAXPOOL LPAREN POOL . COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
     COLON  shift, and go to state 122
 
 
-State 105
+State 100
 
-   46 layer_param_list: STRIDE • COLON expr
+   36 pool_layer: AVGPOOL LPAREN POOL . COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
     COLON  shift, and go to state 123
 
 
+State 101
+
+   37 flatten_layer: FLATTEN LPAREN RPAREN .
+
+    $default  reduce using rule 37 (flatten_layer)
+
+
+State 102
+
+   38 add_layer: ADD LPAREN add_args . RPAREN
+   40 add_args: add_args . COMMA expr
+
+    RPAREN  shift, and go to state 124
+    COMMA   shift, and go to state 125
+
+
+State 103
+
+   39 add_args: expr .
+
+    $default  reduce using rule 39 (add_args)
+
+
+State 104
+
+   41 concat_layer: CONCAT LPAREN concat_args . RPAREN
+   43 concat_args: concat_args . COMMA expr
+
+    RPAREN  shift, and go to state 126
+    COMMA   shift, and go to state 127
+
+
+State 105
+
+   42 concat_args: expr .
+
+    $default  reduce using rule 42 (concat_args)
+
+
 State 106
 
-   47 layer_param_list: PADDING • COLON expr
+   44 norm_layer: BATCHNORM LPAREN RPAREN .
 
-    COLON  shift, and go to state 124
+    $default  reduce using rule 44 (norm_layer)
 
 
 State 107
 
-   48 layer_param_list: POOL • COLON expr
+   45 norm_layer: LAYERNORM LPAREN RPAREN .
 
-    COLON  shift, and go to state 125
+    $default  reduce using rule 45 (norm_layer)
 
 
 State 108
 
-   49 layer_param_list: UNITS • COLON expr
+   50 layer_param_list: FILTERS . COLON expr
 
-    COLON  shift, and go to state 126
+    COLON  shift, and go to state 128
 
 
 State 109
 
-   42 layer_param_list: IDENTIFIER • COLON expr
+   51 layer_param_list: KERNEL . COLON expr
 
-    COLON  shift, and go to state 127
+    COLON  shift, and go to state 129
 
 
 State 110
 
-   39 module_call: IDENTIFIER LPAREN layer_params • RPAREN
+   52 layer_param_list: ACTIVATION . COLON expr
 
-    RPAREN  shift, and go to state 128
+    COLON  shift, and go to state 130
 
 
 State 111
 
-   41 layer_params: layer_param_list •
-   50 layer_param_list: layer_param_list • COMMA IDENTIFIER COLON expr
-   51                 | layer_param_list • COMMA FILTERS COLON expr
-   52                 | layer_param_list • COMMA KERNEL COLON expr
-   53                 | layer_param_list • COMMA ACTIVATION COLON expr
-   54                 | layer_param_list • COMMA STRIDE COLON expr
-   55                 | layer_param_list • COMMA PADDING COLON expr
-   56                 | layer_param_list • COMMA POOL COLON expr
-   57                 | layer_param_list • COMMA UNITS COLON expr
+   53 layer_param_list: STRIDE . COLON expr
 
-    COMMA  shift, and go to state 129
-
-    $default  reduce using rule 41 (layer_params)
+    COLON  shift, and go to state 131
 
 
 State 112
 
-   20 from_clause: FROM expr •
+   54 layer_param_list: PADDING . COLON expr
 
-    $default  reduce using rule 20 (from_clause)
+    COLON  shift, and go to state 132
 
 
 State 113
 
-   68 array_elements: array_elements COMMA number •
+   55 layer_param_list: POOL . COLON expr
 
-    $default  reduce using rule 68 (array_elements)
+    COLON  shift, and go to state 133
 
 
 State 114
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON • expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   56 layer_param_list: UNITS . COLON expr
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 130
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    COLON  shift, and go to state 134
 
 
 State 115
 
-   30 dense_layer: DENSE LPAREN UNITS COLON • expr COMMA ACTIVATION COLON activation_value RPAREN
+   49 layer_param_list: IDENTIFIER . COLON expr
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 131
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    COLON  shift, and go to state 135
 
 
 State 116
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON • array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   46 module_call: IDENTIFIER LPAREN layer_params . RPAREN
 
-    LBRACKET  shift, and go to state 39
-
-    array  go to state 132
+    RPAREN  shift, and go to state 136
 
 
 State 117
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON • array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   48 layer_params: layer_param_list .
+   57 layer_param_list: layer_param_list . COMMA IDENTIFIER COLON expr
+   58                 | layer_param_list . COMMA FILTERS COLON expr
+   59                 | layer_param_list . COMMA KERNEL COLON expr
+   60                 | layer_param_list . COMMA ACTIVATION COLON expr
+   61                 | layer_param_list . COMMA STRIDE COLON expr
+   62                 | layer_param_list . COMMA PADDING COLON expr
+   63                 | layer_param_list . COMMA POOL COLON expr
+   64                 | layer_param_list . COMMA UNITS COLON expr
 
-    LBRACKET  shift, and go to state 39
+    COMMA  shift, and go to state 137
 
-    array  go to state 133
+    $default  reduce using rule 48 (layer_params)
 
 
 State 118
 
-   34 concat_layer: CONCAT LPAREN concat_args RPAREN •
+   23 optional_from_clause: FROM expr .
 
-    $default  reduce using rule 34 (concat_layer)
+    $default  reduce using rule 23 (optional_from_clause)
 
 
 State 119
 
-   36 concat_args: concat_args COMMA • expr
+   75 array_elements: array_elements COMMA number .
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 134
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    $default  reduce using rule 75 (array_elements)
 
 
 State 120
 
-   43 layer_param_list: FILTERS COLON • expr
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON . expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
 
-    expr              go to state 135
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    expr              go to state 138
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 121
 
-   44 layer_param_list: KERNEL COLON • expr
+   34 dense_layer: DENSE LPAREN UNITS COLON . expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
 
-    expr              go to state 136
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    expr              go to state 139
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 122
 
-   45 layer_param_list: ACTIVATION COLON • expr
+   35 pool_layer: MAXPOOL LPAREN POOL COLON . array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    LBRACKET  shift, and go to state 40
 
-    expr              go to state 137
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    array  go to state 140
 
 
 State 123
 
-   46 layer_param_list: STRIDE COLON • expr
+   36 pool_layer: AVGPOOL LPAREN POOL COLON . array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    LBRACKET  shift, and go to state 40
 
-    expr              go to state 138
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    array  go to state 141
 
 
 State 124
 
-   47 layer_param_list: PADDING COLON • expr
+   38 add_layer: ADD LPAREN add_args RPAREN .
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 139
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    $default  reduce using rule 38 (add_layer)
 
 
 State 125
 
-   48 layer_param_list: POOL COLON • expr
+   40 add_args: add_args COMMA . expr
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
 
-    expr              go to state 140
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    expr              go to state 142
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 126
 
-   49 layer_param_list: UNITS COLON • expr
+   41 concat_layer: CONCAT LPAREN concat_args RPAREN .
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 141
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    $default  reduce using rule 41 (concat_layer)
 
 
 State 127
 
-   42 layer_param_list: IDENTIFIER COLON • expr
+   43 concat_args: concat_args COMMA . expr
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
 
-    expr              go to state 142
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    expr              go to state 143
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 128
 
-   39 module_call: IDENTIFIER LPAREN layer_params RPAREN •
+   50 layer_param_list: FILTERS COLON . expr
 
-    $default  reduce using rule 39 (module_call)
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 144
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 129
 
-   50 layer_param_list: layer_param_list COMMA • IDENTIFIER COLON expr
-   51                 | layer_param_list COMMA • FILTERS COLON expr
-   52                 | layer_param_list COMMA • KERNEL COLON expr
-   53                 | layer_param_list COMMA • ACTIVATION COLON expr
-   54                 | layer_param_list COMMA • STRIDE COLON expr
-   55                 | layer_param_list COMMA • PADDING COLON expr
-   56                 | layer_param_list COMMA • POOL COLON expr
-   57                 | layer_param_list COMMA • UNITS COLON expr
+   51 layer_param_list: KERNEL COLON . expr
 
-    FILTERS     shift, and go to state 143
-    KERNEL      shift, and go to state 144
-    ACTIVATION  shift, and go to state 145
-    STRIDE      shift, and go to state 146
-    PADDING     shift, and go to state 147
-    POOL        shift, and go to state 148
-    UNITS       shift, and go to state 149
-    IDENTIFIER  shift, and go to state 150
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 145
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 130
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr • COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   52 layer_param_list: ACTIVATION COLON . expr
 
-    COMMA  shift, and go to state 151
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 146
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 131
 
-   30 dense_layer: DENSE LPAREN UNITS COLON expr • COMMA ACTIVATION COLON activation_value RPAREN
+   53 layer_param_list: STRIDE COLON . expr
 
-    COMMA  shift, and go to state 152
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 147
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 132
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array • COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   54 layer_param_list: PADDING COLON . expr
 
-    COMMA  shift, and go to state 153
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 148
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 133
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array • COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+   55 layer_param_list: POOL COLON . expr
 
-    COMMA  shift, and go to state 154
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 149
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 134
 
-   36 concat_args: concat_args COMMA expr •
+   56 layer_param_list: UNITS COLON . expr
 
-    $default  reduce using rule 36 (concat_args)
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 150
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 135
 
-   43 layer_param_list: FILTERS COLON expr •
+   49 layer_param_list: IDENTIFIER COLON . expr
 
-    $default  reduce using rule 43 (layer_param_list)
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 151
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 136
 
-   44 layer_param_list: KERNEL COLON expr •
+   46 module_call: IDENTIFIER LPAREN layer_params RPAREN .
 
-    $default  reduce using rule 44 (layer_param_list)
+    $default  reduce using rule 46 (module_call)
 
 
 State 137
 
-   45 layer_param_list: ACTIVATION COLON expr •
+   57 layer_param_list: layer_param_list COMMA . IDENTIFIER COLON expr
+   58                 | layer_param_list COMMA . FILTERS COLON expr
+   59                 | layer_param_list COMMA . KERNEL COLON expr
+   60                 | layer_param_list COMMA . ACTIVATION COLON expr
+   61                 | layer_param_list COMMA . STRIDE COLON expr
+   62                 | layer_param_list COMMA . PADDING COLON expr
+   63                 | layer_param_list COMMA . POOL COLON expr
+   64                 | layer_param_list COMMA . UNITS COLON expr
 
-    $default  reduce using rule 45 (layer_param_list)
+    FILTERS     shift, and go to state 152
+    KERNEL      shift, and go to state 153
+    ACTIVATION  shift, and go to state 154
+    STRIDE      shift, and go to state 155
+    PADDING     shift, and go to state 156
+    POOL        shift, and go to state 157
+    UNITS       shift, and go to state 158
+    IDENTIFIER  shift, and go to state 159
 
 
 State 138
 
-   46 layer_param_list: STRIDE COLON expr •
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr . COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    $default  reduce using rule 46 (layer_param_list)
+    COMMA  shift, and go to state 160
 
 
 State 139
 
-   47 layer_param_list: PADDING COLON expr •
+   34 dense_layer: DENSE LPAREN UNITS COLON expr . COMMA ACTIVATION COLON activation_value RPAREN
 
-    $default  reduce using rule 47 (layer_param_list)
+    COMMA  shift, and go to state 161
 
 
 State 140
 
-   48 layer_param_list: POOL COLON expr •
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array . COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
-    $default  reduce using rule 48 (layer_param_list)
+    COMMA  shift, and go to state 162
 
 
 State 141
 
-   49 layer_param_list: UNITS COLON expr •
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array . COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN
 
-    $default  reduce using rule 49 (layer_param_list)
+    COMMA  shift, and go to state 163
 
 
 State 142
 
-   42 layer_param_list: IDENTIFIER COLON expr •
+   40 add_args: add_args COMMA expr .
 
-    $default  reduce using rule 42 (layer_param_list)
+    $default  reduce using rule 40 (add_args)
 
 
 State 143
 
-   51 layer_param_list: layer_param_list COMMA FILTERS • COLON expr
+   43 concat_args: concat_args COMMA expr .
 
-    COLON  shift, and go to state 155
+    $default  reduce using rule 43 (concat_args)
 
 
 State 144
 
-   52 layer_param_list: layer_param_list COMMA KERNEL • COLON expr
-
-    COLON  shift, and go to state 156
-
-
-State 145
-
-   53 layer_param_list: layer_param_list COMMA ACTIVATION • COLON expr
-
-    COLON  shift, and go to state 157
-
-
-State 146
-
-   54 layer_param_list: layer_param_list COMMA STRIDE • COLON expr
-
-    COLON  shift, and go to state 158
-
-
-State 147
-
-   55 layer_param_list: layer_param_list COMMA PADDING • COLON expr
-
-    COLON  shift, and go to state 159
-
-
-State 148
-
-   56 layer_param_list: layer_param_list COMMA POOL • COLON expr
-
-    COLON  shift, and go to state 160
-
-
-State 149
-
-   57 layer_param_list: layer_param_list COMMA UNITS • COLON expr
-
-    COLON  shift, and go to state 161
-
-
-State 150
-
-   50 layer_param_list: layer_param_list COMMA IDENTIFIER • COLON expr
-
-    COLON  shift, and go to state 162
-
-
-State 151
-
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA • KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
-
-    KERNEL  shift, and go to state 163
-
-
-State 152
-
-   30 dense_layer: DENSE LPAREN UNITS COLON expr COMMA • ACTIVATION COLON activation_value RPAREN
-
-    ACTIVATION  shift, and go to state 164
-
-
-State 153
-
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA • STRIDE COLON expr COMMA PADDING COLON expr RPAREN
-
-    STRIDE  shift, and go to state 165
-
-
-State 154
-
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA • STRIDE COLON expr COMMA PADDING COLON expr RPAREN
-
-    STRIDE  shift, and go to state 166
-
-
-State 155
-
-   51 layer_param_list: layer_param_list COMMA FILTERS COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 167
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 156
-
-   52 layer_param_list: layer_param_list COMMA KERNEL COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 168
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 157
-
-   53 layer_param_list: layer_param_list COMMA ACTIVATION COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 169
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 158
-
-   54 layer_param_list: layer_param_list COMMA STRIDE COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 170
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 159
-
-   55 layer_param_list: layer_param_list COMMA PADDING COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 171
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 160
-
-   56 layer_param_list: layer_param_list COMMA POOL COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 172
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 161
-
-   57 layer_param_list: layer_param_list COMMA UNITS COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 173
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 162
-
-   50 layer_param_list: layer_param_list COMMA IDENTIFIER COLON • expr
-
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 174
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
-
-
-State 163
-
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL • COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
-
-    COLON  shift, and go to state 175
-
-
-State 164
-
-   30 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION • COLON activation_value RPAREN
-
-    COLON  shift, and go to state 176
-
-
-State 165
-
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE • COLON expr COMMA PADDING COLON expr RPAREN
-
-    COLON  shift, and go to state 177
-
-
-State 166
-
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE • COLON expr COMMA PADDING COLON expr RPAREN
-
-    COLON  shift, and go to state 178
-
-
-State 167
-
-   51 layer_param_list: layer_param_list COMMA FILTERS COLON expr •
-
-    $default  reduce using rule 51 (layer_param_list)
-
-
-State 168
-
-   52 layer_param_list: layer_param_list COMMA KERNEL COLON expr •
-
-    $default  reduce using rule 52 (layer_param_list)
-
-
-State 169
-
-   53 layer_param_list: layer_param_list COMMA ACTIVATION COLON expr •
-
-    $default  reduce using rule 53 (layer_param_list)
-
-
-State 170
-
-   54 layer_param_list: layer_param_list COMMA STRIDE COLON expr •
-
-    $default  reduce using rule 54 (layer_param_list)
-
-
-State 171
-
-   55 layer_param_list: layer_param_list COMMA PADDING COLON expr •
-
-    $default  reduce using rule 55 (layer_param_list)
-
-
-State 172
-
-   56 layer_param_list: layer_param_list COMMA POOL COLON expr •
-
-    $default  reduce using rule 56 (layer_param_list)
-
-
-State 173
-
-   57 layer_param_list: layer_param_list COMMA UNITS COLON expr •
-
-    $default  reduce using rule 57 (layer_param_list)
-
-
-State 174
-
-   50 layer_param_list: layer_param_list COMMA IDENTIFIER COLON expr •
+   50 layer_param_list: FILTERS COLON expr .
 
     $default  reduce using rule 50 (layer_param_list)
 
 
+State 145
+
+   51 layer_param_list: KERNEL COLON expr .
+
+    $default  reduce using rule 51 (layer_param_list)
+
+
+State 146
+
+   52 layer_param_list: ACTIVATION COLON expr .
+
+    $default  reduce using rule 52 (layer_param_list)
+
+
+State 147
+
+   53 layer_param_list: STRIDE COLON expr .
+
+    $default  reduce using rule 53 (layer_param_list)
+
+
+State 148
+
+   54 layer_param_list: PADDING COLON expr .
+
+    $default  reduce using rule 54 (layer_param_list)
+
+
+State 149
+
+   55 layer_param_list: POOL COLON expr .
+
+    $default  reduce using rule 55 (layer_param_list)
+
+
+State 150
+
+   56 layer_param_list: UNITS COLON expr .
+
+    $default  reduce using rule 56 (layer_param_list)
+
+
+State 151
+
+   49 layer_param_list: IDENTIFIER COLON expr .
+
+    $default  reduce using rule 49 (layer_param_list)
+
+
+State 152
+
+   58 layer_param_list: layer_param_list COMMA FILTERS . COLON expr
+
+    COLON  shift, and go to state 164
+
+
+State 153
+
+   59 layer_param_list: layer_param_list COMMA KERNEL . COLON expr
+
+    COLON  shift, and go to state 165
+
+
+State 154
+
+   60 layer_param_list: layer_param_list COMMA ACTIVATION . COLON expr
+
+    COLON  shift, and go to state 166
+
+
+State 155
+
+   61 layer_param_list: layer_param_list COMMA STRIDE . COLON expr
+
+    COLON  shift, and go to state 167
+
+
+State 156
+
+   62 layer_param_list: layer_param_list COMMA PADDING . COLON expr
+
+    COLON  shift, and go to state 168
+
+
+State 157
+
+   63 layer_param_list: layer_param_list COMMA POOL . COLON expr
+
+    COLON  shift, and go to state 169
+
+
+State 158
+
+   64 layer_param_list: layer_param_list COMMA UNITS . COLON expr
+
+    COLON  shift, and go to state 170
+
+
+State 159
+
+   57 layer_param_list: layer_param_list COMMA IDENTIFIER . COLON expr
+
+    COLON  shift, and go to state 171
+
+
+State 160
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA . KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+
+    KERNEL  shift, and go to state 172
+
+
+State 161
+
+   34 dense_layer: DENSE LPAREN UNITS COLON expr COMMA . ACTIVATION COLON activation_value RPAREN
+
+    ACTIVATION  shift, and go to state 173
+
+
+State 162
+
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA . STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+
+    STRIDE  shift, and go to state 174
+
+
+State 163
+
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA . STRIDE COLON expr COMMA PADDING COLON expr RPAREN
+
+    STRIDE  shift, and go to state 175
+
+
+State 164
+
+   58 layer_param_list: layer_param_list COMMA FILTERS COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 176
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 165
+
+   59 layer_param_list: layer_param_list COMMA KERNEL COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 177
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 166
+
+   60 layer_param_list: layer_param_list COMMA ACTIVATION COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 178
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 167
+
+   61 layer_param_list: layer_param_list COMMA STRIDE COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 179
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 168
+
+   62 layer_param_list: layer_param_list COMMA PADDING COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 180
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 169
+
+   63 layer_param_list: layer_param_list COMMA POOL COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 181
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 170
+
+   64 layer_param_list: layer_param_list COMMA UNITS COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 182
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 171
+
+   57 layer_param_list: layer_param_list COMMA IDENTIFIER COLON . expr
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 183
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 172
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL . COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+
+    COLON  shift, and go to state 184
+
+
+State 173
+
+   34 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION . COLON activation_value RPAREN
+
+    COLON  shift, and go to state 185
+
+
+State 174
+
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE . COLON expr COMMA PADDING COLON expr RPAREN
+
+    COLON  shift, and go to state 186
+
+
 State 175
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON • array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE . COLON expr COMMA PADDING COLON expr RPAREN
 
-    LBRACKET  shift, and go to state 39
-
-    array  go to state 179
+    COLON  shift, and go to state 187
 
 
 State 176
 
-   30 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON • activation_value RPAREN
+   58 layer_param_list: layer_param_list COMMA FILTERS COLON expr .
 
-    RELU     shift, and go to state 79
-    SIGMOID  shift, and go to state 80
-    TANH     shift, and go to state 81
-    SOFTMAX  shift, and go to state 82
-    LINEAR   shift, and go to state 83
-
-    activation_value  go to state 180
+    $default  reduce using rule 58 (layer_param_list)
 
 
 State 177
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON • expr COMMA PADDING COLON expr RPAREN
+   59 layer_param_list: layer_param_list COMMA KERNEL COLON expr .
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 181
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    $default  reduce using rule 59 (layer_param_list)
 
 
 State 178
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON • expr COMMA PADDING COLON expr RPAREN
+   60 layer_param_list: layer_param_list COMMA ACTIVATION COLON expr .
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 182
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    $default  reduce using rule 60 (layer_param_list)
 
 
 State 179
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array • COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   61 layer_param_list: layer_param_list COMMA STRIDE COLON expr .
 
-    COMMA  shift, and go to state 183
+    $default  reduce using rule 61 (layer_param_list)
 
 
 State 180
 
-   30 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value • RPAREN
+   62 layer_param_list: layer_param_list COMMA PADDING COLON expr .
 
-    RPAREN  shift, and go to state 184
+    $default  reduce using rule 62 (layer_param_list)
 
 
 State 181
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr • COMMA PADDING COLON expr RPAREN
+   63 layer_param_list: layer_param_list COMMA POOL COLON expr .
 
-    COMMA  shift, and go to state 185
+    $default  reduce using rule 63 (layer_param_list)
 
 
 State 182
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr • COMMA PADDING COLON expr RPAREN
+   64 layer_param_list: layer_param_list COMMA UNITS COLON expr .
 
-    COMMA  shift, and go to state 186
+    $default  reduce using rule 64 (layer_param_list)
 
 
 State 183
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA • STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   57 layer_param_list: layer_param_list COMMA IDENTIFIER COLON expr .
 
-    STRIDE  shift, and go to state 187
+    $default  reduce using rule 57 (layer_param_list)
 
 
 State 184
 
-   30 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN •
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON . array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    $default  reduce using rule 30 (dense_layer)
+    LBRACKET  shift, and go to state 40
+
+    array  go to state 188
 
 
 State 185
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA • PADDING COLON expr RPAREN
+   34 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON . activation_value RPAREN
 
-    PADDING  shift, and go to state 188
+    RELU     shift, and go to state 83
+    SIGMOID  shift, and go to state 84
+    TANH     shift, and go to state 85
+    SOFTMAX  shift, and go to state 86
+    LINEAR   shift, and go to state 87
+
+    activation_value  go to state 189
 
 
 State 186
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA • PADDING COLON expr RPAREN
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON . expr COMMA PADDING COLON expr RPAREN
 
-    PADDING  shift, and go to state 189
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 190
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 187
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE • COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON . expr COMMA PADDING COLON expr RPAREN
 
-    COLON  shift, and go to state 190
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 191
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 188
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING • COLON expr RPAREN
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array . COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    COLON  shift, and go to state 191
+    COMMA  shift, and go to state 192
 
 
 State 189
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING • COLON expr RPAREN
+   34 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value . RPAREN
 
-    COLON  shift, and go to state 192
+    RPAREN  shift, and go to state 193
 
 
 State 190
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON • expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr . COMMA PADDING COLON expr RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 193
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    COMMA  shift, and go to state 194
 
 
 State 191
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON • expr RPAREN
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr . COMMA PADDING COLON expr RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 194
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    COMMA  shift, and go to state 195
 
 
 State 192
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON • expr RPAREN
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA . STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
-
-    expr              go to state 195
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    STRIDE  shift, and go to state 196
 
 
 State 193
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr • COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   34 dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN .
 
-    COMMA  shift, and go to state 196
+    $default  reduce using rule 34 (dense_layer)
 
 
 State 194
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr • RPAREN
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA . PADDING COLON expr RPAREN
 
-    RPAREN  shift, and go to state 197
+    PADDING  shift, and go to state 197
 
 
 State 195
 
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr • RPAREN
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA . PADDING COLON expr RPAREN
 
-    RPAREN  shift, and go to state 198
+    PADDING  shift, and go to state 198
 
 
 State 196
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA • PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE . COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    PADDING  shift, and go to state 199
+    COLON  shift, and go to state 199
 
 
 State 197
 
-   31 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN •
-
-    $default  reduce using rule 31 (pool_layer)
-
-
-State 198
-
-   32 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN •
-
-    $default  reduce using rule 32 (pool_layer)
-
-
-State 199
-
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING • COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING . COLON expr RPAREN
 
     COLON  shift, and go to state 200
 
 
+State 198
+
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING . COLON expr RPAREN
+
+    COLON  shift, and go to state 201
+
+
+State 199
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON . expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 202
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
 State 200
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON • expr COMMA ACTIVATION COLON activation_value RPAREN
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON . expr RPAREN
 
-    INPUT       shift, and go to state 78
-    RELU        shift, and go to state 79
-    SIGMOID     shift, and go to state 80
-    TANH        shift, and go to state 81
-    SOFTMAX     shift, and go to state 82
-    LINEAR      shift, and go to state 83
-    NUMBER      shift, and go to state 62
-    FLOAT_NUM   shift, and go to state 63
-    IDENTIFIER  shift, and go to state 84
-    LBRACKET    shift, and go to state 39
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
 
-    expr              go to state 201
-    identifier_expr   go to state 86
-    number            go to state 87
-    array             go to state 88
-    activation_value  go to state 89
+    expr              go to state 203
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 201
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr • COMMA ACTIVATION COLON activation_value RPAREN
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON . expr RPAREN
 
-    COMMA  shift, and go to state 202
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 204
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
 
 
 State 202
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA • ACTIVATION COLON activation_value RPAREN
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr . COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
 
-    ACTIVATION  shift, and go to state 203
+    COMMA  shift, and go to state 205
 
 
 State 203
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION • COLON activation_value RPAREN
-
-    COLON  shift, and go to state 204
-
-
-State 204
-
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON • activation_value RPAREN
-
-    RELU     shift, and go to state 79
-    SIGMOID  shift, and go to state 80
-    TANH     shift, and go to state 81
-    SOFTMAX  shift, and go to state 82
-    LINEAR   shift, and go to state 83
-
-    activation_value  go to state 205
-
-
-State 205
-
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value • RPAREN
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr . RPAREN
 
     RPAREN  shift, and go to state 206
 
 
+State 204
+
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr . RPAREN
+
+    RPAREN  shift, and go to state 207
+
+
+State 205
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA . PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+
+    PADDING  shift, and go to state 208
+
+
 State 206
 
-   29 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN •
+   35 pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN .
 
-    $default  reduce using rule 29 (conv2d_layer)
+    $default  reduce using rule 35 (pool_layer)
+
+
+State 207
+
+   36 pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN .
+
+    $default  reduce using rule 36 (pool_layer)
+
+
+State 208
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING . COLON expr COMMA ACTIVATION COLON activation_value RPAREN
+
+    COLON  shift, and go to state 209
+
+
+State 209
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON . expr COMMA ACTIVATION COLON activation_value RPAREN
+
+    INPUT       shift, and go to state 82
+    RELU        shift, and go to state 83
+    SIGMOID     shift, and go to state 84
+    TANH        shift, and go to state 85
+    SOFTMAX     shift, and go to state 86
+    LINEAR      shift, and go to state 87
+    NUMBER      shift, and go to state 65
+    FLOAT_NUM   shift, and go to state 66
+    IDENTIFIER  shift, and go to state 88
+    LBRACKET    shift, and go to state 40
+
+    expr              go to state 210
+    identifier_expr   go to state 90
+    number            go to state 91
+    array             go to state 92
+    activation_value  go to state 93
+
+
+State 210
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr . COMMA ACTIVATION COLON activation_value RPAREN
+
+    COMMA  shift, and go to state 211
+
+
+State 211
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA . ACTIVATION COLON activation_value RPAREN
+
+    ACTIVATION  shift, and go to state 212
+
+
+State 212
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION . COLON activation_value RPAREN
+
+    COLON  shift, and go to state 213
+
+
+State 213
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON . activation_value RPAREN
+
+    RELU     shift, and go to state 83
+    SIGMOID  shift, and go to state 84
+    TANH     shift, and go to state 85
+    SOFTMAX  shift, and go to state 86
+    LINEAR   shift, and go to state 87
+
+    activation_value  go to state 214
+
+
+State 214
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value . RPAREN
+
+    RPAREN  shift, and go to state 215
+
+
+State 215
+
+   33 conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN .
+
+    $default  reduce using rule 33 (conv2d_layer)

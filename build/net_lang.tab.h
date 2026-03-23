@@ -66,34 +66,35 @@ extern int yydebug;
     MAXPOOL = 267,                 /* MAXPOOL  */
     AVGPOOL = 268,                 /* AVGPOOL  */
     FLATTEN = 269,                 /* FLATTEN  */
-    CONCAT = 270,                  /* CONCAT  */
-    BATCHNORM = 271,               /* BATCHNORM  */
-    LAYERNORM = 272,               /* LAYERNORM  */
-    FILTERS = 273,                 /* FILTERS  */
-    KERNEL = 274,                  /* KERNEL  */
-    ACTIVATION = 275,              /* ACTIVATION  */
-    STRIDE = 276,                  /* STRIDE  */
-    PADDING = 277,                 /* PADDING  */
-    POOL = 278,                    /* POOL  */
-    UNITS = 279,                   /* UNITS  */
-    RELU = 280,                    /* RELU  */
-    SIGMOID = 281,                 /* SIGMOID  */
-    TANH = 282,                    /* TANH  */
-    SOFTMAX = 283,                 /* SOFTMAX  */
-    LINEAR = 284,                  /* LINEAR  */
-    NUMBER = 285,                  /* NUMBER  */
-    FLOAT_NUM = 286,               /* FLOAT_NUM  */
-    IDENTIFIER = 287,              /* IDENTIFIER  */
-    STRING_LIT = 288,              /* STRING_LIT  */
-    LBRACE = 289,                  /* LBRACE  */
-    RBRACE = 290,                  /* RBRACE  */
-    LBRACKET = 291,                /* LBRACKET  */
-    RBRACKET = 292,                /* RBRACKET  */
-    LPAREN = 293,                  /* LPAREN  */
-    RPAREN = 294,                  /* RPAREN  */
-    COLON = 295,                   /* COLON  */
-    COMMA = 296,                   /* COMMA  */
-    ASSIGN = 297                   /* ASSIGN  */
+    ADD = 270,                     /* ADD  */
+    CONCAT = 271,                  /* CONCAT  */
+    BATCHNORM = 272,               /* BATCHNORM  */
+    LAYERNORM = 273,               /* LAYERNORM  */
+    FILTERS = 274,                 /* FILTERS  */
+    KERNEL = 275,                  /* KERNEL  */
+    ACTIVATION = 276,              /* ACTIVATION  */
+    STRIDE = 277,                  /* STRIDE  */
+    PADDING = 278,                 /* PADDING  */
+    POOL = 279,                    /* POOL  */
+    UNITS = 280,                   /* UNITS  */
+    RELU = 281,                    /* RELU  */
+    SIGMOID = 282,                 /* SIGMOID  */
+    TANH = 283,                    /* TANH  */
+    SOFTMAX = 284,                 /* SOFTMAX  */
+    LINEAR = 285,                  /* LINEAR  */
+    NUMBER = 286,                  /* NUMBER  */
+    FLOAT_NUM = 287,               /* FLOAT_NUM  */
+    IDENTIFIER = 288,              /* IDENTIFIER  */
+    STRING_LIT = 289,              /* STRING_LIT  */
+    LBRACE = 290,                  /* LBRACE  */
+    RBRACE = 291,                  /* RBRACE  */
+    LBRACKET = 292,                /* LBRACKET  */
+    RBRACKET = 293,                /* RBRACKET  */
+    LPAREN = 294,                  /* LPAREN  */
+    RPAREN = 295,                  /* RPAREN  */
+    COLON = 296,                   /* COLON  */
+    COMMA = 297,                   /* COMMA  */
+    ASSIGN = 298                   /* ASSIGN  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -113,7 +114,7 @@ union YYSTYPE
     ActivationType activation;
     NetworkBody* netbody;
 
-#line 117 "build\\net_lang.tab.h"
+#line 118 "build\\net_lang.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

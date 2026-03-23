@@ -32,6 +32,7 @@ static const char* node_type_name(NodeType type) {
         case NODE_MAXPOOL: return "MAXPOOL";
         case NODE_AVGPOOL: return "AVGPOOL";
         case NODE_FLATTEN: return "FLATTEN";
+        case NODE_ADD: return "ADD";
         case NODE_CONCAT: return "CONCAT";
         case NODE_BATCHNORM: return "BATCHNORM";
         case NODE_LAYERNORM: return "LAYERNORM";
@@ -191,6 +192,19 @@ void ast_print(ASTNode* node, int indent) {
             break;
         }
         
+        case NODE_ADD: {
+            print_indent(indent + 1);
+            printf("inputs:\n");
+            if (node->data.add.inputs) {
+                ASTNode* curr = node->data.add.inputs->head;
+                while (curr) {
+                    ast_print(curr, indent + 2);
+                    curr = curr->next;
+                }
+            }
+            break;
+        }
+
         case NODE_CONCAT: {
             print_indent(indent + 1);
             printf("inputs:\n");
@@ -335,6 +349,10 @@ void ast_free(ASTNode* node) {
             ast_free(node->data.return_stmt.value);
             break;
             
+        case NODE_ADD:
+            free_ast_list(node->data.add.inputs);
+            break;
+
         case NODE_CONCAT:
             free_ast_list(node->data.concat.inputs);
             break;

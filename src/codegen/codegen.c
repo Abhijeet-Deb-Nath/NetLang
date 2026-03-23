@@ -36,62 +36,34 @@ static int calculate_tensor_size(TensorType* shape) {
     return size;
 }
 
-/* Recompute output shape for a layer (needed because symbol table only has final shape) */
-static TensorType* compute_layer_output_shape(LayerInfo* layer) {
-    if (!layer->input_shape) return NULL;
-    
-    TensorType* output = calloc(1, sizeof(TensorType));
-    TensorType* input = layer->input_shape;
-    
-    switch (layer->layer_type) {
-        case NODE_CONV2D: {
-            ASTNode* node = layer->layer_node;
-            int filters = node->data.conv2d.filters;
-            int kernel_h = node->data.conv2d.kernel[0];
-            int kernel_w = node->data.conv2d.kernel[1];
-            int stride = node->data.conv2d.stride;
-            int padding = node->data.conv2d.padding;
-            
-            output->rank = 3;
-            output->dims[0] = (input->dims[0] + 2*padding - kernel_h) / stride + 1;
-            output->dims[1] = (input->dims[1] + 2*padding - kernel_w) / stride + 1;
-            output->dims[2] = filters;
-            break;
-        }
-        case NODE_MAXPOOL:
-        case NODE_AVGPOOL: {
-            ASTNode* node = layer->layer_node;
-            int pool_h = node->data.pooling.pool[0];
-            int pool_w = node->data.pooling.pool[1];
-            int stride = node->data.pooling.stride;
-            int padding = node->data.pooling.padding;
-            
-            if (stride == 0) stride = pool_h;  // Default stride
-            
-            output->rank = 3;
-            output->dims[0] = (input->dims[0] + 2*padding - pool_h) / stride + 1;
-            output->dims[1] = (input->dims[1] + 2*padding - pool_w) / stride + 1;
-            output->dims[2] = input->dims[2];  // Channels unchanged
-            break;
-        }
-        case NODE_DENSE: {
-            ASTNode* node = layer->layer_node;
-            output->rank = 1;
-            output->dims[0] = node->data.dense.units;
-            break;
-        }
-        case NODE_FLATTEN: {
-            output->rank = 1;
-            output->dims[0] = calculate_tensor_size(input);
-            break;
-        }
-        default:
-            free(output);
-            return NULL;
+static const ValueAllocation* get_value_allocation(CodegenContext* ctx, const GraphValue* value) {
+    return memory_plan_get_allocation(ctx->plan, value);
+}
+
+static int get_output_slot_id(CodegenContext* ctx, LayerInfo* layer) {
+    const ValueAllocation* allocation = get_value_allocation(ctx, layer->graph_node->output);
+    return allocation ? allocation->slot_id : -1;
+}
+
+static void format_output_reference(CodegenContext* ctx,
+                                    char* buffer,
+                                    size_t buffer_size,
+                                    LayerInfo* layer) {
+    snprintf(buffer, buffer_size, "net->slot_%d", get_output_slot_id(ctx, layer));
+}
+
+static void format_value_reference(CodegenContext* ctx,
+                                   char* buffer,
+                                   size_t buffer_size,
+                                   const GraphValue* value) {
+    const ValueAllocation* allocation = get_value_allocation(ctx, value);
+
+    if (!value || !value->producer || !allocation || allocation->slot_id < 0) {
+        snprintf(buffer, buffer_size, "input");
+        return;
     }
-    
-    output->dtype = "float32";
-    return output;
+
+    snprintf(buffer, buffer_size, "net->slot_%d", allocation->slot_id);
 }
 
 void emit_tensor_allocation(FILE* out, const char* name, TensorType* shape) {
@@ -110,60 +82,30 @@ void emit_tensor_allocation(FILE* out, const char* name, TensorType* shape) {
 /* ========== LAYER EXTRACTION ========== */
 
 void extract_layers(CodegenContext* ctx, ASTNode* network) {
-    if (!network || network->type != NODE_NETWORK) return;
-    
-    /* Count layers and allocate array */
-    ASTList* stmts = network->data.network.statements;
-    ctx->layer_count = stmts->count;
+    (void)network;
+
+    if (!ctx || !ctx->graph) return;
+
+    ctx->layer_count = ctx->graph->topo_count;
     ctx->layers = calloc(ctx->layer_count, sizeof(LayerInfo));
-    
     ctx->weight_layer_count = 0;
-    int idx = 0;
-    ASTNode* stmt = stmts->head;
-    
-    while (stmt) {
-        if (stmt->type == NODE_ASSIGNMENT) {
-            LayerInfo* layer = &ctx->layers[idx];
-            
-            /* Create unique variable name for this layer */
-            char unique_name[64];
-            snprintf(unique_name, sizeof(unique_name), "layer_%d", idx);
-            layer->var_name = strdup(unique_name);
-            
-            /* Get layer node (unwrap FROM_EXPR if present) */
-            ASTNode* layer_node = stmt->data.assignment.value;
-            if (layer_node->type == NODE_FROM_EXPR) {
-                layer_node = layer_node->data.from_expr.layer;
-            }
-            
-            layer->layer_type = layer_node->type;
-            layer->layer_node = layer_node;
-            
-            /* Get input shape: for first layer use network input, else use previous layer's output */
-            if (idx == 0) {
-                /* First layer - use network input */
-                Symbol* input_sym = scope_lookup(ctx->scope, "input", 1);
-                if (input_sym && input_sym->tensor_type) {
-                    layer->input_shape = input_sym->tensor_type;
-                }
-            } else {
-                /* Subsequent layers - use previous layer's output as input */
-                layer->input_shape = ctx->layers[idx - 1].output_shape;
-            }
-            
-            /* Compute output shape based on layer type and input shape */
-            layer->output_shape = compute_layer_output_shape(layer);
-            
-            /* Assign layer index for weight-bearing layers */
-            if (layer->layer_type == NODE_CONV2D || layer->layer_type == NODE_DENSE) {
-                layer->layer_index = ctx->weight_layer_count++;
-            } else {
-                layer->layer_index = -1;
-            }
-            
-            idx++;
+
+    for (int idx = 0; idx < ctx->layer_count; idx++) {
+        GraphNode* graph_node = ctx->graph->topo_nodes[idx];
+        LayerInfo* layer = &ctx->layers[idx];
+
+        layer->graph_node = graph_node;
+        layer->var_name = strdup(graph_node->output->storage_name);
+        layer->layer_type = graph_node->op_type;
+        layer->layer_node = graph_node->ast_node;
+        layer->input_shape = graph_node->input_count > 0 ? graph_node->inputs[0]->type : NULL;
+        layer->output_shape = graph_node->output->type;
+
+        if (layer->layer_type == NODE_CONV2D || layer->layer_type == NODE_DENSE) {
+            layer->layer_index = ctx->weight_layer_count++;
+        } else {
+            layer->layer_index = -1;
         }
-        stmt = stmt->next;
     }
 }
 
@@ -236,7 +178,7 @@ void emit_includes(CodegenContext* ctx) {
     emit(ctx->output, " * Generated by NetLang Compiler\n");
     emit(ctx->output, " * Network: %s\n", ctx->network_name);
     emit(ctx->output, " * Optimizations: Shape specialization, Aligned memory, Operator fusion\n");
-    emit(ctx->output, " * Compile: gcc -O3 -march=haswell -mavx2 -mfma -o network network.c\n");
+    emit(ctx->output, " * Compile: gcc -O3 -march=haswell -mavx2 -mfma -I. -o network network.c src/codegen/runtime.c src/codegen/kernels.c\n");
     emit(ctx->output, " */\n\n");
     
     emit(ctx->output, "#include <stdio.h>\n");
@@ -254,23 +196,38 @@ void emit_network_struct(CodegenContext* ctx) {
     emit(ctx->output, "/* Network structure */\n");
     emit(ctx->output, "typedef struct {\n");
     emit(ctx->output, "    WeightFile* weights;\n");
-    
-    /* Allocate tensors for all intermediate layers */
-    for (int i = 0; i < ctx->layer_count; i++) {
-        LayerInfo* layer = &ctx->layers[i];
-        emit(ctx->output, "    float* %s;  /* ", layer->var_name);
-        if (layer->output_shape) {
-            emit(ctx->output, "Shape: [");
-            for (int j = 0; j < layer->output_shape->rank; j++) {
-                emit(ctx->output, "%d", layer->output_shape->dims[j]);
-                if (j < layer->output_shape->rank - 1) emit(ctx->output, ", ");
-            }
-            emit(ctx->output, "]");
-        }
-        emit(ctx->output, " */\n");
+    emit(ctx->output, "    float* arena;         /* %zu bytes total */\n", ctx->plan->arena_bytes);
+
+    for (int i = 0; i < ctx->plan->slot_count; i++) {
+        MemorySlot* slot = &ctx->plan->slots[i];
+        emit(ctx->output, "    float* slot_%d;       /* %zu floats, offset %zu */\n",
+             slot->id, slot->element_count, slot->offset_elements);
     }
     
     emit(ctx->output, "} NetworkState;\n\n");
+}
+
+void emit_metadata_functions(CodegenContext* ctx) {
+    emit(ctx->output, "/* Planner metadata for external harnesses */\n");
+    emit(ctx->output, "const char* network_name(void) {\n");
+    emit(ctx->output, "    return \"%s\";\n", ctx->network_name);
+    emit(ctx->output, "}\n\n");
+
+    emit(ctx->output, "size_t network_input_element_count(void) {\n");
+    emit(ctx->output, "    return %d;\n", calculate_tensor_size(ctx->input_shape));
+    emit(ctx->output, "}\n\n");
+
+    emit(ctx->output, "size_t network_output_element_count(void) {\n");
+    emit(ctx->output, "    return %d;\n", calculate_tensor_size(ctx->graph->output_value->type));
+    emit(ctx->output, "}\n\n");
+
+    emit(ctx->output, "size_t network_activation_arena_bytes(void) {\n");
+    emit(ctx->output, "    return %zu;\n", ctx->plan->arena_bytes);
+    emit(ctx->output, "}\n\n");
+
+    emit(ctx->output, "int network_activation_slot_count(void) {\n");
+    emit(ctx->output, "    return %d;\n", ctx->plan->slot_count);
+    emit(ctx->output, "}\n\n");
 }
 
 /* ========== INITIALIZATION ========== */
@@ -286,22 +243,33 @@ void emit_init_function(CodegenContext* ctx) {
     
     /* Load weights */
     emit_comment_separator(ctx->output, "Load Weights");
-    emit(ctx->output, "    net->weights = load_weights(\"%s\");\n", ctx->weight_path);
-    emit(ctx->output, "    if (!net->weights) {\n");
-    emit(ctx->output, "        fprintf(stderr, \"Failed to load weights from %s\\n\");\n", ctx->weight_path);
-    emit(ctx->output, "        free(net);\n");
-    emit(ctx->output, "        return NULL;\n");
-    emit(ctx->output, "    }\n\n");
+    if (ctx->weight_layer_count > 0) {
+        emit(ctx->output, "    net->weights = load_weights(\"%s\");\n", ctx->weight_path);
+        emit(ctx->output, "    if (!net->weights) {\n");
+        emit(ctx->output, "        fprintf(stderr, \"Failed to load weights from %s\\n\");\n", ctx->weight_path);
+        emit(ctx->output, "        free(net);\n");
+        emit(ctx->output, "        return NULL;\n");
+        emit(ctx->output, "    }\n\n");
+    } else {
+        emit(ctx->output, "    net->weights = NULL;\n\n");
+    }
     
-    /* Allocate tensors */
-    emit_comment_separator(ctx->output, "Allocate Tensors");
-    for (int i = 0; i < ctx->layer_count; i++) {
-        LayerInfo* layer = &ctx->layers[i];
-        if (layer->output_shape) {
-            int size = calculate_tensor_size(layer->output_shape);
-            emit(ctx->output, "    net->%s = aligned_alloc_64(%d * sizeof(float));\n", 
-                 layer->var_name, size);
+    /* Allocate activation arena */
+    emit_comment_separator(ctx->output, "Allocate Activation Arena");
+    if (ctx->plan->arena_bytes > 0) {
+        emit(ctx->output, "    net->arena = aligned_alloc_64(%zu);\n", ctx->plan->arena_bytes);
+        emit(ctx->output, "    if (!net->arena) {\n");
+        emit(ctx->output, "        fprintf(stderr, \"Failed to allocate activation arena\\n\");\n");
+        emit(ctx->output, "        unload_weights(net->weights);\n");
+        emit(ctx->output, "        free(net);\n");
+        emit(ctx->output, "        return NULL;\n");
+        emit(ctx->output, "    }\n");
+        for (int i = 0; i < ctx->plan->slot_count; i++) {
+            MemorySlot* slot = &ctx->plan->slots[i];
+            emit(ctx->output, "    net->slot_%d = net->arena + %zu;\n", slot->id, slot->offset_elements);
         }
+    } else {
+        emit(ctx->output, "    net->arena = NULL;\n");
     }
     
     emit(ctx->output, "\n    return net;\n");
@@ -323,11 +291,20 @@ void emit_infer_function(CodegenContext* ctx) {
     }
     
     /* Copy final output */
-    LayerInfo* last_layer = &ctx->layers[ctx->layer_count - 1];
-    int output_size = calculate_tensor_size(last_layer->output_shape);
+    GraphValue* output_value = ctx->graph->output_value;
+    int output_size = calculate_tensor_size(output_value->type);
     emit(ctx->output, "    /* Copy output */\n");
-    emit(ctx->output, "    memcpy(output, net->%s, %d * sizeof(float));\n", 
-         last_layer->var_name, output_size);
+    if (output_value->producer) {
+        const ValueAllocation* allocation = get_value_allocation(ctx, output_value);
+        if (allocation) {
+            emit(ctx->output, "    memcpy(output, net->slot_%d, %d * sizeof(float));\n",
+                 allocation->slot_id, output_size);
+        } else {
+            emit(ctx->output, "    /* ERROR: missing allocation for final output */\n");
+        }
+    } else {
+        emit(ctx->output, "    memcpy(output, input, %d * sizeof(float));\n", output_size);
+    }
     
     emit(ctx->output, "}\n\n");
 }
@@ -349,6 +326,12 @@ void emit_layer_code(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
         case NODE_FLATTEN:
             emit_flatten(ctx, layer, layer_idx);
             break;
+        case NODE_ADD:
+            emit_add(ctx, layer, layer_idx);
+            break;
+        case NODE_CONCAT:
+            emit_concat(ctx, layer, layer_idx);
+            break;
         default:
             emit(ctx->output, "    /* TODO: Layer type %d */\n", layer->layer_type);
     }
@@ -363,13 +346,11 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     int padding = node->data.conv2d.padding;
     ActivationType act = node->data.conv2d.activation;
     
-    /* Get input tensor name (previous layer or "input") */
+    /* Get input tensor reference from graph */
     char input_name[64];
-    if (layer_idx == 0) {
-        snprintf(input_name, sizeof(input_name), "input");
-    } else {
-        snprintf(input_name, sizeof(input_name), "net->%s", ctx->layers[layer_idx - 1].var_name);
-    }
+    char output_name[64];
+    format_value_reference(ctx, input_name, sizeof(input_name), layer->graph_node->inputs[0]);
+    format_output_reference(ctx, output_name, sizeof(output_name), layer);
     
     /* Get shapes for specialized code */
     TensorType* in_shape = layer->input_shape;
@@ -419,8 +400,8 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
         emit(ctx->output, "    conv2d_forward_avx2(\n");
     }
     
-    emit(ctx->output, "        %s, conv_weights_%d, conv_bias_%d, net->%s,\n", 
-         input_name, layer_idx, layer_idx, layer->var_name);
+    emit(ctx->output, "        %s, conv_weights_%d, conv_bias_%d, %s,\n",
+         input_name, layer_idx, layer_idx, output_name);
     emit(ctx->output, "        %d, %d, %d,  /* in: H, W, C */\n", in_h, in_w, in_c);
     emit(ctx->output, "        %d, %d,      /* kernel: H, W */\n", kernel_h, kernel_w);
     emit(ctx->output, "        %d,          /* out channels */\n", filters);
@@ -454,13 +435,11 @@ void emit_dense(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     int units = node->data.dense.units;
     ActivationType act = node->data.dense.activation;
     
-    /* Get input tensor name */
+    /* Get input tensor reference from graph */
     char input_name[64];
-    if (layer_idx == 0) {
-        snprintf(input_name, sizeof(input_name), "input");
-    } else {
-        snprintf(input_name, sizeof(input_name), "net->%s", ctx->layers[layer_idx - 1].var_name);
-    }
+    char output_name[64];
+    format_value_reference(ctx, input_name, sizeof(input_name), layer->graph_node->inputs[0]);
+    format_output_reference(ctx, output_name, sizeof(output_name), layer);
     
     /* Get shapes */
     TensorType* in_shape = layer->input_shape;
@@ -486,8 +465,8 @@ void emit_dense(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
         emit(ctx->output, "    dense_forward_avx2(\n");
     }
     
-    emit(ctx->output, "        %s, dense_weights_%d, dense_bias_%d, net->%s,\n",
-         input_name, layer_idx, layer_idx, layer->var_name);
+    emit(ctx->output, "        %s, dense_weights_%d, dense_bias_%d, %s,\n",
+         input_name, layer_idx, layer_idx, output_name);
     emit(ctx->output, "        %d, %d  /* in_features, out_features */\n", in_features, units);
     emit(ctx->output, "    );\n");
     
@@ -511,11 +490,9 @@ void emit_pooling(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     int padding = node->data.pooling.padding;
     
     char input_name[64];
-    if (layer_idx == 0) {
-        snprintf(input_name, sizeof(input_name), "input");
-    } else {
-        snprintf(input_name, sizeof(input_name), "net->%s", ctx->layers[layer_idx - 1].var_name);
-    }
+    char output_name[64];
+    format_value_reference(ctx, input_name, sizeof(input_name), layer->graph_node->inputs[0]);
+    format_output_reference(ctx, output_name, sizeof(output_name), layer);
     
     TensorType* in_shape = layer->input_shape;
     TensorType* out_shape = layer->output_shape;
@@ -537,7 +514,7 @@ void emit_pooling(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
          (layer->layer_type == NODE_MAXPOOL) ? "MaxPool" : "AvgPool",
          in_h, in_w, channels, out_h, out_w, channels, pool_h, pool_w, stride);
     emit(ctx->output, "    %s(\n", pool_func);
-    emit(ctx->output, "        %s, net->%s,\n", input_name, layer->var_name);
+    emit(ctx->output, "        %s, %s,\n", input_name, output_name);
     emit(ctx->output, "        %d, %d, %d,  /* in: H, W, C */\n", in_h, in_w, channels);
     emit(ctx->output, "        %d, %d,      /* pool: H, W */\n", pool_h, pool_w);
     emit(ctx->output, "        %d, %d       /* stride, padding */\n", stride, padding);
@@ -546,11 +523,10 @@ void emit_pooling(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
 
 void emit_flatten(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     char input_name[64];
-    if (layer_idx == 0) {
-        snprintf(input_name, sizeof(input_name), "input");
-    } else {
-        snprintf(input_name, sizeof(input_name), "net->%s", ctx->layers[layer_idx - 1].var_name);
-    }
+    char output_name[64];
+    (void)layer_idx;
+    format_value_reference(ctx, input_name, sizeof(input_name), layer->graph_node->inputs[0]);
+    format_output_reference(ctx, output_name, sizeof(output_name), layer);
     
     if (!layer->input_shape) {
         emit(ctx->output, "    /* ERROR: Missing input shape for flatten */\n");
@@ -565,25 +541,101 @@ void emit_flatten(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     /* Convert HWC to CHW order for ONNX/PyTorch compatibility */
     emit(ctx->output, "    /* Flatten: HWC [%d,%d,%d] -> CHW order [%d] for dense layer compatibility */\n",
          H, W, C, size);
-    emit(ctx->output, "    flatten_hwc_to_chw(%s, net->%s, %d, %d, %d);\n", 
-         input_name, layer->var_name, H, W, C);
+    emit(ctx->output, "    flatten_hwc_to_chw(%s, %s, %d, %d, %d);\n",
+         input_name, output_name, H, W, C);
+}
+
+void emit_add(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
+    GraphNode* node = layer->graph_node;
+    TensorType* out_shape = layer->output_shape;
+    char output_name[64];
+
+    if (!node || node->input_count == 0 || !out_shape) {
+        emit(ctx->output, "    /* ERROR: Invalid graph information for Add */\n");
+        return;
+    }
+
+    format_output_reference(ctx, output_name, sizeof(output_name), layer);
+
+    emit(ctx->output, "    /* Add: %d inputs -> [%d] flattened elements */\n",
+         node->input_count, calculate_tensor_size(out_shape));
+    emit(ctx->output, "    const float* add_inputs_%d[%d] = {\n", layer_idx, node->input_count);
+    for (int i = 0; i < node->input_count; i++) {
+        char input_name[64];
+        format_value_reference(ctx, input_name, sizeof(input_name), node->inputs[i]);
+        emit(ctx->output, "        %s%s\n", input_name, (i + 1 < node->input_count) ? "," : "");
+    }
+    emit(ctx->output, "    };\n");
+
+    emit(ctx->output, "    add_forward(\n");
+    emit(ctx->output, "        add_inputs_%d,\n", layer_idx);
+    emit(ctx->output, "        %s,\n", output_name);
+    emit(ctx->output, "        %d,\n", node->input_count);
+    emit(ctx->output, "        %d\n", calculate_tensor_size(out_shape));
+    emit(ctx->output, "    );\n");
+}
+
+void emit_concat(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
+    GraphNode* node = layer->graph_node;
+    TensorType* out_shape = layer->output_shape;
+    char output_name[64];
+
+    if (!node || node->input_count == 0 || !out_shape) {
+        emit(ctx->output, "    /* ERROR: Invalid graph information for Concat */\n");
+        return;
+    }
+
+    format_output_reference(ctx, output_name, sizeof(output_name), layer);
+
+    int H = node->inputs[0]->type->dims[0];
+    int W = node->inputs[0]->type->dims[1];
+    int total_channels = out_shape->dims[2];
+
+    emit(ctx->output, "    /* Concat: %d inputs -> [%d,%d,%d] */\n",
+         node->input_count, H, W, total_channels);
+    emit(ctx->output, "    const float* concat_inputs_%d[%d] = {\n", layer_idx, node->input_count);
+    for (int i = 0; i < node->input_count; i++) {
+        char input_name[64];
+        format_value_reference(ctx, input_name, sizeof(input_name), node->inputs[i]);
+        emit(ctx->output, "        %s%s\n", input_name, (i + 1 < node->input_count) ? "," : "");
+    }
+    emit(ctx->output, "    };\n");
+
+    emit(ctx->output, "    const int concat_channels_%d[%d] = { ", layer_idx, node->input_count);
+    for (int i = 0; i < node->input_count; i++) {
+        emit(ctx->output, "%d%s",
+             node->inputs[i]->type->dims[2],
+             (i + 1 < node->input_count) ? ", " : " ");
+    }
+    emit(ctx->output, "};\n");
+
+    emit(ctx->output, "    concat_forward(\n");
+    emit(ctx->output, "        concat_inputs_%d,\n", layer_idx);
+    emit(ctx->output, "        %s,\n", output_name);
+    emit(ctx->output, "        %d,\n", node->input_count);
+    emit(ctx->output, "        %d, %d,\n", H, W);
+    emit(ctx->output, "        concat_channels_%d,\n", layer_idx);
+    emit(ctx->output, "        %d\n", total_channels);
+    emit(ctx->output, "    );\n");
 }
 
 void emit_activation(CodegenContext* ctx, LayerInfo* layer, ActivationType act) {
     int size = calculate_tensor_size(layer->output_shape);
+    char output_name[64];
+    format_output_reference(ctx, output_name, sizeof(output_name), layer);
     
     switch (act) {
         case ACT_RELU:
-            emit(ctx->output, "    relu_inplace_avx2(net->%s, %d);\n", layer->var_name, size);
+            emit(ctx->output, "    relu_inplace_avx2(%s, %d);\n", output_name, size);
             break;
         case ACT_SIGMOID:
-            emit(ctx->output, "    sigmoid_inplace_avx2(net->%s, %d);\n", layer->var_name, size);
+            emit(ctx->output, "    sigmoid_inplace_avx2(%s, %d);\n", output_name, size);
             break;
         case ACT_TANH:
-            emit(ctx->output, "    tanh_inplace_avx2(net->%s, %d);\n", layer->var_name, size);
+            emit(ctx->output, "    tanh_inplace_avx2(%s, %d);\n", output_name, size);
             break;
         case ACT_SOFTMAX:
-            emit(ctx->output, "    softmax_inplace(net->%s, %d);\n", layer->var_name, size);
+            emit(ctx->output, "    softmax_inplace(%s, %d);\n", output_name, size);
             break;
         default:
             break;
@@ -597,12 +649,7 @@ void emit_cleanup_function(CodegenContext* ctx) {
     emit(ctx->output, "void network_cleanup(NetworkState* net) {\n");
     emit(ctx->output, "    if (!net) return;\n\n");
     
-    /* Free tensors */
-    for (int i = 0; i < ctx->layer_count; i++) {
-        LayerInfo* layer = &ctx->layers[i];
-        emit(ctx->output, "    aligned_free(net->%s);\n", layer->var_name);
-    }
-    
+    emit(ctx->output, "    aligned_free(net->arena);\n");
     emit(ctx->output, "    unload_weights(net->weights);\n");
     emit(ctx->output, "    free(net);\n");
     emit(ctx->output, "}\n\n");
@@ -620,8 +667,7 @@ void emit_main_function(CodegenContext* ctx) {
     
     /* Allocate input and output */
     int input_size = calculate_tensor_size(ctx->input_shape);
-    LayerInfo* last_layer = &ctx->layers[ctx->layer_count - 1];
-    int output_size = calculate_tensor_size(last_layer->output_shape);
+    int output_size = calculate_tensor_size(ctx->graph->output_value->type);
     
     emit(ctx->output, "    /* Allocate input and output */\n");
     emit(ctx->output, "    float* input = aligned_alloc_64(%d * sizeof(float));\n", input_size);
@@ -656,50 +702,48 @@ void emit_main_function(CodegenContext* ctx) {
 /* ========== MAIN ENTRY POINT ========== */
 
 void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) {
+    (void)global_scope;
+
     if (!network || network->type != NODE_NETWORK) {
         fprintf(stderr, "ERROR: Invalid network node\n");
         return;
     }
-    
-    /* Find the network's scope (it's a child of global_scope) */
-    char scope_name[256];
-    snprintf(scope_name, sizeof(scope_name), "network:%s", network->data.network.name);
-    
-    Scope* network_scope = NULL;
-    if (global_scope && global_scope->children) {
-        Scope* child = global_scope->children;
-        while (child) {
-            if (child->name && strcmp(child->name, scope_name) == 0) {
-                network_scope = child;
-                break;
-            }
-            child = child->next;
-        }
-    }
-    
-    if (!network_scope) {
-        fprintf(stderr, "ERROR: Cannot find network scope '%s'\n", scope_name);
-        network_scope = global_scope;  /* Fallback */
-    }
-    
+
     /* Initialize context */
     CodegenContext ctx = {0};
     ctx.output = output;
-    ctx.scope = network_scope;  /* Use network scope, not global */
     ctx.network_name = network->data.network.name;
-    
-    /* Get weight path */
-    if (network->data.network.weights) {
-        ctx.weight_path = network->data.network.weights->data.weights.path;
-    } else {
-        ctx.weight_path = "weights.nwf";  /* Default */
+
+    ctx.graph = netgraph_build(network, stderr);
+    if (!ctx.graph) {
+        fprintf(stderr, "ERROR: Graph lowering failed\n");
+        return;
     }
-    
-    /* Get input shape from network scope */
-    if (network->data.network.input) {
-        Symbol* input_sym = scope_lookup(network_scope, "input", 0);  /* Don't recurse, look in THIS scope */
-        if (input_sym && input_sym->tensor_type) {
-            ctx.input_shape = input_sym->tensor_type;
+
+    ctx.weight_path = ctx.graph->weight_path;
+    ctx.input_shape = ctx.graph->input_type;
+    ctx.plan = memory_plan_build(ctx.graph);
+    if (!ctx.plan) {
+        fprintf(stderr, "ERROR: Memory planning failed\n");
+        netgraph_free(ctx.graph);
+        return;
+    }
+
+    if (ctx.graph->node_count == 0) {
+        fprintf(stderr, "ERROR: Graph contains no executable nodes\n");
+        memory_plan_free(ctx.plan);
+        netgraph_free(ctx.graph);
+        return;
+    }
+
+    for (int i = 0; i < ctx.graph->node_count; i++) {
+        NodeType type = ctx.graph->nodes[i]->op_type;
+        if (type == NODE_BATCHNORM || type == NODE_LAYERNORM || type == NODE_MODULE_CALL) {
+            fprintf(stderr, "ERROR: Graph node type %s is not yet supported by code generation\n",
+                    netgraph_node_type_name(type));
+            memory_plan_free(ctx.plan);
+            netgraph_free(ctx.graph);
+            return;
         }
     }
     
@@ -711,6 +755,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
     /* Generate code */
     emit_includes(&ctx);
     emit_network_struct(&ctx);
+    emit_metadata_functions(&ctx);
     emit_init_function(&ctx);
     emit_infer_function(&ctx);
     emit_cleanup_function(&ctx);
@@ -721,4 +766,6 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
         free(ctx.layers[i].var_name);
     }
     free(ctx.layers);
+    memory_plan_free(ctx.plan);
+    netgraph_free(ctx.graph);
 }

@@ -22,6 +22,8 @@ PARSER_DIR = $(SRC_DIR)/parser
 AST_DIR = $(SRC_DIR)/ast
 SEMANTIC_DIR = $(SRC_DIR)/semantic
 CODEGEN_DIR = $(SRC_DIR)/codegen
+GRAPH_DIR = $(SRC_DIR)/graph
+PLANNER_DIR = $(SRC_DIR)/planner
 
 # Output
 TARGET = $(BUILD_DIR)/netlang
@@ -34,12 +36,15 @@ BISON_H = $(BUILD_DIR)/net_lang.tab.h
 # Source files
 AST_SRC = $(AST_DIR)/ast.c
 SEMANTIC_SRC = $(SEMANTIC_DIR)/semantic.c $(SEMANTIC_DIR)/symbol_table.c $(SEMANTIC_DIR)/type_checker.c
+GRAPH_SRC = $(GRAPH_DIR)/graph.c
+PLANNER_SRC = $(PLANNER_DIR)/memory_plan.c
 CODEGEN_SRC = $(CODEGEN_DIR)/codegen.c $(CODEGEN_DIR)/fusion_optimizer.c
 MAIN_SRC = $(SRC_DIR)/main.c
 
 # Object files
 OBJS = $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/net_lang.tab.o $(BUILD_DIR)/ast.o \
        $(BUILD_DIR)/semantic.o $(BUILD_DIR)/symbol_table.o $(BUILD_DIR)/type_checker.o \
+       $(BUILD_DIR)/graph.o $(BUILD_DIR)/memory_plan.o \
        $(BUILD_DIR)/codegen.o $(BUILD_DIR)/fusion_optimizer.o $(BUILD_DIR)/main.o
 
 # Default target
@@ -81,9 +86,17 @@ $(BUILD_DIR)/symbol_table.o: $(SEMANTIC_DIR)/symbol_table.c
 $(BUILD_DIR)/type_checker.o: $(SEMANTIC_DIR)/type_checker.c
 	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -c -o $@ $<
 
+# Compile graph IR
+$(BUILD_DIR)/graph.o: $(GRAPH_SRC)
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -c -o $@ $<
+
+# Compile memory planner
+$(BUILD_DIR)/memory_plan.o: $(PLANNER_SRC)
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -c -o $@ $<
+
 # Compile code generator
 $(BUILD_DIR)/codegen.o: $(CODEGEN_DIR)/codegen.c
-	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(CODEGEN_DIR) -c -o $@ $<
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -I$(CODEGEN_DIR) -c -o $@ $<
 
 # Compile fusion optimizer
 $(BUILD_DIR)/fusion_optimizer.o: $(CODEGEN_DIR)/fusion_optimizer.c
@@ -99,17 +112,17 @@ $(TARGET): $(OBJS)
 	@echo ""
 	@echo "Build complete: $(TARGET)"
 
-# Test with example files
+# Test with reference example
 test: $(TARGET)
 	@echo ""
-	@echo "========== Testing demo.nlang =========="
-	./$(TARGET) examples/demo.nlang || ./$(TARGET) demo.nlang
+	@echo "========== Testing lenet5.nlang =========="
+	./$(TARGET) examples/lenet5.nlang
 
-# Run on inception demo
+# Run on legacy inception fixture
 test-inception: $(TARGET)
 	@echo ""
-	@echo "========== Testing inception_demo.nlang =========="
-	./$(TARGET) examples/inception_demo.nlang || ./$(TARGET) inception_demo.nlang
+	@echo "========== Testing inception.nlang =========="
+	./$(TARGET) fixtures/legacy/inception.nlang
 
 # Clean build artifacts
 clean:
@@ -138,7 +151,7 @@ info:
 	@echo ""
 	@echo "Build targets:"
 	@echo "  make          - Build compiler"
-	@echo "  make test     - Test with demo.nlang"
+	@echo "  make test     - Test with lenet5.nlang"
 	@echo "  make clean    - Remove build files"
 
 .PHONY: all clean rebuild test test-inception deps info

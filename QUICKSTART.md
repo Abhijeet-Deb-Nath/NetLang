@@ -1,95 +1,107 @@
-# NetLang Quick Start
+# Quick Start
 
-Get from zero to inference in **5 minutes**.
+This quick start verifies the current compiler pipeline on the stable sequential subset.
 
----
+It does not validate the full research target yet.
 
 ## Prerequisites
 
-**Windows:** MSYS2 with GCC, Flex, Bison  
-**Linux/macOS:** GCC/Clang, flex, bison, make  
-**Optional:** Python 3.7+ (for weight conversion)
+- Windows with GCC, Flex, and Bison available to `build.bat`
+- or Linux/macOS with `make`, GCC/Clang, Flex, and Bison
+- Python is optional unless you need data conversion tools
 
----
+## 1. Build the Compiler
 
-## Step 1: Build Compiler
+```powershell
+build.bat
+```
+
+On Unix-like systems:
 
 ```bash
-# Windows
-build.bat
-
-# Linux/macOS
 make
 ```
 
----
+## 2. Generate C for the Reference Network
 
-## Step 2: Compile Network to C
-
-```bash
-# Windows
-build\netlang.exe architecture\lenet5.nlang -o generated\lenet5.c
-
-# Linux/macOS
-bin/netlang_compiler architecture/lenet5.nlang -o generated/lenet5.c
+```powershell
+build\netlang.exe examples\lenet5.nlang -o generated\lenet5.c
 ```
 
----
+This example is the current reference path because it stays inside the sequential codegen-ready subset.
 
-## Step 3: Build Executable
+## 3. Build a Smoke-Test Executable
 
-```bash
-gcc -O3 -mavx2 generated/lenet5.c -o lenet5_infer -lm
+```powershell
+build_network.bat generated\lenet5.c lenet5_smoke
 ```
 
----
+This script links the generated file with:
 
-## Step 4: Run Inference
+- `src/codegen/runtime.c`
+- `src/codegen/kernels.c`
+- `tools/test_network.c`
 
-**Option A: Synthetic test data**
-```bash
-python -c "import numpy as np; np.zeros((28,28), dtype='float32').tofile('test.bin')"
-./lenet5_infer test.bin
+## 4. Run a Sample Inference
+
+```powershell
+bin\lenet5_smoke.exe assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin
 ```
 
-**Option B: Real MNIST data**
-```bash
-python tools/download_mnist_for_netlang.py
-./lenet5_infer test_data/mnist_test_0.bin
+The current harness prints a predicted class and a rough elapsed time.
+
+That elapsed time is only a smoke-test signal. It is not paper-grade benchmarking.
+
+## 5. Build The Benchmark Harness
+
+```powershell
+build_benchmark.bat generated\lenet5.c lenet5_bench
+bin\lenet5_bench.exe --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin --warmup 25 --runs 200
 ```
 
-**Output:**
-```
-Predicted: 7 (confidence: 95.3%)
-Inference time: 4.43 ms
-```
+This benchmark path reports:
 
----
+- init time
+- first inference latency
+- warm in-process latency statistics
+- activation arena bytes
+- reusable slot count
+- executable size
 
-## Next Steps
+## 6. Run The End-To-End Evaluation Driver
 
-**Run accuracy test:**
-```bash
-python test_accuracy.py --network architecture/lenet5.nlang --num-samples 100
-```
-
-**Try VGG-16:**
-```bash
-bin/netlang_compiler architecture/vgg16.nlang -o generated/vgg16.c
-gcc -O3 -mavx2 generated/vgg16.c -o vgg16_infer -lm
-```
-
-**Convert your own model:**
-```bash
-python tools/convert_pytorch.py your_model.pth models/your_model.nwf
-# Then create .nlang file (see examples/)
+```powershell
+python tools\run_eval.py ^
+  --network examples\lenet5.nlang ^
+  --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin ^
+  --onnx assets\models\onnx\lenet_mnist.onnx ^
+  --warmup 25 ^
+  --runs 200
 ```
 
----
+This produces a combined JSON report under `results/evaluation/`.
 
-## Documentation
+## 7. Run The Multi-Sample Matrix
 
-- **[README.md](README.md)** - Project overview
-- **[BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md)** - Performance results
-- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete syntax reference
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Compiler internals
+```powershell
+python tools\run_eval_matrix.py ^
+  --network examples\lenet5.nlang ^
+  --input-glob assets\inputs\preprocessed_28x28\*.bin ^
+  --onnx assets\models\onnx\lenet_mnist.onnx ^
+  --warmup 5 ^
+  --runs 20 ^
+  --sample-limit 25
+```
+
+This produces:
+
+- an aggregate JSON summary
+- a per-sample CSV table
+- reusable benchmark artifacts for the evaluated network
+
+## Where To Go Next
+
+- [Roadmap](docs/ROADMAP.md)
+- [Current Status](docs/STATUS.md)
+- [Benchmarking](docs/BENCHMARKING.md)
+- [Syntax](docs/SYNTAX.md)
