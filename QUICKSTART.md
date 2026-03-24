@@ -66,7 +66,17 @@ This benchmark path reports:
 - warm in-process latency statistics
 - activation arena bytes
 - reusable slot count
+- runtime thread count
 - executable size
+
+The generated runtime creates a persistent threadpool by default. You can force a
+specific thread count for controlled comparisons with `NETLANG_THREADS`:
+
+```powershell
+$env:NETLANG_THREADS='1'
+bin\lenet5_bench.exe --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin --warmup 25 --runs 200
+Remove-Item Env:NETLANG_THREADS
+```
 
 ## 6. Run The End-To-End Evaluation Driver
 
@@ -103,5 +113,6 @@ This produces:
 
 - [Roadmap](docs/ROADMAP.md)
 - [Current Status](docs/STATUS.md)
+- [Execution Backend](docs/EXECUTION_BACKEND.md)
 - [Benchmarking](docs/BENCHMARKING.md)
 - [Syntax](docs/SYNTAX.md)

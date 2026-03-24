@@ -25,6 +25,9 @@ extern size_t network_input_element_count(void);
 extern size_t network_output_element_count(void);
 extern size_t network_activation_arena_bytes(void);
 extern int network_activation_slot_count(void);
+extern size_t network_repacked_weight_bytes(void);
+extern int network_default_thread_count(void);
+extern int network_thread_count(const NetworkState* net);
 
 #ifdef _WIN32
 #include <windows.h>
@@ -247,7 +250,8 @@ static int write_json_report(const char* path,
                              double output_checksum,
                              long exe_size_bytes,
                              size_t input_elements,
-                             size_t output_elements) {
+                             size_t output_elements,
+                             int thread_count) {
     FILE* file = fopen(path, "w");
     if (!file) {
         fprintf(stderr, "Error: Cannot open JSON report '%s'\n", path);
@@ -271,6 +275,8 @@ static int write_json_report(const char* path,
     fprintf(file, "  \"bench_runs\": %d,\n", config->bench_runs);
     fprintf(file, "  \"activation_arena_bytes\": %zu,\n", network_activation_arena_bytes());
     fprintf(file, "  \"activation_slot_count\": %d,\n", network_activation_slot_count());
+    fprintf(file, "  \"repacked_weight_bytes\": %zu,\n", network_repacked_weight_bytes());
+    fprintf(file, "  \"thread_count\": %d,\n", thread_count);
     fprintf(file, "  \"init_time_ms\": %.6f,\n", init_time_ms);
     fprintf(file, "  \"first_inference_ms\": %.6f,\n", first_inference_ms);
     fprintf(file, "  \"warm_mean_ms\": %.6f,\n", stats->mean_ms);
@@ -351,6 +357,8 @@ int main(int argc, char** argv) {
     printf("Output elements: %zu\n", output_elements);
     printf("Activation arena: %zu bytes\n", network_activation_arena_bytes());
     printf("Reusable slots: %d\n", network_activation_slot_count());
+    printf("Repacked weight bytes: %zu\n", network_repacked_weight_bytes());
+    printf("Default thread count: %d\n", network_default_thread_count());
     printf("Warmup runs: %d\n", config.warmup_runs);
     printf("Measured runs: %d\n", config.bench_runs);
 
@@ -389,6 +397,7 @@ int main(int argc, char** argv) {
         free(samples);
         return 1;
     }
+    int thread_count = network_thread_count(net);
 
     double first_start_ms = timer_now_ms();
     network_infer(net, input, output);
@@ -423,6 +432,7 @@ int main(int argc, char** argv) {
         printf("Warm throughput: %.2f inferences/sec\n", 1000.0 / stats.mean_ms);
     }
     printf("Output checksum: %.6f\n", output_checksum);
+    printf("Thread count: %d\n", thread_count);
     if (exe_size_bytes >= 0) {
         printf("Executable size: %ld bytes\n", exe_size_bytes);
     }
@@ -446,7 +456,8 @@ int main(int argc, char** argv) {
                                output_checksum,
                                exe_size_bytes,
                                input_elements,
-                               output_elements)) {
+                               output_elements,
+                               thread_count)) {
             network_cleanup(net);
             aligned_free(input);
             aligned_free(output);

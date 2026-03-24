@@ -37,15 +37,15 @@ BISON_H = $(BUILD_DIR)/net_lang.tab.h
 AST_SRC = $(AST_DIR)/ast.c
 SEMANTIC_SRC = $(SEMANTIC_DIR)/semantic.c $(SEMANTIC_DIR)/symbol_table.c $(SEMANTIC_DIR)/type_checker.c
 GRAPH_SRC = $(GRAPH_DIR)/graph.c
-PLANNER_SRC = $(PLANNER_DIR)/memory_plan.c
-CODEGEN_SRC = $(CODEGEN_DIR)/codegen.c $(CODEGEN_DIR)/fusion_optimizer.c
+PLANNER_SRC = $(PLANNER_DIR)/layout_plan.c $(PLANNER_DIR)/weight_pack_plan.c $(PLANNER_DIR)/memory_plan.c
+CODEGEN_SRC = $(CODEGEN_DIR)/codegen.c $(CODEGEN_DIR)/conv_execution_plan.c $(CODEGEN_DIR)/kernel_selection.c $(CODEGEN_DIR)/fusion_optimizer.c
 MAIN_SRC = $(SRC_DIR)/main.c
 
 # Object files
 OBJS = $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/net_lang.tab.o $(BUILD_DIR)/ast.o \
        $(BUILD_DIR)/semantic.o $(BUILD_DIR)/symbol_table.o $(BUILD_DIR)/type_checker.o \
-       $(BUILD_DIR)/graph.o $(BUILD_DIR)/memory_plan.o \
-       $(BUILD_DIR)/codegen.o $(BUILD_DIR)/fusion_optimizer.o $(BUILD_DIR)/main.o
+       $(BUILD_DIR)/graph.o $(BUILD_DIR)/layout_plan.o $(BUILD_DIR)/weight_pack_plan.o $(BUILD_DIR)/memory_plan.o \
+       $(BUILD_DIR)/codegen.o $(BUILD_DIR)/conv_execution_plan.o $(BUILD_DIR)/kernel_selection.o $(BUILD_DIR)/fusion_optimizer.o $(BUILD_DIR)/main.o
 
 # Default target
 all: $(BUILD_DIR) $(TARGET)
@@ -90,12 +90,28 @@ $(BUILD_DIR)/type_checker.o: $(SEMANTIC_DIR)/type_checker.c
 $(BUILD_DIR)/graph.o: $(GRAPH_SRC)
 	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -c -o $@ $<
 
+# Compile layout planner
+$(BUILD_DIR)/layout_plan.o: $(PLANNER_DIR)/layout_plan.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -c -o $@ $<
+
+# Compile weight pack planner
+$(BUILD_DIR)/weight_pack_plan.o: $(PLANNER_DIR)/weight_pack_plan.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -c -o $@ $<
+
 # Compile memory planner
-$(BUILD_DIR)/memory_plan.o: $(PLANNER_SRC)
+$(BUILD_DIR)/memory_plan.o: $(PLANNER_DIR)/memory_plan.c
 	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -c -o $@ $<
 
 # Compile code generator
 $(BUILD_DIR)/codegen.o: $(CODEGEN_DIR)/codegen.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -I$(CODEGEN_DIR) -c -o $@ $<
+
+# Compile kernel selection policy
+$(BUILD_DIR)/conv_execution_plan.o: $(CODEGEN_DIR)/conv_execution_plan.c
+	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -I$(CODEGEN_DIR) -c -o $@ $<
+
+# Compile kernel selection policy
+$(BUILD_DIR)/kernel_selection.o: $(CODEGEN_DIR)/kernel_selection.c
 	$(CC) $(CFLAGS) -I$(AST_DIR) -I$(SEMANTIC_DIR) -I$(GRAPH_DIR) -I$(PLANNER_DIR) -I$(CODEGEN_DIR) -c -o $@ $<
 
 # Compile fusion optimizer

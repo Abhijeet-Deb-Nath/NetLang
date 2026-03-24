@@ -15,6 +15,14 @@
 #include <stdio.h>
 
 #ifdef _WIN32
+    #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600)
+        #undef _WIN32_WINNT
+        #define _WIN32_WINNT 0x0600
+    #endif
+    #if !defined(WINVER) || (WINVER < 0x0600)
+        #undef WINVER
+        #define WINVER 0x0600
+    #endif
     #include <windows.h>
 #else
     #include <sys/mman.h>
@@ -96,6 +104,9 @@ typedef struct {
 
 /* ========== FUNCTION DECLARATIONS ========== */
 
+typedef struct NetLangThreadPool NetLangThreadPool;
+typedef void (*NetLangParallelRangeFn)(void* user_data, int start, int end);
+
 /* Weight file operations */
 WeightFile* load_weights(const char* path);
 void unload_weights(WeightFile* wf);
@@ -110,5 +121,18 @@ Tensor* tensor_create_from_weights(WeightFile* wf, int layer_id);
 /* Memory alignment */
 void* aligned_alloc_64(size_t size);
 void aligned_free(void* ptr);
+
+/* Runtime execution support */
+double netlang_now_ms(void);
+int netlang_default_thread_count(void);
+NetLangThreadPool* netlang_thread_pool_create(int requested_threads);
+void netlang_thread_pool_destroy(NetLangThreadPool* pool);
+int netlang_thread_pool_thread_count(const NetLangThreadPool* pool);
+void netlang_parallel_for(NetLangThreadPool* pool,
+                          int start,
+                          int end,
+                          int grain,
+                          NetLangParallelRangeFn fn,
+                          void* user_data);
 
 #endif /* NETLANG_RUNTIME_H */

@@ -1,67 +1,79 @@
 # NetLang
 
-NetLang is a research compiler prototype for fixed-shape CNN inference.
+NetLang is a research compiler prototype for fixed-shape CNN inference on CPU.
 
-The repo is now centered on one thesis:
+The repo is now centered on one stable mainline:
 
-> build a static CNN compiler that lowers a restricted network description to C, then evolve it into a true DAG compiler with compile-time activation memory planning and low-overhead deployment
+> a restricted CNN compiler that lowers fixed-shape networks to C and evaluates how far a packed, thread-aware CPU backend can be pushed without architecture-specific hacks
 
-This is the current research direction. It is the only direction this repo should optimize for.
+That is the current codebase message. Experimental region-based tiling work has
+been removed from mainline because it added complexity without improving the
+reference path.
 
 ## Current Reality
 
 What works today:
 
 - lexing, parsing, and semantic checks for `.nlang` network files
-- weight-file declarations via `.nwf`
-- C code generation for a sequential subset
-- runtime support for external weights and aligned activation buffers
+- external weight declarations via `.nwf`
+- graph IR lowering for the generated op subset
+- planner-backed static activation arena with slot reuse
+- ahead-of-time C code generation
 
-What is stable for code generation today:
+What is stable for generated execution today:
 
 - `Conv2D`
 - `Dense`
 - `MaxPool`
 - `AvgPool`
 - `Flatten`
-- graph lowering with explicit value dependencies
-- planner-backed static activation arena
-- generated planner metadata for arena size and slot count
+- OC8-packed Conv2D weights
+- packed Conv2D AVX2/FMA kernels
+- output-width micro-tiling inside packed Conv2D
+- layout-specialized `Flatten -> Dense` lowering with repacked dense weights
+- explicit kernel selection from shape/layout facts
+- persistent runtime threadpool for eligible packed Conv2D layers
+- generated metadata for arena size, slot count, repacked weight bytes, and thread count
 
-What is available but still experimental:
+What exists but should still be treated cautiously:
 
-- `Add` for residual-style branch merge
-- `Concat` for branch merge in fixed-shape graphs
+- `Add` and `Concat` for fixed-shape graph experiments
+- graph-aware lowering and topological scheduling outside the reference sequential path
 
-What is not yet an honest end-to-end feature:
+What is not yet an honest end-to-end claim:
 
-- general DAG execution
-- detailed planner reporting and final benchmark harness integration
-- publication-grade benchmarking
+- broad modern CNN coverage
+- general DAG performance claims
+- oneDNN/ONNX Runtime parity on warm inference
+- publication-grade multi-model evaluation
 
-The repo previously mixed assignment-era documentation, inflated optimization claims, and parser-only features with actual compiler support. That drift has been removed from the top-level docs.
+## Current Reference Result
+
+The stable reference backend is the packed-spatial CPU path preserved in
+`results/evaluation/lenet5_stable_matrix_25.json`.
+
+On the current 25-sample LeNet reference matrix:
+
+- NetLang warm-mean average: `1.002 ms`
+- ONNX Runtime warm-mean average: `0.240 ms`
+- accuracy: `25/25`
+- argmax match rate: `1.0`
+
+That is the honest mainline position today: roughly `4.2x` slower than the
+local ONNX Runtime CPU baseline on the reference workload.
 
 ## Research Target
 
-NetLang is being reorganized around this target system:
+NetLang is still being shaped around a constrained target system:
 
-- fixed-shape CNN graphs
+- fixed-shape CNN inference
 - ahead-of-time lowering to C
 - explicit graph IR
-- topological scheduling
-- compile-time activation lifetime analysis
-- static arena allocation and buffer reuse
-- late-bound external weights
-- deployment evaluation on CPU and edge-like constraints
+- compile-time activation planning
+- packed and shape-specialized CPU execution
+- honest CPU-side evaluation
 
-The goal is not "beat every existing runtime on generic throughput."
-
-The goal is:
-
-- lower overhead deployment
-- stronger resource predictability
-- compile-time memory planning
-- honest, narrow compiler contributions
+The repo should not claim more than that until the measurements justify it.
 
 ## Repo Guide
 
@@ -71,6 +83,11 @@ The goal is:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Graph IR](docs/GRAPH_IR.md)
 - [Memory Planning](docs/MEMORY_PLANNING.md)
+- [Layout Specialization](docs/LAYOUT_SPECIALIZATION.md)
+- [Weight Packing](docs/WEIGHT_PACKING.md)
+- [Conv Execution Plan](docs/CONV_EXECUTION_PLAN.md)
+- [Kernel Selection](docs/KERNEL_SELECTION.md)
+- [Execution Backend](docs/EXECUTION_BACKEND.md)
 - [Syntax](docs/SYNTAX.md)
 - [Benchmarking](docs/BENCHMARKING.md)
 - [Weight Format](docs/WEIGHT_FORMAT.md)
@@ -99,6 +116,14 @@ Build the in-process benchmark harness:
 ```powershell
 build_benchmark.bat generated\lenet5.c lenet5_bench
 bin\lenet5_bench.exe --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin --warmup 25 --runs 200
+```
+
+Override the runtime thread count if you need controlled comparisons:
+
+```powershell
+$env:NETLANG_THREADS='1'
+bin\lenet5_bench.exe --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin --warmup 25 --runs 200
+Remove-Item Env:NETLANG_THREADS
 ```
 
 Run the end-to-end evaluation driver:
@@ -143,4 +168,4 @@ results/        evaluation outputs
 - parser support is not the same as codegen support
 - performance claims must follow `docs/BENCHMARKING.md`
 - public docs should describe the codegen-ready subset first
-- new language features are secondary to graph IR, scheduling, and memory planning
+- do not keep experimental branches in mainline after they stop paying for their complexity

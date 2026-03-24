@@ -18,6 +18,8 @@
 #include "../ast/ast.h"
 #include "../graph/graph.h"
 #include "../planner/memory_plan.h"
+#include "../planner/layout_plan.h"
+#include "../planner/weight_pack_plan.h"
 #include <stdio.h>
 
 /* ========== CODE GENERATION CONTEXT ========== */
@@ -36,6 +38,10 @@ typedef struct LayerInfo {
 typedef struct CodegenContext {
     FILE* output;           /* Output file stream */
     NetGraph* graph;        /* Graph IR */
+    LayoutPlan* layout_plan;/* Layout specialization analysis */
+    WeightPackPlan* weight_plan; /* Weight packing analysis */
+    struct ConvExecutionPlan* conv_plan; /* Conv2D execution planning */
+    struct KernelPlan* kernel_plan; /* Backend kernel selection */
     MemoryPlan* plan;       /* Activation memory plan */
     LayerInfo* layers;      /* Array of layer information */
     int layer_count;        /* Number of layers */

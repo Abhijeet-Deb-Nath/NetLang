@@ -102,6 +102,72 @@ void conv2d_relu_blocked_avx2(
     int tile_size
 );
 
+float* repack_conv2d_weights_oc8(
+    const float* weights,
+    int C_out,
+    int C_in,
+    int K_h,
+    int K_w
+);
+
+void conv2d_packed_oc8_forward_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+);
+
+void conv2d_relu_packed_oc8_forward_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+);
+
+void conv2d_packed_oc8_blocked_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int tile_size,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+);
+
+void conv2d_relu_packed_oc8_blocked_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int tile_size,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+);
+
 /* ========== DENSE (FULLY CONNECTED) KERNELS ========== */
 
 /**
@@ -181,6 +247,22 @@ void flatten(const float* input, float* output, int size);
 void flatten_hwc_to_chw(const float* input, float* output, int H, int W, int C);
 
 /**
+ * Repack dense weights from CHW flatten order to native HWC memory order.
+ *
+ * The source matrix is stored row-major as [out_features, H*W*C] where the
+ * feature axis assumes a CHW flattening of the producer tensor. The returned
+ * matrix keeps the same row-major shape but remaps each row so a Dense layer
+ * can read the producer tensor directly in HWC order.
+ *
+ * The returned buffer is 64-byte aligned and must be freed with aligned_free().
+ */
+float* repack_dense_weights_chw_to_hwc(
+    const float* weights,
+    int out_features,
+    int H, int W, int C
+);
+
+/**
  * Elementwise sum of multiple tensors with identical shapes.
  */
 void add_forward(
@@ -200,6 +282,29 @@ void concat_forward(
     int H, int W,
     const int* input_channels,  /* Channels for each input */
     int total_channels      /* Sum of all input channels */
+);
+
+/**
+ * Extract an HWC tile from a larger tensor, zero-filling any out-of-bounds
+ * positions caused by halo requirements at the global tensor boundary.
+ */
+void extract_hwc_tile_zero_pad(
+    const float* input,
+    float* output,
+    int H_in, int W_in, int C,
+    int src_h0, int src_w0,
+    int tile_h, int tile_w
+);
+
+/**
+ * Scatter an HWC tile into a larger output tensor at a given top-left origin.
+ */
+void scatter_hwc_tile(
+    const float* tile,
+    float* output,
+    int H_out, int W_out, int C,
+    int dst_h0, int dst_w0,
+    int tile_h, int tile_w
 );
 
 #endif /* NETLANG_KERNELS_H */

@@ -58,6 +58,312 @@ void softmax_inplace(float* data, int size) {
 
 /* ========== CONV2D KERNEL ========== */
 
+static int round_up_to_8(int value) {
+    return (value + 7) & ~7;
+}
+
+typedef struct PackedConvTask {
+    const float* input;
+    const float* packed_weights;
+    const float* bias;
+    float* output;
+    int H_in;
+    int W_in;
+    int C_in;
+    int K_h;
+    int K_w;
+    int C_out;
+    int stride;
+    int padding;
+    int tile_h_step;
+    int tile_w_step;
+    int H_out;
+    int W_out;
+    int padded_out;
+    int apply_relu;
+    int spatial_block_width;
+} PackedConvTask;
+
+static void packed_conv_compute_output_block(const PackedConvTask* task,
+                                             int oc,
+                                             __m256 bias_vec,
+                                             __m256 zero,
+                                             int oh,
+                                             int ow,
+                                             int output_count) {
+    __m256 sums[4];
+    float out_block[8];
+
+    for (int lane = 0; lane < output_count; lane++) {
+        sums[lane] = bias_vec;
+    }
+
+    for (int kh = 0; kh < task->K_h; kh++) {
+        int h = oh * task->stride - task->padding + kh;
+        if (h < 0 || h >= task->H_in) {
+            continue;
+        }
+
+        for (int kw = 0; kw < task->K_w; kw++) {
+            const float* input_pixels[4] = {0};
+            const float* packed_base = NULL;
+
+            for (int lane = 0; lane < output_count; lane++) {
+                int w = (ow + lane) * task->stride - task->padding + kw;
+                if (w < 0 || w >= task->W_in) {
+                    continue;
+                }
+                input_pixels[lane] = &task->input[(h * task->W_in + w) * task->C_in];
+            }
+
+            packed_base = task->packed_weights + ((((kh * task->K_w) + kw) * task->C_in) * task->padded_out + oc);
+
+            for (int ic = 0; ic < task->C_in; ic++) {
+                __m256 weight_vec = _mm256_load_ps(packed_base + ic * task->padded_out);
+
+                for (int lane = 0; lane < output_count; lane++) {
+                    if (!input_pixels[lane]) {
+                        continue;
+                    }
+                    __m256 input_vec = _mm256_set1_ps(input_pixels[lane][ic]);
+                    sums[lane] = _mm256_fmadd_ps(input_vec, weight_vec, sums[lane]);
+                }
+            }
+        }
+    }
+
+    if (task->apply_relu) {
+        for (int lane = 0; lane < output_count; lane++) {
+            sums[lane] = _mm256_max_ps(sums[lane], zero);
+        }
+    }
+
+    for (int lane = 0; lane < output_count; lane++) {
+        int out_base = (oh * task->W_out + ow + lane) * task->C_out + oc;
+        int valid_channels = (oc + 8 <= task->C_out) ? 8 : (task->C_out - oc);
+        _mm256_storeu_ps(out_block, sums[lane]);
+
+        for (int channel = 0; channel < valid_channels; channel++) {
+            task->output[out_base + channel] = out_block[channel];
+        }
+    }
+}
+
+static void packed_conv_oc_block_range(void* user_data, int start, int end) {
+    PackedConvTask* task = (PackedConvTask*)user_data;
+    __m256 zero = _mm256_setzero_ps();
+    int spatial_block_width = task->spatial_block_width > 0 ? task->spatial_block_width : 1;
+
+    if (spatial_block_width > 4) {
+        spatial_block_width = 4;
+    }
+
+    for (int oc_block = start; oc_block < end; oc_block++) {
+        int oc = oc_block * 8;
+        float bias_block[8];
+
+        for (int lane = 0; lane < 8; lane++) {
+            int out_channel = oc + lane;
+            bias_block[lane] = (task->bias && out_channel < task->C_out) ? task->bias[out_channel] : 0.0f;
+        }
+
+        __m256 bias_vec = _mm256_loadu_ps(bias_block);
+
+        for (int tile_h = 0; tile_h < task->H_out; tile_h += task->tile_h_step) {
+            int tile_h_end = (tile_h + task->tile_h_step < task->H_out) ? (tile_h + task->tile_h_step) : task->H_out;
+
+            for (int tile_w = 0; tile_w < task->W_out; tile_w += task->tile_w_step) {
+                int tile_w_end = (tile_w + task->tile_w_step < task->W_out) ? (tile_w + task->tile_w_step) : task->W_out;
+
+                for (int oh = tile_h; oh < tile_h_end; oh++) {
+                    for (int ow = tile_w; ow < tile_w_end; ow += spatial_block_width) {
+                        int output_count = spatial_block_width;
+                        if (ow + output_count > tile_w_end) {
+                            output_count = tile_w_end - ow;
+                        }
+                        packed_conv_compute_output_block(task, oc, bias_vec, zero, oh, ow, output_count);
+                    }
+                }
+            }
+        }
+    }
+}
+
+float* repack_conv2d_weights_oc8(
+    const float* weights,
+    int C_out,
+    int C_in,
+    int K_h,
+    int K_w
+) {
+    int padded_out = round_up_to_8(C_out);
+    size_t total_elements = (size_t)K_h * (size_t)K_w * (size_t)C_in * (size_t)padded_out;
+    float* packed = NULL;
+
+    if (!weights || C_out <= 0 || C_in <= 0 || K_h <= 0 || K_w <= 0) {
+        return NULL;
+    }
+
+    packed = (float*)aligned_alloc_64(total_elements * sizeof(float));
+    if (!packed) {
+        return NULL;
+    }
+
+    memset(packed, 0, total_elements * sizeof(float));
+
+    for (int kh = 0; kh < K_h; kh++) {
+        for (int kw = 0; kw < K_w; kw++) {
+            for (int ic = 0; ic < C_in; ic++) {
+                float* dst = packed + ((((kh * K_w) + kw) * C_in + ic) * padded_out);
+                for (int oc = 0; oc < C_out; oc++) {
+                    int src_idx = ((oc * C_in + ic) * K_h + kh) * K_w + kw;
+                    dst[oc] = weights[src_idx];
+                }
+            }
+        }
+    }
+
+    return packed;
+}
+
+static void conv2d_packed_oc8_core(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int spatial_block_width,
+    int tile_size,
+    int apply_relu,
+    NetLangThreadPool* thread_pool
+) {
+    int H_out = (H_in + 2 * padding - K_h) / stride + 1;
+    int W_out = (W_in + 2 * padding - K_w) / stride + 1;
+    int padded_out = round_up_to_8(C_out);
+    int tile_h_step = tile_size > 0 ? tile_size : H_out;
+    int tile_w_step = tile_size > 0 ? tile_size : W_out;
+    int oc_block_count = padded_out / 8;
+    long long total_ops = (long long)H_out * (long long)W_out * (long long)K_h * (long long)K_w *
+                          (long long)C_in * (long long)padded_out;
+    int use_parallel = thread_pool &&
+                       netlang_thread_pool_thread_count(thread_pool) > 1 &&
+                       oc_block_count > 1 &&
+                       total_ops >= 200000;
+    PackedConvTask task;
+
+    task.input = input;
+    task.packed_weights = packed_weights;
+    task.bias = bias;
+    task.output = output;
+    task.H_in = H_in;
+    task.W_in = W_in;
+    task.C_in = C_in;
+    task.K_h = K_h;
+    task.K_w = K_w;
+    task.C_out = C_out;
+    task.stride = stride;
+    task.padding = padding;
+    task.tile_h_step = tile_h_step;
+    task.tile_w_step = tile_w_step;
+    task.H_out = H_out;
+    task.W_out = W_out;
+    task.padded_out = padded_out;
+    task.apply_relu = apply_relu;
+    task.spatial_block_width = spatial_block_width;
+
+    if (use_parallel) {
+        netlang_parallel_for(thread_pool, 0, oc_block_count, 1, packed_conv_oc_block_range, &task);
+    } else {
+        packed_conv_oc_block_range(&task, 0, oc_block_count);
+    }
+}
+
+void conv2d_packed_oc8_forward_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+) {
+    conv2d_packed_oc8_core(
+        input, packed_weights, bias, output,
+        H_in, W_in, C_in, K_h, K_w, C_out, stride, padding,
+        spatial_block_width, 0, 0, thread_pool
+    );
+}
+
+void conv2d_relu_packed_oc8_forward_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+) {
+    conv2d_packed_oc8_core(
+        input, packed_weights, bias, output,
+        H_in, W_in, C_in, K_h, K_w, C_out, stride, padding,
+        spatial_block_width, 0, 1, thread_pool
+    );
+}
+
+void conv2d_packed_oc8_blocked_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int tile_size,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+) {
+    conv2d_packed_oc8_core(
+        input, packed_weights, bias, output,
+        H_in, W_in, C_in, K_h, K_w, C_out, stride, padding,
+        spatial_block_width, tile_size, 0, thread_pool
+    );
+}
+
+void conv2d_relu_packed_oc8_blocked_avx2(
+    const float* input,
+    const float* packed_weights,
+    const float* bias,
+    float* output,
+    int H_in, int W_in, int C_in,
+    int K_h, int K_w,
+    int C_out,
+    int stride,
+    int padding,
+    int tile_size,
+    int spatial_block_width,
+    NetLangThreadPool* thread_pool
+) {
+    conv2d_packed_oc8_core(
+        input, packed_weights, bias, output,
+        H_in, W_in, C_in, K_h, K_w, C_out, stride, padding,
+        spatial_block_width, tile_size, 1, thread_pool
+    );
+}
+
 void conv2d_forward_avx2(
     const float* input,
     const float* weights,
@@ -292,6 +598,41 @@ void flatten_hwc_to_chw(const float* input, float* output, int H, int W, int C) 
     }
 }
 
+float* repack_dense_weights_chw_to_hwc(
+    const float* weights,
+    int out_features,
+    int H, int W, int C
+) {
+    int in_features = H * W * C;
+    float* repacked = NULL;
+
+    if (!weights || out_features <= 0 || H <= 0 || W <= 0 || C <= 0) {
+        return NULL;
+    }
+
+    repacked = (float*)aligned_alloc_64((size_t)out_features * (size_t)in_features * sizeof(float));
+    if (!repacked) {
+        return NULL;
+    }
+
+    for (int out = 0; out < out_features; out++) {
+        const float* src_row = &weights[out * in_features];
+        float* dst_row = &repacked[out * in_features];
+
+        for (int h = 0; h < H; h++) {
+            for (int w = 0; w < W; w++) {
+                for (int c = 0; c < C; c++) {
+                    int chw_index = c * H * W + h * W + w;
+                    int hwc_index = (h * W + w) * C + c;
+                    dst_row[hwc_index] = src_row[chw_index];
+                }
+            }
+        }
+    }
+
+    return repacked;
+}
+
 void add_forward(
     const float** inputs,
     float* output,
@@ -331,6 +672,60 @@ void concat_forward(
         }
         
         out_offset += C;
+    }
+}
+
+void extract_hwc_tile_zero_pad(
+    const float* input,
+    float* output,
+    int H_in, int W_in, int C,
+    int src_h0, int src_w0,
+    int tile_h, int tile_w
+) {
+    memset(output, 0, (size_t)tile_h * (size_t)tile_w * (size_t)C * sizeof(float));
+
+    for (int th = 0; th < tile_h; th++) {
+        int src_h = src_h0 + th;
+        if (src_h < 0 || src_h >= H_in) {
+            continue;
+        }
+
+        for (int tw = 0; tw < tile_w; tw++) {
+            int src_w = src_w0 + tw;
+            if (src_w < 0 || src_w >= W_in) {
+                continue;
+            }
+
+            const float* src = &input[(src_h * W_in + src_w) * C];
+            float* dst = &output[(th * tile_w + tw) * C];
+            memcpy(dst, src, (size_t)C * sizeof(float));
+        }
+    }
+}
+
+void scatter_hwc_tile(
+    const float* tile,
+    float* output,
+    int H_out, int W_out, int C,
+    int dst_h0, int dst_w0,
+    int tile_h, int tile_w
+) {
+    for (int th = 0; th < tile_h; th++) {
+        int dst_h = dst_h0 + th;
+        if (dst_h < 0 || dst_h >= H_out) {
+            continue;
+        }
+
+        for (int tw = 0; tw < tile_w; tw++) {
+            int dst_w = dst_w0 + tw;
+            if (dst_w < 0 || dst_w >= W_out) {
+                continue;
+            }
+
+            const float* src = &tile[(th * tile_w + tw) * C];
+            float* dst = &output[(dst_h * W_out + dst_w) * C];
+            memcpy(dst, src, (size_t)C * sizeof(float));
+        }
     }
 }
 

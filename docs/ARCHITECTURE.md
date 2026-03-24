@@ -11,8 +11,12 @@ Today the compiler is organized as:
 3. AST construction
 4. semantic checks and shape inference
 5. graph IR lowering
-6. memory planning
-7. direct C code generation from graph order and slot plan
+6. layout specialization analysis
+7. weight-packing analysis
+8. kernel-selection analysis
+9. memory planning
+10. execution-backend planning
+11. direct C code generation from graph order and slot plan
 
 Relevant directories:
 
@@ -102,11 +106,39 @@ The planner layer now computes:
 - value last-use tracking
 - reusable activation slots
 - aligned offsets inside a single arena
+- alias-aware storage resolution for layout-specialized values
+
+The execution-backend layer currently computes:
+
+- kernel family selection from op/layout facts
+- conv execution planning for output-width micro-tiling on packed Conv2D
+- persistent runtime threadpool setup
+- shape-driven Conv2D parallelization over output-channel blocks
+- generated metadata for effective runtime thread count
+
+The layout-specialization layer currently computes:
+
+- structural `Flatten -> Dense` eligibility
+- aliasable flattened values
+- dense layers that require repacked weights for native HWC input order
+
+The weight-packing layer currently computes:
+
+- which Conv2D layers should use OC8-packed AVX2 kernels
+- which dense layers require repacked weights because of layout specialization
+- total runtime packed-weight bytes
+
+The kernel-selection layer currently computes:
+
+- which kernel family each emitted layer should call
+- whether a layer should use packed or legacy kernels
+- whether a layer should use fused or blocked variants
 
 What is still missing:
 
 - richer policies than the current conservative best-fit reuse
 - emitted reporting of peak memory statistics
+- broader cross-op scheduling beyond per-op parallel kernels
 - integration with future residual and broader DAG support
 
 ### Code Generation
@@ -116,9 +148,10 @@ Refactor `src/codegen/codegen.c` so it consumes graph IR plus memory-plan result
 ## Immediate Refactor Priorities
 
 1. Tighten the planner and expose richer memory metrics in generated artifacts
-2. Add ablation-friendly allocation modes so planner impact can be measured directly
+2. Strengthen the packed Conv2D backend and its execution planning
 3. Broaden evaluation around graph-aware workloads and additional trusted models
-4. Extend the supported op set only when it strengthens the fixed-shape DAG thesis
+4. Add ablation-friendly modes once the current backend direction stabilizes
+5. Extend the supported op set only when it strengthens the fixed-shape DAG thesis
 
 ## What This Repo Is Not Doing
 

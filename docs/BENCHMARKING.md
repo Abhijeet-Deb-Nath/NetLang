@@ -35,6 +35,7 @@ In particular:
 - use repeated in-process inference for warm runs
 - report mean, median, and tail behavior
 - fix thread count and machine settings for all baselines
+- report the selected NetLang thread count in every published run
 - compare the same model, weights, precision, and preprocessing path
 
 ## Target Metrics
@@ -50,6 +51,8 @@ The new planner phase makes peak activation memory a real compiler metric instea
 
 - activation arena bytes
 - reusable slot count
+- repacked weight bytes
+- runtime thread count
 - init time
 - first inference latency
 - warm mean / median / p95 latency
@@ -97,6 +100,24 @@ That driver orchestrates:
 - output comparison on the same input sample
 
 The current gap after this step is broader multi-model and multi-runtime result collection, not single-model measurement plumbing.
+
+## Thread Control
+
+NetLang runtime thread count is selected at runtime. By default it uses the
+machine-derived thread count exposed by the generated network metadata. For
+controlled experiments, set `NETLANG_THREADS` before launching the benchmark or
+evaluation driver.
+
+Example:
+
+```powershell
+$env:NETLANG_THREADS='1'
+python tools\run_eval.py ^
+  --network examples\lenet5.nlang ^
+  --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin ^
+  --onnx assets\models\onnx\lenet_mnist.onnx
+Remove-Item Env:NETLANG_THREADS
+```
 
 ## Matrix Path
 

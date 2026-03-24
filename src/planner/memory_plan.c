@@ -53,7 +53,53 @@ static int ensure_slot_capacity(MemoryPlan* plan, int needed_count) {
     return 1;
 }
 
-MemoryPlan* memory_plan_build(const NetGraph* graph) {
+static int compute_last_use_step(const NetGraph* graph,
+                                 const LayoutPlan* layout_plan,
+                                 const GraphValue* value) {
+    int last_step = -1;
+
+    if (!graph || !value || !value->producer) {
+        return last_step;
+    }
+
+    last_step = value->producer->topo_index;
+
+    if (value == graph->output_value) {
+        last_step = graph->topo_count;
+    }
+
+    for (int consumer_idx = 0; consumer_idx < value->consumer_count; consumer_idx++) {
+        GraphNode* consumer = value->consumers[consumer_idx];
+        if (consumer && consumer->topo_index > last_step) {
+            last_step = consumer->topo_index;
+        }
+    }
+
+    if (layout_plan) {
+        for (int alias_value_id = 0; alias_value_id < graph->value_count; alias_value_id++) {
+            GraphValue* alias_value = graph->values[alias_value_id];
+
+            if (layout_plan->alias_source_ids[alias_value_id] != value->id || !alias_value) {
+                continue;
+            }
+
+            if (alias_value == graph->output_value) {
+                last_step = graph->topo_count;
+            }
+
+            for (int consumer_idx = 0; consumer_idx < alias_value->consumer_count; consumer_idx++) {
+                GraphNode* consumer = alias_value->consumers[consumer_idx];
+                if (consumer && consumer->topo_index > last_step) {
+                    last_step = consumer->topo_index;
+                }
+            }
+        }
+    }
+
+    return last_step;
+}
+
+MemoryPlan* memory_plan_build(const NetGraph* graph, const LayoutPlan* layout_plan) {
     MemoryPlan* plan = NULL;
     ValueAllocation* ordered = NULL;
     int ordered_count = 0;
@@ -68,6 +114,7 @@ MemoryPlan* memory_plan_build(const NetGraph* graph) {
     }
 
     plan->graph = graph;
+    plan->layout_plan = layout_plan;
     plan->allocation_count = graph->value_count;
     plan->allocations = calloc((size_t)plan->allocation_count, sizeof(ValueAllocation));
     if (!plan->allocations) {
@@ -86,30 +133,31 @@ MemoryPlan* memory_plan_build(const NetGraph* graph) {
         plan->allocations[i].slot_id = -1;
         plan->allocations[i].first_step = -1;
         plan->allocations[i].last_step = -1;
+        plan->allocations[i].storage_kind = VALUE_STORAGE_EXTERNAL;
+        plan->allocations[i].alias_value_id = -1;
     }
 
     for (int i = 0; i < graph->value_count; i++) {
         GraphValue* value = graph->values[i];
         ValueAllocation* allocation = &plan->allocations[value->id];
+        int alias_source_id = layout_plan_get_alias_source_id(layout_plan, value);
 
         if (!value->producer) {
             continue;
         }
 
-        allocation->first_step = value->producer->topo_index;
-        allocation->last_step = value->producer->topo_index;
         allocation->element_count = tensor_element_count(value->type);
 
-        if (value == graph->output_value) {
-            allocation->last_step = graph->topo_count;
-        } else {
-            for (int j = 0; j < value->consumer_count; j++) {
-                GraphNode* consumer = value->consumers[j];
-                if (consumer->topo_index > allocation->last_step) {
-                    allocation->last_step = consumer->topo_index;
-                }
-            }
+        if (alias_source_id >= 0) {
+            allocation->storage_kind = VALUE_STORAGE_ALIAS;
+            allocation->alias_value_id = alias_source_id;
+            continue;
         }
+
+        allocation->first_step = value->producer->topo_index;
+        allocation->last_step = value->producer->topo_index;
+        allocation->storage_kind = VALUE_STORAGE_SLOT;
+        allocation->last_step = compute_last_use_step(graph, layout_plan, value);
 
         ordered[ordered_count++] = *allocation;
     }
@@ -190,4 +238,33 @@ const ValueAllocation* memory_plan_get_allocation(const MemoryPlan* plan, const 
     }
 
     return &plan->allocations[value->id];
+}
+
+const ValueAllocation* memory_plan_get_storage_allocation(const MemoryPlan* plan, const GraphValue* value) {
+    const GraphValue* current_value = value;
+    int guard = 0;
+
+    if (!plan || !value) {
+        return NULL;
+    }
+
+    while (current_value && guard <= plan->allocation_count) {
+        const ValueAllocation* allocation = memory_plan_get_allocation(plan, current_value);
+        if (!allocation) {
+            return NULL;
+        }
+
+        if (allocation->storage_kind != VALUE_STORAGE_ALIAS) {
+            return allocation;
+        }
+
+        if (allocation->alias_value_id < 0 || allocation->alias_value_id >= plan->allocation_count) {
+            return allocation;
+        }
+
+        current_value = plan->graph->values[allocation->alias_value_id];
+        guard++;
+    }
+
+    return NULL;
 }

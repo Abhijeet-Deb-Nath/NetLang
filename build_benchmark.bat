@@ -13,10 +13,11 @@ set OUTPUT=%~2
 if "%OUTPUT%"=="" set OUTPUT=%~n1_bench
 
 if not exist bin mkdir bin
+if "%GEN_CFLAGS%"=="" set GEN_CFLAGS=-O3 -march=haswell -mavx2 -mfma -DNDEBUG -DNETLANG_NO_MAIN -I.
 
 echo Building benchmark %NETWORK% -^> bin\%OUTPUT%.exe
 
-gcc -O3 -march=haswell -mavx2 -mfma -DNDEBUG -DNETLANG_NO_MAIN -I. ^
+gcc %GEN_CFLAGS% ^
     %NETWORK% ^
     src\codegen\runtime.c ^
     src\codegen\kernels.c ^
