@@ -18,8 +18,8 @@ It asks:
 
 - does this `Conv2D` use packed OC8 weights?
 - does the output have enough width to reuse packed weights across adjacent outputs?
-- is the layer large enough for that reuse to amortize extra control overhead?
 - is the sliding window compact enough that a small output-width micro-tile is still locality-friendly?
+- is there enough total convolution work for a wider micro-tile to amortize its control cost?
 
 ## Current Plan Surface
 
@@ -46,6 +46,27 @@ The current planner uses only general operator/runtime facts:
 
 This is still heuristic, but it is heuristic over execution properties, not
 architecture identities.
+
+## Current Selection Rule
+
+The current planner evaluates legal candidate widths `1`, `2`, and `4`.
+
+For each legal width, it computes a simple reuse-density score:
+
+- `score ~= estimated_conv_work * width / sliding_window_span`
+
+Where:
+
+- `estimated_conv_work` is derived from output size, kernel size, input channels, and padded output channels
+- `sliding_window_span` is `((width - 1) * stride) + kernel_width`
+
+Very small layers are still filtered conservatively so the wider choices do not
+pay extra control overhead for trivial work.
+
+This keeps the policy general:
+
+- wider micro-tiles win when they buy more adjacent outputs per sliding-window span
+- narrower tiles remain available when width, stride, or total work make them the safer choice
 
 ## Why This Is General
 

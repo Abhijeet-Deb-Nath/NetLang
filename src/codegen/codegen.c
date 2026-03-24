@@ -303,6 +303,7 @@ void emit_network_struct(CodegenContext* ctx) {
     emit(ctx->output, "    WeightFile* weights;\n");
     emit(ctx->output, "    NetLangThreadPool* thread_pool;\n");
     emit(ctx->output, "    int thread_count;\n");
+    emit(ctx->output, "    int conv_spatial_block_override;\n");
     emit(ctx->output, "    float* arena;         /* %zu bytes total */\n", ctx->plan->arena_bytes);
 
     for (int i = 0; i < ctx->plan->slot_count; i++) {
@@ -363,6 +364,10 @@ void emit_metadata_functions(CodegenContext* ctx) {
     emit(ctx->output, "int network_thread_count(const NetworkState* net) {\n");
     emit(ctx->output, "    return net ? net->thread_count : netlang_default_thread_count();\n");
     emit(ctx->output, "}\n\n");
+
+    emit(ctx->output, "int network_conv_spatial_block_override(const NetworkState* net) {\n");
+    emit(ctx->output, "    return net ? net->conv_spatial_block_override : netlang_conv_spatial_block_override();\n");
+    emit(ctx->output, "}\n\n");
 }
 
 /* ========== INITIALIZATION ========== */
@@ -394,7 +399,8 @@ void emit_init_function(CodegenContext* ctx) {
     emit(ctx->output, "        fprintf(stderr, \"Failed to create thread pool\\n\");\n");
     emit(ctx->output, "        goto fail;\n");
     emit(ctx->output, "    }\n");
-    emit(ctx->output, "    net->thread_count = netlang_thread_pool_thread_count(net->thread_pool);\n\n");
+    emit(ctx->output, "    net->thread_count = netlang_thread_pool_thread_count(net->thread_pool);\n");
+    emit(ctx->output, "    net->conv_spatial_block_override = netlang_conv_spatial_block_override();\n\n");
     
     /* Allocate activation arena */
     emit_comment_separator(ctx->output, "Allocate Activation Arena");
@@ -566,7 +572,7 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     int out_w = out_shape->dims[1];
     int needs_tile_size = 0;
     int fused_activation = 0;
-    int spatial_block_width = exec_choice ? exec_choice->spatial_block_width : 1;
+    int planned_spatial_block_width = exec_choice ? exec_choice->spatial_block_width : 1;
 
     /* Get weights and bias from .nwf file */
     if (!(packed_desc && packed_desc->kind == PACKED_WEIGHT_CONV_OC8)) {
@@ -576,12 +582,16 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
     emit(ctx->output, "    const float* conv_bias_%d = get_layer_bias(net->weights, %d);\n", 
          layer_idx, layer->layer_index);
     format_conv_weight_reference(ctx, weight_name, sizeof(weight_name), layer, layer_idx);
+    emit(ctx->output,
+         "    int conv_spatial_block_width_%d = net->conv_spatial_block_override > 0 ? net->conv_spatial_block_override : %d;\n",
+         layer_idx,
+         planned_spatial_block_width);
     
     /* Emit optimized Conv2D call based on available optimizations */
     emit(ctx->output, "    /* Conv2D: [%d,%d,%d] -> [%d,%d,%d], K=%dx%d, S=%d, P=%d",
          in_h, in_w, in_c, out_h, out_w, filters, kernel_h, kernel_w, stride, padding);
-    if (spatial_block_width > 1) {
-        emit(ctx->output, ", OWx%d", spatial_block_width);
+    if (planned_spatial_block_width > 1) {
+        emit(ctx->output, ", plan=OWx%d", planned_spatial_block_width);
     }
 
     switch (kernel_choice ? kernel_choice->conv_kind : CONV_KERNEL_LEGACY) {
@@ -643,7 +653,7 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
              kernel_choice->conv_kind == CONV_KERNEL_PACKED_OC8_FUSED_BLOCKED)) {
             emit(ctx->output, "        %d,          /* tile size */\n", 
                  node->blocking_info->l1_tile_size);
-            emit(ctx->output, "        %d,          /* output-width micro-tile */\n", spatial_block_width);
+            emit(ctx->output, "        conv_spatial_block_width_%d, /* output-width micro-tile */\n", layer_idx);
             emit(ctx->output, "        net->thread_pool\n");
         } else {
             emit(ctx->output, "        %d           /* tile size */\n", 
@@ -655,7 +665,7 @@ void emit_conv2d(CodegenContext* ctx, LayerInfo* layer, int layer_idx) {
             (kernel_choice->conv_kind == CONV_KERNEL_PACKED_OC8 ||
              kernel_choice->conv_kind == CONV_KERNEL_PACKED_OC8_FUSED)) {
             emit(ctx->output, ",\n");
-            emit(ctx->output, "        %d,          /* output-width micro-tile */\n", spatial_block_width);
+            emit(ctx->output, "        conv_spatial_block_width_%d, /* output-width micro-tile */\n", layer_idx);
             emit(ctx->output, "        net->thread_pool\n");
         } else {
             emit(ctx->output, "\n");

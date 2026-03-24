@@ -23,13 +23,64 @@ static long long estimate_conv_work(const LayerInfo* layer, const PackedWeightDe
     return out_h * out_w * kernel_h * kernel_w * in_channels * out_channels;
 }
 
+static int is_width_legal(int width, int stride, int kernel_w, int out_w) {
+    int span = 0;
+
+    if (width <= 1) {
+        return out_w >= 1;
+    }
+
+    if (stride > 2 || out_w < width) {
+        return 0;
+    }
+
+    span = ((width - 1) * stride) + kernel_w;
+    if (width == 4) {
+        return span <= 16;
+    }
+
+    if (width == 2) {
+        return span <= 12;
+    }
+
+    return 0;
+}
+
+static long long score_spatial_block_width(int width,
+                                           long long work,
+                                           int stride,
+                                           int kernel_w,
+                                           int out_w) {
+    long long span = 0;
+
+    if (!is_width_legal(width, stride, kernel_w, out_w)) {
+        return -1;
+    }
+
+    span = ((long long)(width - 1) * stride) + kernel_w;
+
+    /*
+     * Favor widths that produce more adjacent outputs per sliding-window span.
+     * This is a general proxy for packed-weight reuse density, not a model-name
+     * rule. Small-work candidates are still filtered so tiny layers do not pay
+     * wider-kernel overhead needlessly.
+     */
+    if ((width == 4 && work < 20000) ||
+        (width == 2 && work < 8000)) {
+        return -1;
+    }
+
+    return (work * width) / span;
+}
+
 static int choose_spatial_block_width(const LayerInfo* layer, const PackedWeightDesc* packed_desc) {
+    static const int candidate_widths[] = {4, 2, 1};
     int stride = 0;
     int kernel_w = 0;
     int out_w = 0;
-    int in_channels = 0;
     long long work = 0;
-    long long reuse_score = 0;
+    long long best_score = -1;
+    int best_width = 1;
 
     if (!layer || layer->layer_type != NODE_CONV2D || !layer->layer_node) {
         return 1;
@@ -46,34 +97,19 @@ static int choose_spatial_block_width(const LayerInfo* layer, const PackedWeight
     stride = layer->layer_node->data.conv2d.stride;
     kernel_w = layer->layer_node->data.conv2d.kernel[1];
     out_w = layer->output_shape->dims[1];
-    in_channels = layer->input_shape->dims[2];
     work = estimate_conv_work(layer, packed_desc);
-    reuse_score = (long long)kernel_w * in_channels * packed_desc->padded_out_channels;
 
-    if (stride > 2 || out_w <= 1) {
-        return 1;
+    for (size_t i = 0; i < sizeof(candidate_widths) / sizeof(candidate_widths[0]); i++) {
+        int width = candidate_widths[i];
+        long long score = score_spatial_block_width(width, work, stride, kernel_w, out_w);
+
+        if (score > best_score) {
+            best_score = score;
+            best_width = width;
+        }
     }
 
-    /*
-     * Choose a small output-width micro-tile only when the layer has enough
-     * total work and a compact enough sliding window to reuse the loaded
-     * packed weights across adjacent outputs.
-     */
-    if (out_w >= 4 &&
-        work >= 50000 &&
-        ((4 - 1) * stride + kernel_w) <= 16 &&
-        reuse_score >= 256) {
-        return 4;
-    }
-
-    if (out_w >= 2 &&
-        work >= 15000 &&
-        ((2 - 1) * stride + kernel_w) <= 12 &&
-        reuse_score >= 128) {
-        return 2;
-    }
-
-    return 1;
+    return best_width;
 }
 
 ConvExecutionPlan* conv_execution_plan_build(CodegenContext* ctx) {

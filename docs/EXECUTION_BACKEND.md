@@ -61,12 +61,22 @@ Generated networks expose:
 The runtime also honors the `NETLANG_THREADS` environment variable for
 controlled experiments.
 
+For controlled backend-mode recovery experiments, the runtime also honors
+`NETLANG_CONV_SPATIAL_BLOCK`:
+
+- `auto` or unset: use the generated execution plan
+- `1`: force `OWx1`
+- `2`: force `OWx2`
+- `4`: force `OWx4`
+
 Example:
 
 ```powershell
 $env:NETLANG_THREADS='1'
+$env:NETLANG_CONV_SPATIAL_BLOCK='1'
 bin\lenet5_bench.exe --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin --warmup 25 --runs 200
 Remove-Item Env:NETLANG_THREADS
+Remove-Item Env:NETLANG_CONV_SPATIAL_BLOCK
 ```
 
 ## Current Limitation
@@ -96,8 +106,8 @@ The latest reference evaluation artifacts are:
 
 On that 25-sample LeNet reference matrix:
 
-- default runtime threading averaged about `1.002 ms`
-- forced single-thread averaged about `1.947 ms`
+- default runtime threading averaged about `0.602 ms`
+- forced single-thread averaged about `0.726 ms`
 
 So the current packed-spatial execution backend is materially useful, but it
 still does not beat the current local ONNX Runtime CPU baseline on the same

@@ -12,6 +12,7 @@
 #ifdef _WIN32
 #include <malloc.h>  /* For _aligned_malloc/_aligned_free */
 #else
+#include <strings.h>
 #include <time.h>
 #endif
 
@@ -359,6 +360,36 @@ double netlang_now_ms(void) {
     clock_gettime(CLOCK_MONOTONIC, &now);
     return (double)now.tv_sec * 1000.0 + (double)now.tv_nsec / 1000000.0;
 #endif
+}
+
+int netlang_conv_spatial_block_override(void) {
+    const char* env_value = getenv("NETLANG_CONV_SPATIAL_BLOCK");
+    char* end = NULL;
+    long parsed = 0;
+
+    if (!env_value || !env_value[0]) {
+        return 0;
+    }
+
+#ifdef _WIN32
+    if (_stricmp(env_value, "auto") == 0) {
+        return 0;
+    }
+#else
+    if (strcasecmp(env_value, "auto") == 0) {
+        return 0;
+    }
+#endif
+
+    parsed = strtol(env_value, &end, 10);
+    if (end && *end == '\0' && (parsed == 1 || parsed == 2 || parsed == 4)) {
+        return (int)parsed;
+    }
+
+    fprintf(stderr,
+            "Warning: ignoring NETLANG_CONV_SPATIAL_BLOCK=%s (expected auto, 1, 2, or 4)\n",
+            env_value);
+    return 0;
 }
 
 int netlang_default_thread_count(void) {

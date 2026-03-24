@@ -54,12 +54,12 @@ The stable reference backend is the packed-spatial CPU path preserved in
 
 On the current 25-sample LeNet reference matrix:
 
-- NetLang warm-mean average: `1.002 ms`
-- ONNX Runtime warm-mean average: `0.240 ms`
+- NetLang warm-mean average: `0.602 ms`
+- ONNX Runtime warm-mean average: `0.211 ms`
 - accuracy: `25/25`
 - argmax match rate: `1.0`
 
-That is the honest mainline position today: roughly `4.2x` slower than the
+That is the honest mainline position today: roughly `2.9x` slower than the
 local ONNX Runtime CPU baseline on the reference workload.
 
 ## Research Target
@@ -122,8 +122,10 @@ Override the runtime thread count if you need controlled comparisons:
 
 ```powershell
 $env:NETLANG_THREADS='1'
+$env:NETLANG_CONV_SPATIAL_BLOCK='1'
 bin\lenet5_bench.exe --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin --warmup 25 --runs 200
 Remove-Item Env:NETLANG_THREADS
+Remove-Item Env:NETLANG_CONV_SPATIAL_BLOCK
 ```
 
 Run the end-to-end evaluation driver:
@@ -136,6 +138,9 @@ python tools\run_eval.py ^
   --warmup 25 ^
   --runs 200
 ```
+
+For controlled backend comparisons, the evaluation drivers also accept
+`--netlang-threads` and `--netlang-conv-spatial-block`.
 
 Run the multi-sample matrix:
 

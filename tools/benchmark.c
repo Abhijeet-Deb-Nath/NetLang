@@ -28,6 +28,7 @@ extern int network_activation_slot_count(void);
 extern size_t network_repacked_weight_bytes(void);
 extern int network_default_thread_count(void);
 extern int network_thread_count(const NetworkState* net);
+extern int network_conv_spatial_block_override(const NetworkState* net);
 
 #ifdef _WIN32
 #include <windows.h>
@@ -251,7 +252,8 @@ static int write_json_report(const char* path,
                              long exe_size_bytes,
                              size_t input_elements,
                              size_t output_elements,
-                             int thread_count) {
+                             int thread_count,
+                             int conv_spatial_block_override) {
     FILE* file = fopen(path, "w");
     if (!file) {
         fprintf(stderr, "Error: Cannot open JSON report '%s'\n", path);
@@ -277,6 +279,7 @@ static int write_json_report(const char* path,
     fprintf(file, "  \"activation_slot_count\": %d,\n", network_activation_slot_count());
     fprintf(file, "  \"repacked_weight_bytes\": %zu,\n", network_repacked_weight_bytes());
     fprintf(file, "  \"thread_count\": %d,\n", thread_count);
+    fprintf(file, "  \"conv_spatial_block_override\": %d,\n", conv_spatial_block_override);
     fprintf(file, "  \"init_time_ms\": %.6f,\n", init_time_ms);
     fprintf(file, "  \"first_inference_ms\": %.6f,\n", first_inference_ms);
     fprintf(file, "  \"warm_mean_ms\": %.6f,\n", stats->mean_ms);
@@ -398,6 +401,9 @@ int main(int argc, char** argv) {
         return 1;
     }
     int thread_count = network_thread_count(net);
+    int conv_spatial_block_override = network_conv_spatial_block_override(net);
+
+    printf("Conv spatial override: %d (0=auto)\n", conv_spatial_block_override);
 
     double first_start_ms = timer_now_ms();
     network_infer(net, input, output);
@@ -457,7 +463,8 @@ int main(int argc, char** argv) {
                                exe_size_bytes,
                                input_elements,
                                output_elements,
-                               thread_count)) {
+                               thread_count,
+                               conv_spatial_block_override)) {
             network_cleanup(net);
             aligned_free(input);
             aligned_free(output);

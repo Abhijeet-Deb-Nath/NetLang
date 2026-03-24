@@ -112,12 +112,22 @@ Example:
 
 ```powershell
 $env:NETLANG_THREADS='1'
+$env:NETLANG_CONV_SPATIAL_BLOCK='1'
 python tools\run_eval.py ^
   --network examples\lenet5.nlang ^
   --input assets\inputs\preprocessed_28x28\mnist_0000_label_7.bin ^
   --onnx assets\models\onnx\lenet_mnist.onnx
 Remove-Item Env:NETLANG_THREADS
+Remove-Item Env:NETLANG_CONV_SPATIAL_BLOCK
 ```
+
+The evaluation drivers also accept equivalent CLI switches:
+
+- `--netlang-threads`
+- `--netlang-conv-spatial-block`
+
+Those are for controlled backend comparisons from one codebase. They are not a
+license to add architecture-specific paths.
 
 ## Matrix Path
 

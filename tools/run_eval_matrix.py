@@ -21,6 +21,7 @@ import numpy as np
 from run_eval import (
     DEFAULT_RESULTS_DIR,
     REPO_ROOT,
+    build_netlang_runtime_env,
     build_netlang_benchmark_artifact,
     compare_outputs,
     ensure_parent,
@@ -60,6 +61,16 @@ def parse_args() -> argparse.Namespace:
         choices=["auto", "none", "softmax"],
         default="auto",
         help="Transform applied to ONNX Runtime outputs before comparison",
+    )
+    parser.add_argument(
+        "--netlang-threads",
+        type=int,
+        help="Override NETLANG_THREADS during NetLang benchmark execution",
+    )
+    parser.add_argument(
+        "--netlang-conv-spatial-block",
+        choices=["auto", "1", "2", "4"],
+        help="Override NETLANG_CONV_SPATIAL_BLOCK during NetLang benchmark execution",
     )
     return parser.parse_args()
 
@@ -152,6 +163,8 @@ def main() -> None:
 
     if args.warmup <= 0 or args.runs <= 0:
         raise SystemExit("--warmup and --runs must both be positive")
+    if args.netlang_threads is not None and args.netlang_threads <= 0:
+        raise SystemExit("--netlang-threads must be positive")
 
     network_path = resolve_path(args.network)
     if not network_path.exists():
@@ -172,6 +185,10 @@ def main() -> None:
     summary_json_path = result_dir / f"{prefix}.json"
     summary_csv_path = result_dir / f"{prefix}.csv"
     temp_dir = result_dir / ".tmp" / prefix
+    netlang_env = build_netlang_runtime_env(
+        args.netlang_threads,
+        args.netlang_conv_spatial_block,
+    )
 
     artifact = build_netlang_benchmark_artifact(network_path, prefix)
 
@@ -189,6 +206,7 @@ def main() -> None:
             args.runs,
             runtime_json_path,
             output_bin_path,
+            extra_env=netlang_env,
         )
         if benchmark_metadata is None:
             benchmark_metadata = netlang_runtime
@@ -251,6 +269,7 @@ def main() -> None:
             "summary_csv": format_artifact_path(summary_csv_path),
         },
         "netlang": {
+            "env": netlang_env,
             "codegen_ms": artifact["codegen_ms"],
             "native_build_ms": artifact["native_build_ms"],
             "total_build_ms": artifact["total_build_ms"],

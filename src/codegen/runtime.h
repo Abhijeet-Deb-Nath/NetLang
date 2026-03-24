@@ -125,6 +125,7 @@ void aligned_free(void* ptr);
 /* Runtime execution support */
 double netlang_now_ms(void);
 int netlang_default_thread_count(void);
+int netlang_conv_spatial_block_override(void);
 NetLangThreadPool* netlang_thread_pool_create(int requested_threads);
 void netlang_thread_pool_destroy(NetLangThreadPool* pool);
 int netlang_thread_pool_thread_count(const NetLangThreadPool* pool);

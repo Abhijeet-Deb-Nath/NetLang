@@ -57,12 +57,12 @@ This file is the honest support matrix for the repo.
 
 On the current 25-sample LeNet reference matrix:
 
-- NetLang warm-mean average: `1.002 ms` in `results/evaluation/lenet5_stable_matrix_25.json`
-- ONNX Runtime warm-mean average: `0.240 ms` on the same matrix
+- NetLang warm-mean average: `0.602 ms` in `results/evaluation/lenet5_stable_matrix_25.json`
+- ONNX Runtime warm-mean average: `0.211 ms` on the same matrix
 - accuracy: `25/25`
 - argmax match rate: `1.0`
 
-That places the current stable mainline at roughly `4.2x` slower than the
+That places the current stable mainline at roughly `2.9x` slower than the
 local ONNX Runtime CPU baseline on the reference workload.
 
 ## Repository Policy

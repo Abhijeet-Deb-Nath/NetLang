@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import subprocess
 import sys
 import time
@@ -33,19 +34,31 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RESULTS_DIR = REPO_ROOT / "results" / "evaluation"
 
 
-def run_command(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+def run_command(
+    command: list[str],
+    cwd: Path,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         command,
         cwd=str(cwd),
+        env=env,
         text=True,
         capture_output=True,
         check=False,
     )
 
 
-def timed_command(command: list[str], cwd: Path) -> tuple[float, subprocess.CompletedProcess[str]]:
+def timed_command(
+    command: list[str],
+    cwd: Path,
+    extra_env: dict[str, str] | None = None,
+) -> tuple[float, subprocess.CompletedProcess[str]]:
     start = time.perf_counter()
-    completed = run_command(command, cwd)
+    completed = run_command(command, cwd, extra_env=extra_env)
     elapsed_ms = (time.perf_counter() - start) * 1000.0
     return elapsed_ms, completed
 
@@ -66,6 +79,21 @@ def require_success(step_name: str, completed: subprocess.CompletedProcess[str])
 
 def ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def build_netlang_runtime_env(
+    netlang_threads: int | None,
+    netlang_conv_spatial_block: str | None,
+) -> dict[str, str]:
+    env: dict[str, str] = {}
+
+    if netlang_threads is not None:
+        env["NETLANG_THREADS"] = str(netlang_threads)
+
+    if netlang_conv_spatial_block is not None:
+        env["NETLANG_CONV_SPATIAL_BLOCK"] = str(netlang_conv_spatial_block)
+
+    return env
 
 
 def format_artifact_path(path: Path) -> str:
@@ -275,6 +303,7 @@ def run_netlang_benchmark(
     bench_runs: int,
     runtime_json_path: Path,
     output_bin_path: Path,
+    extra_env: dict[str, str] | None = None,
 ) -> tuple[dict[str, Any], np.ndarray]:
     benchmark_command = [
         str(benchmark_exe_path.relative_to(REPO_ROOT)),
@@ -293,7 +322,7 @@ def run_netlang_benchmark(
     ensure_parent(runtime_json_path)
     ensure_parent(output_bin_path)
 
-    benchmark_run = run_command(benchmark_command, REPO_ROOT)
+    benchmark_run = run_command(benchmark_command, REPO_ROOT, extra_env=extra_env)
     require_success("netlang-benchmark", benchmark_run)
 
     with runtime_json_path.open("r", encoding="utf-8") as handle:
@@ -318,6 +347,16 @@ def parse_args() -> argparse.Namespace:
         default="auto",
         help="Transform applied to ONNX Runtime outputs before comparison",
     )
+    parser.add_argument(
+        "--netlang-threads",
+        type=int,
+        help="Override NETLANG_THREADS during NetLang benchmark execution",
+    )
+    parser.add_argument(
+        "--netlang-conv-spatial-block",
+        choices=["auto", "1", "2", "4"],
+        help="Override NETLANG_CONV_SPATIAL_BLOCK during NetLang benchmark execution",
+    )
     return parser.parse_args()
 
 
@@ -326,6 +365,8 @@ def main() -> None:
 
     if args.warmup <= 0 or args.runs <= 0:
         raise SystemExit("--warmup and --runs must both be positive")
+    if args.netlang_threads is not None and args.netlang_threads <= 0:
+        raise SystemExit("--netlang-threads must be positive")
 
     network_path = (REPO_ROOT / args.network).resolve() if not Path(args.network).is_absolute() else Path(args.network)
     if not network_path.exists():
@@ -356,6 +397,11 @@ def main() -> None:
     benchmark_json_path = result_json_path.with_name(f"{prefix}_netlang_runtime.json")
     benchmark_output_path = result_json_path.with_name(f"{prefix}_netlang_output.bin")
 
+    netlang_env = build_netlang_runtime_env(
+        args.netlang_threads,
+        args.netlang_conv_spatial_block,
+    )
+
     ensure_parent(benchmark_json_path)
     ensure_parent(result_json_path)
 
@@ -367,6 +413,7 @@ def main() -> None:
         args.runs,
         benchmark_json_path,
         benchmark_output_path,
+        extra_env=netlang_env,
     )
 
     results: dict[str, Any] = {
@@ -378,6 +425,7 @@ def main() -> None:
             "netlang_output_bin": format_artifact_path(benchmark_output_path),
         },
         "netlang": {
+            "env": netlang_env,
             "codegen_ms": artifact["codegen_ms"],
             "native_build_ms": artifact["native_build_ms"],
             "total_build_ms": artifact["total_build_ms"],
