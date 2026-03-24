@@ -40,6 +40,7 @@ void scope_destroy(Scope* scope);
 Symbol* scope_lookup(Scope* scope, const char* name, int recursive);
 Symbol* scope_insert(Scope* scope, const char* name, SymbolType type, 
                      ASTNode* node, int line);
+Symbol* scope_bind_variable(Scope* scope, const char* name, ASTNode* node, int line);
 void scope_print(Scope* scope, int indent);
 
 #endif

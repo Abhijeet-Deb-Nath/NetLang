@@ -54,7 +54,7 @@ typedef struct CodegenContext {
 /* ========== PUBLIC API ========== */
 
 /* Main entry point: generate C code for a NetLang network */
-void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output);
+int generate_network_code(ASTNode* network, Scope* global_scope, FILE* output);
 
 /* ========== INTERNAL FUNCTIONS ========== */
 

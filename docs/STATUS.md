@@ -20,17 +20,17 @@ This file is the honest support matrix for the repo.
 ## Stable End-to-End Subset
 
 - fixed-shape sequential CNNs
+- fixed-shape branch-and-merge graphs using primitive `Add` / `Concat`
 - `Conv2D`
 - `Dense`
 - `MaxPool`
 - `AvgPool`
 - `Flatten`
+- `Add`
+- `Concat`
 
 ## Experimental Graph Support
 
-- branch fan-out from shared source values
-- `Add` merge
-- `Concat` merge
 - graph-driven storage naming
 - topological scheduling
 - slot-based activation reuse
@@ -38,10 +38,12 @@ This file is the honest support matrix for the repo.
 - OC8-packed Conv2D backend for AVX2 output-channel vectorization
 - output-width micro-tiling plan for packed Conv2D execution
 - runtime threadpool with shape-driven packed Conv2D parallel execution
+- broader residual-network coverage beyond the primitive merge examples
 
 ## Parser-Oriented But Not Yet Honest To Claim
 
-- broader residual-network coverage
+- `BatchNorm`
+- `LayerNorm`
 - reusable modules as a real lowering feature
 - broad converter parity
 

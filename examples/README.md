@@ -8,14 +8,14 @@ This directory contains the user-facing example networks.
 | --- | --- | --- |
 | `simple_classifier.nlang` | Minimal syntax example | Stable |
 | `lenet5.nlang` | Reference sequential CNN for smoke testing | Stable |
-| `add_branch.nlang` | Minimal branch-and-merge graph example with `Add` | Experimental |
-| `concat_branch.nlang` | Minimal branch-and-merge graph example | Experimental |
+| `add_branch.nlang` | Minimal branch-and-merge graph example with `Add` | Stable |
+| `concat_branch.nlang` | Minimal branch-and-merge graph example with `Concat` | Stable |
 | `vgg16.nlang` | Large sequential syntax stress example | Exploratory |
 
 ## Guidance
 
 - use `lenet5.nlang` as the reference end-to-end example today
-- use `add_branch.nlang` and `concat_branch.nlang` when testing graph lowering and merge operators
+- use `add_branch.nlang` and `concat_branch.nlang` when testing the stable fixed-shape merge operators
 - treat `vgg16.nlang` as a language example, not as the primary benchmark target
 - keep new examples inside the codegen-ready subset unless they are explicitly labeled experimental
 

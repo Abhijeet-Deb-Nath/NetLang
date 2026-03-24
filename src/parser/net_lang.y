@@ -28,6 +28,60 @@ extern FILE* yyin;
 
 void yyerror(const char* s);
 
+static int require_int_literal(ASTNode* node,
+                               const char* what,
+                               int line,
+                               int allow_zero,
+                               int allow_negative,
+                               int* out_value) {
+    if (!node || node->type != NODE_NUMBER || node->data.number.is_float) {
+        fprintf(stderr, "Parse error at line %d: %s must be an integer literal\n",
+                line, what);
+        return 0;
+    }
+
+    int value = node->data.number.ival;
+    if ((!allow_negative && value < 0) ||
+        (!allow_zero && value == 0)) {
+        fprintf(stderr, "Parse error at line %d: %s must be %s\n",
+                line,
+                what,
+                allow_negative ? "non-zero" : (allow_zero ? "non-negative" : "positive"));
+        return 0;
+    }
+
+    *out_value = value;
+    return 1;
+}
+
+static int require_int_pair(ASTNode* node,
+                            const char* what,
+                            int line,
+                            int allow_zero,
+                            int out_values[2]) {
+    if (!node || node->type != NODE_ARRAY || !node->data.array.elements) {
+        fprintf(stderr, "Parse error at line %d: %s must be a two-element integer array\n",
+                line, what);
+        return 0;
+    }
+
+    if (node->data.array.elements->count != 2) {
+        fprintf(stderr, "Parse error at line %d: %s must contain exactly two integers\n",
+                line, what);
+        return 0;
+    }
+
+    ASTNode* elem = node->data.array.elements->head;
+    for (int i = 0; i < 2; i++) {
+        if (!require_int_literal(elem, what, line, allow_zero, 0, &out_values[i])) {
+            return 0;
+        }
+        elem = elem->next;
+    }
+
+    return 1;
+}
+
 /* Global AST root - populated after successful parse */
 ASTNode* ast_root = NULL;
 
@@ -278,19 +332,16 @@ conv2d_layer:
         ACTIVATION COLON activation_value 
     RPAREN {
         ASTNode* node = ast_node_new(NODE_CONV2D, @1.first_line);
-        
-        /* Strict positional assignment */
-        node->data.conv2d.filters = $5->data.number.ival;
-        
-        /* Parse kernel array */
-        ASTNode* e = $9->data.array.elements->head;
-        if (e) { node->data.conv2d.kernel[0] = e->data.number.ival; e = e->next; }
-        if (e) { node->data.conv2d.kernel[1] = e->data.number.ival; }
-        
-        node->data.conv2d.stride = $13->data.number.ival;
-        node->data.conv2d.padding = $17->data.number.ival;
+
+        if (!require_int_literal($5, "filters", @5.first_line, 0, 0, &node->data.conv2d.filters) ||
+            !require_int_pair($9, "kernel", @9.first_line, 0, node->data.conv2d.kernel) ||
+            !require_int_literal($13, "stride", @13.first_line, 0, 0, &node->data.conv2d.stride) ||
+            !require_int_literal($17, "padding", @17.first_line, 1, 0, &node->data.conv2d.padding)) {
+            YYERROR;
+        }
+
         node->data.conv2d.activation = $21;
-        
+
         $$ = node;
     }
     ;
@@ -303,10 +354,13 @@ dense_layer:
         ACTIVATION COLON activation_value 
     RPAREN {
         ASTNode* node = ast_node_new(NODE_DENSE, @1.first_line);
-        
-        node->data.dense.units = $5->data.number.ival;
+
+        if (!require_int_literal($5, "units", @5.first_line, 0, 0, &node->data.dense.units)) {
+            YYERROR;
+        }
+
         node->data.dense.activation = $9;
-        
+
         $$ = node;
     }
     ;
@@ -320,15 +374,13 @@ pool_layer:
         PADDING COLON expr 
     RPAREN {
         ASTNode* node = ast_node_new(NODE_MAXPOOL, @1.first_line);
-        
-        /* Parse pool array */
-        ASTNode* e = $5->data.array.elements->head;
-        if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
-        if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
-        
-        node->data.pooling.stride = $9->data.number.ival;
-        node->data.pooling.padding = $13->data.number.ival;
-        
+
+        if (!require_int_pair($5, "pool", @5.first_line, 0, node->data.pooling.pool) ||
+            !require_int_literal($9, "stride", @9.first_line, 1, 0, &node->data.pooling.stride) ||
+            !require_int_literal($13, "padding", @13.first_line, 1, 0, &node->data.pooling.padding)) {
+            YYERROR;
+        }
+
         $$ = node;
     }
     | AVGPOOL LPAREN 
@@ -337,15 +389,13 @@ pool_layer:
         PADDING COLON expr 
     RPAREN {
         ASTNode* node = ast_node_new(NODE_AVGPOOL, @1.first_line);
-        
-        /* Parse pool array */
-        ASTNode* e = $5->data.array.elements->head;
-        if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
-        if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
-        
-        node->data.pooling.stride = $9->data.number.ival;
-        node->data.pooling.padding = $13->data.number.ival;
-        
+
+        if (!require_int_pair($5, "pool", @5.first_line, 0, node->data.pooling.pool) ||
+            !require_int_literal($9, "stride", @9.first_line, 1, 0, &node->data.pooling.stride) ||
+            !require_int_literal($13, "padding", @13.first_line, 1, 0, &node->data.pooling.padding)) {
+            YYERROR;
+        }
+
         $$ = node;
     }
     ;

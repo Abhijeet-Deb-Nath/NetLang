@@ -25,6 +25,7 @@
 
 void relu_inplace_avx2(float* data, int size);
 void sigmoid_inplace_avx2(float* data, int size);
+void tanh_inplace_avx2(float* data, int size);
 void softmax_inplace(float* data, int size);
 
 /* ========== CONV2D KERNELS ========== */

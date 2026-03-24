@@ -35,6 +35,12 @@ void sigmoid_inplace_avx2(float* data, int size) {
     }
 }
 
+void tanh_inplace_avx2(float* data, int size) {
+    for (int i = 0; i < size; i++) {
+        data[i] = tanhf(data[i]);
+    }
+}
+
 void softmax_inplace(float* data, int size) {
     /* Find max for numerical stability */
     float max_val = data[0];

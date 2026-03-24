@@ -156,6 +156,11 @@ static TensorType* input_type_from_ast(ASTNode* input_node, FILE* error_stream) 
                         "input shape dimensions must be integers");
             return NULL;
         }
+        if (elem->data.number.ival <= 0) {
+            graph_error(error_stream, elem->line_number,
+                        "input shape dimensions must be positive");
+            return NULL;
+        }
         dims[idx++] = elem->data.number.ival;
         elem = elem->next;
     }

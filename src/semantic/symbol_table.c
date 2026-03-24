@@ -47,6 +47,19 @@ Symbol* scope_insert(Scope* scope, const char* name, SymbolType type,
     return sym;
 }
 
+Symbol* scope_bind_variable(Scope* scope, const char* name, ASTNode* node, int line) {
+    Symbol* existing = scope_lookup(scope, name, 0);
+    if (existing && existing->sym_type == SYM_VARIABLE) {
+        tensor_type_free(existing->tensor_type);
+        existing->tensor_type = NULL;
+        existing->ast_node = node;
+        existing->line = line;
+        return existing;
+    }
+
+    return scope_insert(scope, name, SYM_VARIABLE, node, line);
+}
+
 void scope_destroy(Scope* scope) {
     if (!scope) return;
     

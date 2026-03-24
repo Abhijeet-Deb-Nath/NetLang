@@ -98,11 +98,65 @@ extern FILE* yyin;
 
 void yyerror(const char* s);
 
+static int require_int_literal(ASTNode* node,
+                               const char* what,
+                               int line,
+                               int allow_zero,
+                               int allow_negative,
+                               int* out_value) {
+    if (!node || node->type != NODE_NUMBER || node->data.number.is_float) {
+        fprintf(stderr, "Parse error at line %d: %s must be an integer literal\n",
+                line, what);
+        return 0;
+    }
+
+    int value = node->data.number.ival;
+    if ((!allow_negative && value < 0) ||
+        (!allow_zero && value == 0)) {
+        fprintf(stderr, "Parse error at line %d: %s must be %s\n",
+                line,
+                what,
+                allow_negative ? "non-zero" : (allow_zero ? "non-negative" : "positive"));
+        return 0;
+    }
+
+    *out_value = value;
+    return 1;
+}
+
+static int require_int_pair(ASTNode* node,
+                            const char* what,
+                            int line,
+                            int allow_zero,
+                            int out_values[2]) {
+    if (!node || node->type != NODE_ARRAY || !node->data.array.elements) {
+        fprintf(stderr, "Parse error at line %d: %s must be a two-element integer array\n",
+                line, what);
+        return 0;
+    }
+
+    if (node->data.array.elements->count != 2) {
+        fprintf(stderr, "Parse error at line %d: %s must contain exactly two integers\n",
+                line, what);
+        return 0;
+    }
+
+    ASTNode* elem = node->data.array.elements->head;
+    for (int i = 0; i < 2; i++) {
+        if (!require_int_literal(elem, what, line, allow_zero, 0, &out_values[i])) {
+            return 0;
+        }
+        elem = elem->next;
+    }
+
+    return 1;
+}
+
 /* Global AST root - populated after successful parse */
 ASTNode* ast_root = NULL;
 
 
-#line 106 "build\\net_lang.tab.c"
+#line 160 "build\\net_lang.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -602,15 +656,15 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    99,    99,   106,   116,   120,   129,   140,   151,   160,
-     163,   169,   174,   184,   190,   197,   200,   208,   211,   218,
-     222,   229,   233,   240,   244,   250,   260,   261,   262,   263,
-     264,   265,   266,   267,   273,   301,   317,   334,   356,   362,
-     370,   374,   381,   389,   393,   400,   403,   411,   423,   426,
-     432,   438,   442,   446,   450,   454,   458,   462,   466,   471,
-     475,   479,   483,   487,   491,   495,   504,   505,   506,   507,
-     514,   518,   524,   527,   533,   541,   545,   552,   553,   554,
-     555,   556
+       0,   153,   153,   160,   170,   174,   183,   194,   205,   214,
+     217,   223,   228,   238,   244,   251,   254,   262,   265,   272,
+     276,   283,   287,   294,   298,   304,   314,   315,   316,   317,
+     318,   319,   320,   321,   327,   352,   371,   386,   406,   412,
+     420,   424,   431,   439,   443,   450,   453,   461,   473,   476,
+     482,   488,   492,   496,   500,   504,   508,   512,   516,   521,
+     525,   529,   533,   537,   541,   545,   554,   555,   556,   557,
+     564,   568,   574,   577,   583,   591,   595,   602,   603,   604,
+     605,   606
 };
 #endif
 
@@ -1688,7 +1742,7 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: network_def  */
-#line 99 "src\\parser\\net_lang.y"
+#line 153 "src\\parser\\net_lang.y"
                 {
         ast_root = ast_program((yylsp[0]).first_line);
         ASTList* defs = ast_list_new();
@@ -1696,40 +1750,40 @@ yyreduce:
         ast_root->data.program.definitions = defs;
         (yyval.node) = ast_root;
     }
-#line 1700 "build\\net_lang.tab.c"
+#line 1754 "build\\net_lang.tab.c"
     break;
 
   case 3: /* program: module_list network_def  */
-#line 106 "src\\parser\\net_lang.y"
+#line 160 "src\\parser\\net_lang.y"
                               {
         ast_root = ast_program((yylsp[-1]).first_line);
         ast_list_append((yyvsp[-1].list), (yyvsp[0].node));  /* Add network to end of module list */
         ast_root->data.program.definitions = (yyvsp[-1].list);
         (yyval.node) = ast_root;
     }
-#line 1711 "build\\net_lang.tab.c"
+#line 1765 "build\\net_lang.tab.c"
     break;
 
   case 4: /* module_list: module_def  */
-#line 116 "src\\parser\\net_lang.y"
+#line 170 "src\\parser\\net_lang.y"
                {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 1720 "build\\net_lang.tab.c"
+#line 1774 "build\\net_lang.tab.c"
     break;
 
   case 5: /* module_list: module_list module_def  */
-#line 120 "src\\parser\\net_lang.y"
+#line 174 "src\\parser\\net_lang.y"
                              {
         ast_list_append((yyvsp[-1].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-1].list);
     }
-#line 1729 "build\\net_lang.tab.c"
+#line 1783 "build\\net_lang.tab.c"
     break;
 
   case 6: /* network_def: NETWORK IDENTIFIER LBRACE network_body RBRACE  */
-#line 129 "src\\parser\\net_lang.y"
+#line 183 "src\\parser\\net_lang.y"
                                                   {
         (yyval.node) = ast_node_new(NODE_NETWORK, (yylsp[-4]).first_line);
         (yyval.node)->data.network.name = (yyvsp[-3].sval);  /* Transfer ownership, don't free */
@@ -1738,377 +1792,373 @@ yyreduce:
         (yyval.node)->data.network.statements = (yyvsp[-1].netbody)->statements;
         free((yyvsp[-1].netbody));  /* Free the temporary NetworkBody struct only */
     }
-#line 1742 "build\\net_lang.tab.c"
+#line 1796 "build\\net_lang.tab.c"
     break;
 
   case 7: /* network_body: input_decl optional_weights_decl statement_list_nonempty  */
-#line 140 "src\\parser\\net_lang.y"
+#line 194 "src\\parser\\net_lang.y"
                                                              {
         (yyval.netbody) = (NetworkBody*)ast_alloc(sizeof(NetworkBody));
         (yyval.netbody)->input = (yyvsp[-2].node);
         (yyval.netbody)->weights = (yyvsp[-1].node);
         (yyval.netbody)->statements = (yyvsp[0].list);
     }
-#line 1753 "build\\net_lang.tab.c"
+#line 1807 "build\\net_lang.tab.c"
     break;
 
   case 8: /* module_def: MODULE IDENTIFIER LPAREN module_params RPAREN LBRACE statement_list return_stmt RBRACE  */
-#line 151 "src\\parser\\net_lang.y"
+#line 205 "src\\parser\\net_lang.y"
                                                                                            {
         (yyval.node) = ast_module((yyvsp[-7].sval), (yyvsp[-5].params), (yylsp[-8]).first_line);
         (yyval.node)->data.module.statements = (yyvsp[-2].list);
         (yyval.node)->data.module.return_stmt = (yyvsp[-1].node);
         free((yyvsp[-7].sval));
     }
-#line 1764 "build\\net_lang.tab.c"
+#line 1818 "build\\net_lang.tab.c"
     break;
 
   case 9: /* module_params: %empty  */
-#line 160 "src\\parser\\net_lang.y"
+#line 214 "src\\parser\\net_lang.y"
                 {
         (yyval.params) = param_list_new();
     }
-#line 1772 "build\\net_lang.tab.c"
+#line 1826 "build\\net_lang.tab.c"
     break;
 
   case 10: /* module_params: param_list  */
-#line 163 "src\\parser\\net_lang.y"
+#line 217 "src\\parser\\net_lang.y"
                  {
         (yyval.params) = (yyvsp[0].params);
     }
-#line 1780 "build\\net_lang.tab.c"
+#line 1834 "build\\net_lang.tab.c"
     break;
 
   case 11: /* param_list: IDENTIFIER  */
-#line 169 "src\\parser\\net_lang.y"
+#line 223 "src\\parser\\net_lang.y"
                {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), (yyvsp[0].sval), NULL);
         free((yyvsp[0].sval));
     }
-#line 1790 "build\\net_lang.tab.c"
+#line 1844 "build\\net_lang.tab.c"
     break;
 
   case 12: /* param_list: param_list COMMA IDENTIFIER  */
-#line 174 "src\\parser\\net_lang.y"
+#line 228 "src\\parser\\net_lang.y"
                                   {
         param_list_add((yyvsp[-2].params), (yyvsp[0].sval), NULL);
         (yyval.params) = (yyvsp[-2].params);
         free((yyvsp[0].sval));
     }
-#line 1800 "build\\net_lang.tab.c"
+#line 1854 "build\\net_lang.tab.c"
     break;
 
   case 13: /* input_decl: INPUT LPAREN SHAPE COLON array RPAREN  */
-#line 184 "src\\parser\\net_lang.y"
+#line 238 "src\\parser\\net_lang.y"
                                           {
         (yyval.node) = ast_input((yyvsp[-1].node), (yylsp[-5]).first_line);
     }
-#line 1808 "build\\net_lang.tab.c"
+#line 1862 "build\\net_lang.tab.c"
     break;
 
   case 14: /* weights_decl: WEIGHTS LPAREN STRING_LIT RPAREN  */
-#line 190 "src\\parser\\net_lang.y"
+#line 244 "src\\parser\\net_lang.y"
                                      {
         (yyval.node) = ast_weights((yyvsp[-1].sval), (yylsp[-3]).first_line);
         free((yyvsp[-1].sval));
     }
-#line 1817 "build\\net_lang.tab.c"
+#line 1871 "build\\net_lang.tab.c"
     break;
 
   case 15: /* optional_weights_decl: %empty  */
-#line 197 "src\\parser\\net_lang.y"
+#line 251 "src\\parser\\net_lang.y"
                 {
         (yyval.node) = NULL;
     }
-#line 1825 "build\\net_lang.tab.c"
+#line 1879 "build\\net_lang.tab.c"
     break;
 
   case 16: /* optional_weights_decl: weights_decl  */
-#line 200 "src\\parser\\net_lang.y"
+#line 254 "src\\parser\\net_lang.y"
                    {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1833 "build\\net_lang.tab.c"
+#line 1887 "build\\net_lang.tab.c"
     break;
 
   case 17: /* statement_list: %empty  */
-#line 208 "src\\parser\\net_lang.y"
+#line 262 "src\\parser\\net_lang.y"
                 {
         (yyval.list) = ast_list_new();
     }
-#line 1841 "build\\net_lang.tab.c"
+#line 1895 "build\\net_lang.tab.c"
     break;
 
   case 18: /* statement_list: statement_list statement  */
-#line 211 "src\\parser\\net_lang.y"
+#line 265 "src\\parser\\net_lang.y"
                                {
         ast_list_append((yyvsp[-1].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-1].list);
     }
-#line 1850 "build\\net_lang.tab.c"
+#line 1904 "build\\net_lang.tab.c"
     break;
 
   case 19: /* statement_list_nonempty: statement  */
-#line 218 "src\\parser\\net_lang.y"
+#line 272 "src\\parser\\net_lang.y"
               {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 1859 "build\\net_lang.tab.c"
+#line 1913 "build\\net_lang.tab.c"
     break;
 
   case 20: /* statement_list_nonempty: statement_list_nonempty statement  */
-#line 222 "src\\parser\\net_lang.y"
+#line 276 "src\\parser\\net_lang.y"
                                         {
         ast_list_append((yyvsp[-1].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-1].list);
     }
-#line 1868 "build\\net_lang.tab.c"
+#line 1922 "build\\net_lang.tab.c"
     break;
 
   case 21: /* statement: assignment  */
-#line 229 "src\\parser\\net_lang.y"
+#line 283 "src\\parser\\net_lang.y"
                { (yyval.node) = (yyvsp[0].node); }
-#line 1874 "build\\net_lang.tab.c"
+#line 1928 "build\\net_lang.tab.c"
     break;
 
   case 22: /* assignment: IDENTIFIER ASSIGN layer_expr optional_from_clause  */
-#line 233 "src\\parser\\net_lang.y"
+#line 287 "src\\parser\\net_lang.y"
                                                       {
         (yyval.node) = ast_assignment((yyvsp[-3].sval), (yyvsp[-1].node), (yyvsp[0].node), (yylsp[-3]).first_line);
         free((yyvsp[-3].sval));
     }
-#line 1883 "build\\net_lang.tab.c"
+#line 1937 "build\\net_lang.tab.c"
     break;
 
   case 23: /* optional_from_clause: %empty  */
-#line 240 "src\\parser\\net_lang.y"
+#line 294 "src\\parser\\net_lang.y"
                 {
         (yyval.node) = NULL;
     }
-#line 1891 "build\\net_lang.tab.c"
+#line 1945 "build\\net_lang.tab.c"
     break;
 
   case 24: /* optional_from_clause: FROM expr  */
-#line 244 "src\\parser\\net_lang.y"
+#line 298 "src\\parser\\net_lang.y"
               {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1899 "build\\net_lang.tab.c"
+#line 1953 "build\\net_lang.tab.c"
     break;
 
   case 25: /* return_stmt: RETURN expr  */
-#line 250 "src\\parser\\net_lang.y"
+#line 304 "src\\parser\\net_lang.y"
                 {
         ASTNode* node = ast_node_new(NODE_RETURN, (yylsp[-1]).first_line);
         node->data.return_stmt.value = (yyvsp[0].node);
         (yyval.node) = node;
     }
-#line 1909 "build\\net_lang.tab.c"
+#line 1963 "build\\net_lang.tab.c"
     break;
 
   case 26: /* layer_expr: conv2d_layer  */
-#line 260 "src\\parser\\net_lang.y"
+#line 314 "src\\parser\\net_lang.y"
                  { (yyval.node) = (yyvsp[0].node); }
-#line 1915 "build\\net_lang.tab.c"
+#line 1969 "build\\net_lang.tab.c"
     break;
 
   case 27: /* layer_expr: dense_layer  */
-#line 261 "src\\parser\\net_lang.y"
+#line 315 "src\\parser\\net_lang.y"
                   { (yyval.node) = (yyvsp[0].node); }
-#line 1921 "build\\net_lang.tab.c"
+#line 1975 "build\\net_lang.tab.c"
     break;
 
   case 28: /* layer_expr: pool_layer  */
-#line 262 "src\\parser\\net_lang.y"
+#line 316 "src\\parser\\net_lang.y"
                  { (yyval.node) = (yyvsp[0].node); }
-#line 1927 "build\\net_lang.tab.c"
+#line 1981 "build\\net_lang.tab.c"
     break;
 
   case 29: /* layer_expr: flatten_layer  */
-#line 263 "src\\parser\\net_lang.y"
+#line 317 "src\\parser\\net_lang.y"
                     { (yyval.node) = (yyvsp[0].node); }
-#line 1933 "build\\net_lang.tab.c"
+#line 1987 "build\\net_lang.tab.c"
     break;
 
   case 30: /* layer_expr: add_layer  */
-#line 264 "src\\parser\\net_lang.y"
+#line 318 "src\\parser\\net_lang.y"
                 { (yyval.node) = (yyvsp[0].node); }
-#line 1939 "build\\net_lang.tab.c"
+#line 1993 "build\\net_lang.tab.c"
     break;
 
   case 31: /* layer_expr: concat_layer  */
-#line 265 "src\\parser\\net_lang.y"
+#line 319 "src\\parser\\net_lang.y"
                    { (yyval.node) = (yyvsp[0].node); }
-#line 1945 "build\\net_lang.tab.c"
+#line 1999 "build\\net_lang.tab.c"
     break;
 
   case 32: /* layer_expr: norm_layer  */
-#line 266 "src\\parser\\net_lang.y"
+#line 320 "src\\parser\\net_lang.y"
                  { (yyval.node) = (yyvsp[0].node); }
-#line 1951 "build\\net_lang.tab.c"
+#line 2005 "build\\net_lang.tab.c"
     break;
 
   case 33: /* layer_expr: module_call  */
-#line 267 "src\\parser\\net_lang.y"
+#line 321 "src\\parser\\net_lang.y"
                   { (yyval.node) = (yyvsp[0].node); }
-#line 1957 "build\\net_lang.tab.c"
+#line 2011 "build\\net_lang.tab.c"
     break;
 
   case 34: /* conv2d_layer: CONV2D LPAREN FILTERS COLON expr COMMA KERNEL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr COMMA ACTIVATION COLON activation_value RPAREN  */
-#line 279 "src\\parser\\net_lang.y"
+#line 333 "src\\parser\\net_lang.y"
            {
         ASTNode* node = ast_node_new(NODE_CONV2D, (yylsp[-21]).first_line);
-        
-        /* Strict positional assignment */
-        node->data.conv2d.filters = (yyvsp[-17].node)->data.number.ival;
-        
-        /* Parse kernel array */
-        ASTNode* e = (yyvsp[-13].node)->data.array.elements->head;
-        if (e) { node->data.conv2d.kernel[0] = e->data.number.ival; e = e->next; }
-        if (e) { node->data.conv2d.kernel[1] = e->data.number.ival; }
-        
-        node->data.conv2d.stride = (yyvsp[-9].node)->data.number.ival;
-        node->data.conv2d.padding = (yyvsp[-5].node)->data.number.ival;
+
+        if (!require_int_literal((yyvsp[-17].node), "filters", (yylsp[-17]).first_line, 0, 0, &node->data.conv2d.filters) ||
+            !require_int_pair((yyvsp[-13].node), "kernel", (yylsp[-13]).first_line, 0, node->data.conv2d.kernel) ||
+            !require_int_literal((yyvsp[-9].node), "stride", (yylsp[-9]).first_line, 0, 0, &node->data.conv2d.stride) ||
+            !require_int_literal((yyvsp[-5].node), "padding", (yylsp[-5]).first_line, 1, 0, &node->data.conv2d.padding)) {
+            YYERROR;
+        }
+
         node->data.conv2d.activation = (yyvsp[-1].activation);
-        
+
         (yyval.node) = node;
     }
-#line 1979 "build\\net_lang.tab.c"
+#line 2030 "build\\net_lang.tab.c"
     break;
 
   case 35: /* dense_layer: DENSE LPAREN UNITS COLON expr COMMA ACTIVATION COLON activation_value RPAREN  */
-#line 304 "src\\parser\\net_lang.y"
+#line 355 "src\\parser\\net_lang.y"
            {
         ASTNode* node = ast_node_new(NODE_DENSE, (yylsp[-9]).first_line);
-        
-        node->data.dense.units = (yyvsp[-5].node)->data.number.ival;
+
+        if (!require_int_literal((yyvsp[-5].node), "units", (yylsp[-5]).first_line, 0, 0, &node->data.dense.units)) {
+            YYERROR;
+        }
+
         node->data.dense.activation = (yyvsp[-1].activation);
-        
-        (yyval.node) = node;
-    }
-#line 1992 "build\\net_lang.tab.c"
-    break;
 
-  case 36: /* pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
-#line 321 "src\\parser\\net_lang.y"
-           {
-        ASTNode* node = ast_node_new(NODE_MAXPOOL, (yylsp[-13]).first_line);
-        
-        /* Parse pool array */
-        ASTNode* e = (yyvsp[-9].node)->data.array.elements->head;
-        if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
-        if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
-        
-        node->data.pooling.stride = (yyvsp[-5].node)->data.number.ival;
-        node->data.pooling.padding = (yyvsp[-1].node)->data.number.ival;
-        
-        (yyval.node) = node;
-    }
-#line 2010 "build\\net_lang.tab.c"
-    break;
-
-  case 37: /* pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
-#line 338 "src\\parser\\net_lang.y"
-           {
-        ASTNode* node = ast_node_new(NODE_AVGPOOL, (yylsp[-13]).first_line);
-        
-        /* Parse pool array */
-        ASTNode* e = (yyvsp[-9].node)->data.array.elements->head;
-        if (e) { node->data.pooling.pool[0] = e->data.number.ival; e = e->next; }
-        if (e) { node->data.pooling.pool[1] = e->data.number.ival; }
-        
-        node->data.pooling.stride = (yyvsp[-5].node)->data.number.ival;
-        node->data.pooling.padding = (yyvsp[-1].node)->data.number.ival;
-        
-        (yyval.node) = node;
-    }
-#line 2028 "build\\net_lang.tab.c"
-    break;
-
-  case 38: /* flatten_layer: FLATTEN LPAREN RPAREN  */
-#line 356 "src\\parser\\net_lang.y"
-                          {
-        (yyval.node) = ast_node_new(NODE_FLATTEN, (yylsp[-2]).first_line);
-    }
-#line 2036 "build\\net_lang.tab.c"
-    break;
-
-  case 39: /* add_layer: ADD LPAREN add_args RPAREN  */
-#line 362 "src\\parser\\net_lang.y"
-                               {
-        ASTNode* node = ast_node_new(NODE_ADD, (yylsp[-3]).first_line);
-        node->data.add.inputs = (yyvsp[-1].list);
         (yyval.node) = node;
     }
 #line 2046 "build\\net_lang.tab.c"
     break;
 
+  case 36: /* pool_layer: MAXPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
+#line 375 "src\\parser\\net_lang.y"
+           {
+        ASTNode* node = ast_node_new(NODE_MAXPOOL, (yylsp[-13]).first_line);
+
+        if (!require_int_pair((yyvsp[-9].node), "pool", (yylsp[-9]).first_line, 0, node->data.pooling.pool) ||
+            !require_int_literal((yyvsp[-5].node), "stride", (yylsp[-5]).first_line, 1, 0, &node->data.pooling.stride) ||
+            !require_int_literal((yyvsp[-1].node), "padding", (yylsp[-1]).first_line, 1, 0, &node->data.pooling.padding)) {
+            YYERROR;
+        }
+
+        (yyval.node) = node;
+    }
+#line 2062 "build\\net_lang.tab.c"
+    break;
+
+  case 37: /* pool_layer: AVGPOOL LPAREN POOL COLON array COMMA STRIDE COLON expr COMMA PADDING COLON expr RPAREN  */
+#line 390 "src\\parser\\net_lang.y"
+           {
+        ASTNode* node = ast_node_new(NODE_AVGPOOL, (yylsp[-13]).first_line);
+
+        if (!require_int_pair((yyvsp[-9].node), "pool", (yylsp[-9]).first_line, 0, node->data.pooling.pool) ||
+            !require_int_literal((yyvsp[-5].node), "stride", (yylsp[-5]).first_line, 1, 0, &node->data.pooling.stride) ||
+            !require_int_literal((yyvsp[-1].node), "padding", (yylsp[-1]).first_line, 1, 0, &node->data.pooling.padding)) {
+            YYERROR;
+        }
+
+        (yyval.node) = node;
+    }
+#line 2078 "build\\net_lang.tab.c"
+    break;
+
+  case 38: /* flatten_layer: FLATTEN LPAREN RPAREN  */
+#line 406 "src\\parser\\net_lang.y"
+                          {
+        (yyval.node) = ast_node_new(NODE_FLATTEN, (yylsp[-2]).first_line);
+    }
+#line 2086 "build\\net_lang.tab.c"
+    break;
+
+  case 39: /* add_layer: ADD LPAREN add_args RPAREN  */
+#line 412 "src\\parser\\net_lang.y"
+                               {
+        ASTNode* node = ast_node_new(NODE_ADD, (yylsp[-3]).first_line);
+        node->data.add.inputs = (yyvsp[-1].list);
+        (yyval.node) = node;
+    }
+#line 2096 "build\\net_lang.tab.c"
+    break;
+
   case 40: /* add_args: expr  */
-#line 370 "src\\parser\\net_lang.y"
+#line 420 "src\\parser\\net_lang.y"
          {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 2055 "build\\net_lang.tab.c"
+#line 2105 "build\\net_lang.tab.c"
     break;
 
   case 41: /* add_args: add_args COMMA expr  */
-#line 374 "src\\parser\\net_lang.y"
+#line 424 "src\\parser\\net_lang.y"
                           {
         ast_list_append((yyvsp[-2].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-2].list);
     }
-#line 2064 "build\\net_lang.tab.c"
+#line 2114 "build\\net_lang.tab.c"
     break;
 
   case 42: /* concat_layer: CONCAT LPAREN concat_args RPAREN  */
-#line 381 "src\\parser\\net_lang.y"
+#line 431 "src\\parser\\net_lang.y"
                                      {
         ASTNode* node = ast_node_new(NODE_CONCAT, (yylsp[-3]).first_line);
         node->data.concat.inputs = (yyvsp[-1].list);
         (yyval.node) = node;
     }
-#line 2074 "build\\net_lang.tab.c"
+#line 2124 "build\\net_lang.tab.c"
     break;
 
   case 43: /* concat_args: expr  */
-#line 389 "src\\parser\\net_lang.y"
+#line 439 "src\\parser\\net_lang.y"
          {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 2083 "build\\net_lang.tab.c"
+#line 2133 "build\\net_lang.tab.c"
     break;
 
   case 44: /* concat_args: concat_args COMMA expr  */
-#line 393 "src\\parser\\net_lang.y"
+#line 443 "src\\parser\\net_lang.y"
                              {
         ast_list_append((yyvsp[-2].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-2].list);
     }
-#line 2092 "build\\net_lang.tab.c"
+#line 2142 "build\\net_lang.tab.c"
     break;
 
   case 45: /* norm_layer: BATCHNORM LPAREN RPAREN  */
-#line 400 "src\\parser\\net_lang.y"
+#line 450 "src\\parser\\net_lang.y"
                             {
         (yyval.node) = ast_node_new(NODE_BATCHNORM, (yylsp[-2]).first_line);
     }
-#line 2100 "build\\net_lang.tab.c"
+#line 2150 "build\\net_lang.tab.c"
     break;
 
   case 46: /* norm_layer: LAYERNORM LPAREN RPAREN  */
-#line 403 "src\\parser\\net_lang.y"
+#line 453 "src\\parser\\net_lang.y"
                               {
         (yyval.node) = ast_node_new(NODE_LAYERNORM, (yylsp[-2]).first_line);
     }
-#line 2108 "build\\net_lang.tab.c"
+#line 2158 "build\\net_lang.tab.c"
     break;
 
   case 47: /* module_call: IDENTIFIER LPAREN layer_params RPAREN  */
-#line 411 "src\\parser\\net_lang.y"
+#line 461 "src\\parser\\net_lang.y"
                                           {
         ASTNode* node = ast_node_new(NODE_MODULE_CALL, (yylsp[-3]).first_line);
         node->data.module_call.module_name = strdup((yyvsp[-3].sval));
@@ -2116,291 +2166,291 @@ yyreduce:
         free((yyvsp[-3].sval));
         (yyval.node) = node;
     }
-#line 2120 "build\\net_lang.tab.c"
+#line 2170 "build\\net_lang.tab.c"
     break;
 
   case 48: /* layer_params: %empty  */
-#line 423 "src\\parser\\net_lang.y"
+#line 473 "src\\parser\\net_lang.y"
                 {
         (yyval.params) = param_list_new();
     }
-#line 2128 "build\\net_lang.tab.c"
+#line 2178 "build\\net_lang.tab.c"
     break;
 
   case 49: /* layer_params: layer_param_list  */
-#line 426 "src\\parser\\net_lang.y"
+#line 476 "src\\parser\\net_lang.y"
                        {
         (yyval.params) = (yyvsp[0].params);
     }
-#line 2136 "build\\net_lang.tab.c"
+#line 2186 "build\\net_lang.tab.c"
     break;
 
   case 50: /* layer_param_list: IDENTIFIER COLON expr  */
-#line 432 "src\\parser\\net_lang.y"
+#line 482 "src\\parser\\net_lang.y"
                           {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), (yyvsp[-2].sval), (yyvsp[0].node));
         free((yyvsp[-2].sval));
     }
-#line 2146 "build\\net_lang.tab.c"
+#line 2196 "build\\net_lang.tab.c"
     break;
 
   case 51: /* layer_param_list: FILTERS COLON expr  */
-#line 438 "src\\parser\\net_lang.y"
+#line 488 "src\\parser\\net_lang.y"
                          {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "filters", (yyvsp[0].node));
     }
-#line 2155 "build\\net_lang.tab.c"
+#line 2205 "build\\net_lang.tab.c"
     break;
 
   case 52: /* layer_param_list: KERNEL COLON expr  */
-#line 442 "src\\parser\\net_lang.y"
+#line 492 "src\\parser\\net_lang.y"
                         {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "kernel", (yyvsp[0].node));
     }
-#line 2164 "build\\net_lang.tab.c"
+#line 2214 "build\\net_lang.tab.c"
     break;
 
   case 53: /* layer_param_list: ACTIVATION COLON expr  */
-#line 446 "src\\parser\\net_lang.y"
+#line 496 "src\\parser\\net_lang.y"
                             {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "activation", (yyvsp[0].node));
     }
-#line 2173 "build\\net_lang.tab.c"
+#line 2223 "build\\net_lang.tab.c"
     break;
 
   case 54: /* layer_param_list: STRIDE COLON expr  */
-#line 450 "src\\parser\\net_lang.y"
+#line 500 "src\\parser\\net_lang.y"
                         {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "stride", (yyvsp[0].node));
     }
-#line 2182 "build\\net_lang.tab.c"
+#line 2232 "build\\net_lang.tab.c"
     break;
 
   case 55: /* layer_param_list: PADDING COLON expr  */
-#line 454 "src\\parser\\net_lang.y"
+#line 504 "src\\parser\\net_lang.y"
                          {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "padding", (yyvsp[0].node));
     }
-#line 2191 "build\\net_lang.tab.c"
+#line 2241 "build\\net_lang.tab.c"
     break;
 
   case 56: /* layer_param_list: POOL COLON expr  */
-#line 458 "src\\parser\\net_lang.y"
+#line 508 "src\\parser\\net_lang.y"
                       {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "pool", (yyvsp[0].node));
     }
-#line 2200 "build\\net_lang.tab.c"
+#line 2250 "build\\net_lang.tab.c"
     break;
 
   case 57: /* layer_param_list: UNITS COLON expr  */
-#line 462 "src\\parser\\net_lang.y"
+#line 512 "src\\parser\\net_lang.y"
                        {
         (yyval.params) = param_list_new();
         param_list_add((yyval.params), "units", (yyvsp[0].node));
     }
-#line 2209 "build\\net_lang.tab.c"
+#line 2259 "build\\net_lang.tab.c"
     break;
 
   case 58: /* layer_param_list: layer_param_list COMMA IDENTIFIER COLON expr  */
-#line 466 "src\\parser\\net_lang.y"
+#line 516 "src\\parser\\net_lang.y"
                                                    {
         param_list_add((yyvsp[-4].params), (yyvsp[-2].sval), (yyvsp[0].node));
         free((yyvsp[-2].sval));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2219 "build\\net_lang.tab.c"
+#line 2269 "build\\net_lang.tab.c"
     break;
 
   case 59: /* layer_param_list: layer_param_list COMMA FILTERS COLON expr  */
-#line 471 "src\\parser\\net_lang.y"
+#line 521 "src\\parser\\net_lang.y"
                                                 {
         param_list_add((yyvsp[-4].params), "filters", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2228 "build\\net_lang.tab.c"
+#line 2278 "build\\net_lang.tab.c"
     break;
 
   case 60: /* layer_param_list: layer_param_list COMMA KERNEL COLON expr  */
-#line 475 "src\\parser\\net_lang.y"
+#line 525 "src\\parser\\net_lang.y"
                                                {
         param_list_add((yyvsp[-4].params), "kernel", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2237 "build\\net_lang.tab.c"
+#line 2287 "build\\net_lang.tab.c"
     break;
 
   case 61: /* layer_param_list: layer_param_list COMMA ACTIVATION COLON expr  */
-#line 479 "src\\parser\\net_lang.y"
+#line 529 "src\\parser\\net_lang.y"
                                                    {
         param_list_add((yyvsp[-4].params), "activation", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2246 "build\\net_lang.tab.c"
+#line 2296 "build\\net_lang.tab.c"
     break;
 
   case 62: /* layer_param_list: layer_param_list COMMA STRIDE COLON expr  */
-#line 483 "src\\parser\\net_lang.y"
+#line 533 "src\\parser\\net_lang.y"
                                                {
         param_list_add((yyvsp[-4].params), "stride", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2255 "build\\net_lang.tab.c"
+#line 2305 "build\\net_lang.tab.c"
     break;
 
   case 63: /* layer_param_list: layer_param_list COMMA PADDING COLON expr  */
-#line 487 "src\\parser\\net_lang.y"
+#line 537 "src\\parser\\net_lang.y"
                                                 {
         param_list_add((yyvsp[-4].params), "padding", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2264 "build\\net_lang.tab.c"
+#line 2314 "build\\net_lang.tab.c"
     break;
 
   case 64: /* layer_param_list: layer_param_list COMMA POOL COLON expr  */
-#line 491 "src\\parser\\net_lang.y"
+#line 541 "src\\parser\\net_lang.y"
                                              {
         param_list_add((yyvsp[-4].params), "pool", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2273 "build\\net_lang.tab.c"
+#line 2323 "build\\net_lang.tab.c"
     break;
 
   case 65: /* layer_param_list: layer_param_list COMMA UNITS COLON expr  */
-#line 495 "src\\parser\\net_lang.y"
+#line 545 "src\\parser\\net_lang.y"
                                               {
         param_list_add((yyvsp[-4].params), "units", (yyvsp[0].node));
         (yyval.params) = (yyvsp[-4].params);
     }
-#line 2282 "build\\net_lang.tab.c"
+#line 2332 "build\\net_lang.tab.c"
     break;
 
   case 66: /* expr: number  */
-#line 504 "src\\parser\\net_lang.y"
+#line 554 "src\\parser\\net_lang.y"
            { (yyval.node) = (yyvsp[0].node); }
-#line 2288 "build\\net_lang.tab.c"
+#line 2338 "build\\net_lang.tab.c"
     break;
 
   case 67: /* expr: array  */
-#line 505 "src\\parser\\net_lang.y"
+#line 555 "src\\parser\\net_lang.y"
             { (yyval.node) = (yyvsp[0].node); }
-#line 2294 "build\\net_lang.tab.c"
+#line 2344 "build\\net_lang.tab.c"
     break;
 
   case 68: /* expr: identifier_expr  */
-#line 506 "src\\parser\\net_lang.y"
+#line 556 "src\\parser\\net_lang.y"
                       { (yyval.node) = (yyvsp[0].node); }
-#line 2300 "build\\net_lang.tab.c"
+#line 2350 "build\\net_lang.tab.c"
     break;
 
   case 69: /* expr: activation_value  */
-#line 507 "src\\parser\\net_lang.y"
+#line 557 "src\\parser\\net_lang.y"
                        {
         /* Convert activation token to identifier node */
         (yyval.node) = ast_identifier(activation_to_string((yyvsp[0].activation)), (yylsp[0]).first_line);
     }
-#line 2309 "build\\net_lang.tab.c"
+#line 2359 "build\\net_lang.tab.c"
     break;
 
   case 70: /* identifier_expr: IDENTIFIER  */
-#line 514 "src\\parser\\net_lang.y"
+#line 564 "src\\parser\\net_lang.y"
                {
         (yyval.node) = ast_identifier((yyvsp[0].sval), (yylsp[0]).first_line);
         free((yyvsp[0].sval));
     }
-#line 2318 "build\\net_lang.tab.c"
+#line 2368 "build\\net_lang.tab.c"
     break;
 
   case 71: /* identifier_expr: INPUT  */
-#line 518 "src\\parser\\net_lang.y"
+#line 568 "src\\parser\\net_lang.y"
             {
         (yyval.node) = ast_identifier("input", (yylsp[0]).first_line);
     }
-#line 2326 "build\\net_lang.tab.c"
+#line 2376 "build\\net_lang.tab.c"
     break;
 
   case 72: /* number: NUMBER  */
-#line 524 "src\\parser\\net_lang.y"
+#line 574 "src\\parser\\net_lang.y"
            {
         (yyval.node) = ast_number_int((yyvsp[0].ival), (yylsp[0]).first_line);
     }
-#line 2334 "build\\net_lang.tab.c"
+#line 2384 "build\\net_lang.tab.c"
     break;
 
   case 73: /* number: FLOAT_NUM  */
-#line 527 "src\\parser\\net_lang.y"
+#line 577 "src\\parser\\net_lang.y"
                 {
         (yyval.node) = ast_number_float((yyvsp[0].fval), (yylsp[0]).first_line);
     }
-#line 2342 "build\\net_lang.tab.c"
+#line 2392 "build\\net_lang.tab.c"
     break;
 
   case 74: /* array: LBRACKET array_elements RBRACKET  */
-#line 533 "src\\parser\\net_lang.y"
+#line 583 "src\\parser\\net_lang.y"
                                      {
         ASTNode* node = ast_array((yylsp[-2]).first_line);
         node->data.array.elements = (yyvsp[-1].list);
         (yyval.node) = node;
     }
-#line 2352 "build\\net_lang.tab.c"
+#line 2402 "build\\net_lang.tab.c"
     break;
 
   case 75: /* array_elements: number  */
-#line 541 "src\\parser\\net_lang.y"
+#line 591 "src\\parser\\net_lang.y"
            {
         (yyval.list) = ast_list_new();
         ast_list_append((yyval.list), (yyvsp[0].node));
     }
-#line 2361 "build\\net_lang.tab.c"
+#line 2411 "build\\net_lang.tab.c"
     break;
 
   case 76: /* array_elements: array_elements COMMA number  */
-#line 545 "src\\parser\\net_lang.y"
+#line 595 "src\\parser\\net_lang.y"
                                   {
         ast_list_append((yyvsp[-2].list), (yyvsp[0].node));
         (yyval.list) = (yyvsp[-2].list);
     }
-#line 2370 "build\\net_lang.tab.c"
+#line 2420 "build\\net_lang.tab.c"
     break;
 
   case 77: /* activation_value: RELU  */
-#line 552 "src\\parser\\net_lang.y"
+#line 602 "src\\parser\\net_lang.y"
          { (yyval.activation) = ACT_RELU; }
-#line 2376 "build\\net_lang.tab.c"
+#line 2426 "build\\net_lang.tab.c"
     break;
 
   case 78: /* activation_value: SIGMOID  */
-#line 553 "src\\parser\\net_lang.y"
+#line 603 "src\\parser\\net_lang.y"
               { (yyval.activation) = ACT_SIGMOID; }
-#line 2382 "build\\net_lang.tab.c"
+#line 2432 "build\\net_lang.tab.c"
     break;
 
   case 79: /* activation_value: TANH  */
-#line 554 "src\\parser\\net_lang.y"
+#line 604 "src\\parser\\net_lang.y"
            { (yyval.activation) = ACT_TANH; }
-#line 2388 "build\\net_lang.tab.c"
+#line 2438 "build\\net_lang.tab.c"
     break;
 
   case 80: /* activation_value: SOFTMAX  */
-#line 555 "src\\parser\\net_lang.y"
+#line 605 "src\\parser\\net_lang.y"
               { (yyval.activation) = ACT_SOFTMAX; }
-#line 2394 "build\\net_lang.tab.c"
+#line 2444 "build\\net_lang.tab.c"
     break;
 
   case 81: /* activation_value: LINEAR  */
-#line 556 "src\\parser\\net_lang.y"
+#line 606 "src\\parser\\net_lang.y"
              { (yyval.activation) = ACT_LINEAR; }
-#line 2400 "build\\net_lang.tab.c"
+#line 2450 "build\\net_lang.tab.c"
     break;
 
 
-#line 2404 "build\\net_lang.tab.c"
+#line 2454 "build\\net_lang.tab.c"
 
       default: break;
     }
@@ -2629,7 +2679,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 559 "src\\parser\\net_lang.y"
+#line 609 "src\\parser\\net_lang.y"
 
 
 /* ========== ERROR HANDLING ========== */

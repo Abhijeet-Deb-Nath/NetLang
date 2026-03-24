@@ -999,12 +999,12 @@ void emit_main_function(CodegenContext* ctx) {
 
 /* ========== MAIN ENTRY POINT ========== */
 
-void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) {
+int generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) {
     (void)global_scope;
 
     if (!network || network->type != NODE_NETWORK) {
         fprintf(stderr, "ERROR: Invalid network node\n");
-        return;
+        return 0;
     }
 
     /* Initialize context */
@@ -1015,14 +1015,14 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
     ctx.graph = netgraph_build(network, stderr);
     if (!ctx.graph) {
         fprintf(stderr, "ERROR: Graph lowering failed\n");
-        return;
+        return 0;
     }
 
     ctx.layout_plan = layout_plan_build(ctx.graph);
     if (!ctx.layout_plan) {
         fprintf(stderr, "ERROR: Layout analysis failed\n");
         netgraph_free(ctx.graph);
-        return;
+        return 0;
     }
 
     ctx.weight_plan = weight_pack_plan_build(ctx.graph, ctx.layout_plan);
@@ -1030,7 +1030,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
         fprintf(stderr, "ERROR: Weight packing analysis failed\n");
         layout_plan_free(ctx.layout_plan);
         netgraph_free(ctx.graph);
-        return;
+        return 0;
     }
 
     ctx.weight_path = ctx.graph->weight_path;
@@ -1041,7 +1041,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
         weight_pack_plan_free(ctx.weight_plan);
         layout_plan_free(ctx.layout_plan);
         netgraph_free(ctx.graph);
-        return;
+        return 0;
     }
 
     if (ctx.graph->node_count == 0) {
@@ -1050,7 +1050,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
         weight_pack_plan_free(ctx.weight_plan);
         layout_plan_free(ctx.layout_plan);
         netgraph_free(ctx.graph);
-        return;
+        return 0;
     }
 
     for (int i = 0; i < ctx.graph->node_count; i++) {
@@ -1062,7 +1062,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
             weight_pack_plan_free(ctx.weight_plan);
             layout_plan_free(ctx.layout_plan);
             netgraph_free(ctx.graph);
-            return;
+            return 0;
         }
     }
     
@@ -1081,7 +1081,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
         weight_pack_plan_free(ctx.weight_plan);
         layout_plan_free(ctx.layout_plan);
         netgraph_free(ctx.graph);
-        return;
+        return 0;
     }
     ctx.kernel_plan = kernel_plan_build(&ctx);
     if (!ctx.kernel_plan) {
@@ -1095,7 +1095,7 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
         weight_pack_plan_free(ctx.weight_plan);
         layout_plan_free(ctx.layout_plan);
         netgraph_free(ctx.graph);
-        return;
+        return 0;
     }
     
     /* Generate code */
@@ -1118,4 +1118,5 @@ void generate_network_code(ASTNode* network, Scope* global_scope, FILE* output) 
     weight_pack_plan_free(ctx.weight_plan);
     layout_plan_free(ctx.layout_plan);
     netgraph_free(ctx.graph);
+    return 1;
 }

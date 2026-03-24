@@ -115,18 +115,33 @@ void analyze_network(TypeChecker* tc, ASTNode* network) {
                 // Extract dimensions from array [H, W, C]
                 int dims[3] = {0, 0, 0};
                 int idx = 0;
+                int valid = 1;
                 
                 ASTNode* elem = elements->head;
                 while (elem && idx < 3) {
-                    if (elem->type == NODE_NUMBER && !elem->data.number.is_float) {
-                        dims[idx++] = elem->data.number.ival;
+                    if (elem->type != NODE_NUMBER || elem->data.number.is_float) {
+                        semantic_error(tc, elem->line_number,
+                                     "Input shape dimensions must be integer literals");
+                        valid = 0;
+                        break;
                     }
+
+                    if (elem->data.number.ival <= 0) {
+                        semantic_error(tc, elem->line_number,
+                                     "Input shape dimensions must be positive");
+                        valid = 0;
+                        break;
+                    }
+
+                    dims[idx++] = elem->data.number.ival;
                     elem = elem->next;
                 }
                 
-                // Create 3D tensor type [H, W, C]
-                TensorType* input_type = tensor_type_create(3, dims);
-                input_sym->tensor_type = input_type;
+                if (valid && idx == 3) {
+                    // Create 3D tensor type [H, W, C]
+                    TensorType* input_type = tensor_type_create(3, dims);
+                    input_sym->tensor_type = input_type;
+                }
             } else {
                 semantic_error(tc, input_node->line_number,
                              "Input shape must have 3 dimensions [H, W, C]");
@@ -213,13 +228,6 @@ void analyze_statement(TypeChecker* tc, ASTNode* stmt) {
             ASTNode* value = stmt->data.assignment.value;
             ASTNode* from_source = stmt->data.assignment.from_source;
             
-            // Check if target already exists (redefinition)
-            Symbol* existing = scope_lookup(tc->current_scope, target, 0);
-            if (existing) {
-                semantic_warning(tc, stmt->line_number,
-                               "Redefining variable '%s'", target);
-            }
-            
             int requires_from = (value->type == NODE_CONV2D ||
                                  value->type == NODE_DENSE ||
                                  value->type == NODE_MAXPOOL ||
@@ -279,16 +287,25 @@ void analyze_statement(TypeChecker* tc, ASTNode* stmt) {
                 case NODE_CONCAT:
                     output_type = infer_concat_shape(tc, value->data.concat.inputs);
                     break;
+                case NODE_BATCHNORM:
+                    semantic_error(tc, stmt->line_number,
+                                 "BatchNorm is parsed but not part of the current codegen-ready subset");
+                    break;
+                case NODE_LAYERNORM:
+                    semantic_error(tc, stmt->line_number,
+                                 "LayerNorm is parsed but not part of the current codegen-ready subset");
+                    break;
                 case NODE_MODULE_CALL: {
-                    // Look up module definition
-                    Symbol* mod_sym = scope_lookup(tc->current_scope, 
+                    Symbol* mod_sym = scope_lookup(tc->current_scope,
                                                    value->data.module_call.module_name, 1);
                     if (!mod_sym || mod_sym->sym_type != SYM_MODULE) {
                         semantic_error(tc, stmt->line_number,
                                      "Undefined module '%s'",
                                      value->data.module_call.module_name);
+                    } else {
+                        semantic_error(tc, stmt->line_number,
+                                     "Module calls are parsed but not lowered into the current codegen-ready subset");
                     }
-                    // TODO: Validate arguments match parameters
                     break;
                 }
                 default:
@@ -298,8 +315,8 @@ void analyze_statement(TypeChecker* tc, ASTNode* stmt) {
             }
             
             // Add variable to symbol table with inferred type
-            Symbol* var_sym = scope_insert(tc->current_scope, target,
-                                          SYM_VARIABLE, stmt, stmt->line_number);
+            Symbol* var_sym = scope_bind_variable(tc->current_scope, target,
+                                                  stmt, stmt->line_number);
             var_sym->tensor_type = output_type;
             
             break;

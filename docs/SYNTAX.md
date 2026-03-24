@@ -32,6 +32,12 @@ Use it when the network contains `Conv2D` or `Dense` layers. Weightless graph ex
 - `Add(x, y, ...)`
 - `Concat(x, y, ...)`
 
+Layer dimensions in the codegen-ready subset must be integer literals:
+
+- `filters`, `units`, `kernel`, and `pool` entries must be positive integers
+- `stride` must be a positive integer for `Conv2D` and a non-negative integer for pooling
+- `padding` must be a non-negative integer
+
 ### Activations
 
 The parser recognizes:
@@ -42,7 +48,7 @@ The parser recognizes:
 - `softmax`
 - `linear`
 
-The most reliable current path is `relu` in hidden layers and `softmax` only at the final dense layer.
+The validated activation path today includes `relu`, `sigmoid`, `tanh`, `softmax`, and `linear`.
 
 ## Support Matrix
 
@@ -53,10 +59,12 @@ The most reliable current path is `relu` in hidden layers and `softmax` only at 
 | `Dense` | Yes | Yes | Yes |
 | `MaxPool` / `AvgPool` | Yes | Yes | Yes |
 | `Flatten` | Yes | Yes | Yes |
-| `Add` | Yes | Yes | Yes (experimental) |
-| `Concat` | Yes | Yes | Yes (experimental) |
-| `BatchNorm` | Yes | Partial | No |
-| `module` definitions | Yes | Partial | No |
+| `Add` | Yes | Yes | Yes |
+| `Concat` | Yes | Yes | Yes |
+| `BatchNorm` | Yes | Explicitly rejected | No |
+| `LayerNorm` | Yes | Explicitly rejected | No |
+| `module` definitions | Yes | Parsed, but not executable by themselves | No |
+| module calls | Yes | Explicitly rejected | No |
 
 If a feature is not codegen-ready, it must not be documented as a stable end-to-end capability.
 

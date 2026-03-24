@@ -20,6 +20,23 @@ extern FILE* yyin;
 extern int yyparse(void);
 extern ASTNode* ast_root;      /* Set by parser */
 
+static ASTNode* find_first_network(ASTNode* root) {
+    if (!root || root->type != NODE_PROGRAM) {
+        return NULL;
+    }
+
+    ASTList* defs = root->data.program.definitions;
+    ASTNode* def = defs ? defs->head : NULL;
+    while (def) {
+        if (def->type == NODE_NETWORK) {
+            return def;
+        }
+        def = def->next;
+    }
+
+    return NULL;
+}
+
 /* Print usage information */
 void print_usage(const char* program_name) {
     fprintf(stderr, "NetLang Compiler v1.0\n");
@@ -107,13 +124,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "[3/5] Running current optimization pass...\n");
 
     /* Find network node for optimization */
-    ASTNode* network = NULL;
-    if (ast_root->type == NODE_PROGRAM) {
-        ASTList* defs = ast_root->data.program.definitions;
-        if (defs && defs->head) {
-            network = defs->head;
-        }
-    }
+    ASTNode* network = find_first_network(ast_root);
 
     if (network && network->type == NODE_NETWORK) {
         /* Operator fusion detection */
@@ -142,17 +153,7 @@ int main(int argc, char** argv) {
     }
 
     /* Find network node (assume first definition is a network) */
-    network = NULL;
-    if (ast_root->type == NODE_PROGRAM) {
-        ASTList* defs = ast_root->data.program.definitions;
-        if (defs && defs->head) {
-            network = defs->head;
-            if (network->type != NODE_NETWORK) {
-                fprintf(stderr, "ERROR: First definition must be a network\n");
-                return 1;
-            }
-        }
-    }
+    network = find_first_network(ast_root);
 
     if (!network) {
         fprintf(stderr, "ERROR: No network found in input file\n");
@@ -160,7 +161,13 @@ int main(int argc, char** argv) {
     }
 
     /* Generate code (includes fusion + blocking detection) */
-    generate_network_code(network, sem_result.global_scope, output);
+    if (!generate_network_code(network, sem_result.global_scope, output)) {
+        if (output_file != NULL) {
+            fclose(output);
+        }
+        fprintf(stderr, "ERROR: Code generation failed\n");
+        return 1;
+    }
 
     if (output_file != NULL) {
         fclose(output);

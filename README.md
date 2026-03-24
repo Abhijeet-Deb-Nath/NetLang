@@ -27,6 +27,7 @@ What is stable for generated execution today:
 - `MaxPool`
 - `AvgPool`
 - `Flatten`
+- fixed-shape branch fan-out with primitive `Add` / `Concat` merge nodes
 - OC8-packed Conv2D weights
 - packed Conv2D AVX2/FMA kernels
 - output-width micro-tiling inside packed Conv2D
@@ -37,8 +38,8 @@ What is stable for generated execution today:
 
 What exists but should still be treated cautiously:
 
-- `Add` and `Concat` for fixed-shape graph experiments
-- graph-aware lowering and topological scheduling outside the reference sequential path
+- broader residual-network coverage beyond primitive fixed-shape merge examples
+- graph-aware lowering and topological scheduling outside the currently validated primitive op set
 
 What is not yet an honest end-to-end claim:
 
