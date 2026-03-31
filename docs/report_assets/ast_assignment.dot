@@ -1,0 +1,37 @@
+digraph AssignmentAST {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.2,
+        nodesep=0.35,
+        ranksep=0.45,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=18,
+        label="Representative AST for a NetLang Assignment",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fontname="Helvetica",
+        fontsize=10,
+        penwidth=1.1,
+        color="#475569",
+        fillcolor="#F8FAFC",
+        margin="0.12,0.06"
+    ];
+
+    edge [color="#334155", penwidth=1.1, arrowsize=0.7];
+
+    assign [label="NODE_ASSIGNMENT\n target = \"x\"\n line = ...", fillcolor="#DBEAFE", color="#2563EB"];
+    target [label="target\n\"x\""];
+    conv [label="NODE_CONV2D\n filters = 32\n kernel = [5,5]\n stride = 1\n padding = 0\n activation = ACT_RELU", fillcolor="#DCFCE7", color="#16A34A"];
+    fromsrc [label="from_source\nNODE_IDENTIFIER(\"input\")", fillcolor="#FEF3C7", color="#D97706"];
+
+    assign -> target [label="data.assignment.target"];
+    assign -> conv [label="data.assignment.value"];
+    assign -> fromsrc [label="data.assignment.from_source"];
+}

@@ -1,0 +1,86 @@
+digraph RebindingVsGraph {
+    graph [
+        label="Source-Level Rebinding vs Graph-Level Unique Values",
+        labelloc="t",
+        labeljust="l",
+        fontsize=24,
+        fontname="Helvetica",
+        pad=0.25,
+        nodesep=0.45,
+        ranksep=0.6,
+        splines=polyline,
+        bgcolor="white"
+    ];
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fontname="Helvetica",
+        fontsize=11,
+        margin="0.14,0.10",
+        penwidth=1.2
+    ];
+
+    edge [
+        color="#64748B",
+        penwidth=1.2,
+        arrowsize=0.75
+    ];
+
+    subgraph cluster_source {
+        label="Source Program View";
+        color="#CBD5E1";
+        style="rounded,filled";
+        fillcolor="#F8FAFC";
+
+        s1 [label=<
+            <B>Statement 1</B><BR/>
+            <FONT FACE="Courier New">x = Conv2D(...) from input</FONT>
+        >, fillcolor="#F3E8FF", color="#7C3AED"];
+
+        s2 [label=<
+            <B>Statement 2</B><BR/>
+            <FONT FACE="Courier New">x = MaxPool(...) from x</FONT>
+        >, fillcolor="#F3E8FF", color="#7C3AED"];
+
+        s3 [label=<
+            <B>Statement 3</B><BR/>
+            <FONT FACE="Courier New">x = Dense(...) from x</FONT>
+        >, fillcolor="#F3E8FF", color="#7C3AED"];
+
+        s1 -> s2 -> s3;
+    }
+
+    subgraph cluster_graph {
+        label="Graph IR View";
+        color="#CBD5E1";
+        style="rounded,filled";
+        fillcolor="#FFFFFF";
+
+        g0 [label=<
+            <B>input</B><BR/>
+            external graph value
+        >, fillcolor="#E0F2FE", color="#0284C7"];
+
+        g1 [label=<
+            <B>value_1</B><BR/>
+            output of Conv2D
+        >, fillcolor="#DBEAFE", color="#2563EB"];
+
+        g2 [label=<
+            <B>value_2</B><BR/>
+            output of MaxPool
+        >, fillcolor="#DBEAFE", color="#2563EB"];
+
+        g3 [label=<
+            <B>value_3</B><BR/>
+            output of Dense
+        >, fillcolor="#DBEAFE", color="#2563EB"];
+
+        g0 -> g1 -> g2 -> g3;
+    }
+
+    s1 -> g1 [style=dashed];
+    s2 -> g2 [style=dashed];
+    s3 -> g3 [style=dashed];
+}

@@ -1,0 +1,32 @@
+digraph NetLangPipelineOverview {
+    graph [
+        label="NetLang Compiler Pipeline",
+        labelloc="t",
+        labeljust="l",
+        fontsize=24,
+        fontname="Helvetica",
+        pad=0.2,
+        bgcolor="white"
+    ];
+
+    node [shape=plain];
+
+    pipeline [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="10">
+                <TR>
+                    <TD BGCOLOR="#F3E8FF"><B>.nlang Source</B><BR/><FONT POINT-SIZE="10">CNN DSL program</FONT></TD>
+                    <TD BGCOLOR="#DBEAFE"><B>Lex + Parse</B><BR/><FONT POINT-SIZE="10">Flex and Bison</FONT></TD>
+                    <TD BGCOLOR="#F3E8FF"><B>AST</B><BR/><FONT POINT-SIZE="10">typed syntax tree</FONT></TD>
+                    <TD BGCOLOR="#E0F2FE"><B>Semantic Analysis</B><BR/><FONT POINT-SIZE="10">scopes, symbols, tensor shapes</FONT></TD>
+                </TR>
+                <TR>
+                    <TD BGCOLOR="#DCFCE7"><B>Graph IR</B><BR/><FONT POINT-SIZE="10">values, ops, topo order</FONT></TD>
+                    <TD BGCOLOR="#FCE7F3"><B>Planner Layer</B><BR/><FONT POINT-SIZE="10">layout, packing, memory, kernels</FONT></TD>
+                    <TD BGCOLOR="#FEF3C7"><B>Code Generation</B><BR/><FONT POINT-SIZE="10">specialized C</FONT></TD>
+                    <TD BGCOLOR="#EDE9FE"><B>Native Binary</B><BR/><FONT POINT-SIZE="10">runtime + AVX2 kernels</FONT></TD>
+                </TR>
+            </TABLE>
+        >
+    ];
+}

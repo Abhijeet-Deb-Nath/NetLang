@@ -36,7 +36,7 @@ TensorType* tensor_type_clone(const TensorType* type) {
 /* ========== SHAPE INFERENCE ========== */
 
 TensorType* infer_conv2d_shape(TypeChecker* tc, ASTNode* conv2d, 
-                               const TensorType* input) {
+                            const TensorType* input) {
     if (!input || input->rank != 3) {
         fprintf(tc->error_stream, "Conv2D requires 3D input [H,W,C] (got rank %d)\n",
                 input ? input->rank : 0);
@@ -218,7 +218,7 @@ TensorType* infer_concat_shape(TypeChecker* tc, ASTList* inputs) {
 /* ========== VALIDATION ========== */
 
 int validate_layer_input(TypeChecker* tc, ASTNode* layer, 
-                         const char* source_name, int line) {
+                        const char* source_name, int line) {
     // Look up source symbol
     Symbol* sym = scope_lookup(tc->current_scope, source_name, 1);
     

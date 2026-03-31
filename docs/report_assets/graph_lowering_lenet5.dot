@@ -1,0 +1,75 @@
+digraph GraphLowering {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.2,
+        nodesep=0.35,
+        ranksep=0.55,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=18,
+        label="Graph Lowering: Source Rebinding to Unique Values",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [shape=plain, fontname="Helvetica"];
+    edge [color="#334155", penwidth=1.1, arrowsize=0.7];
+
+    binding_table [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="10" COLOR="#475569">
+            <TR><TD BGCOLOR="#E2E8F0" COLSPAN="3"><B>Binding table updates during lowering</B></TD></TR>
+            <TR><TD BGCOLOR="#F8FAFC"><B>Statement</B></TD><TD BGCOLOR="#F8FAFC"><B>Created value</B></TD><TD BGCOLOR="#F8FAFC"><B>binding["x"] after statement</B></TD></TR>
+            <TR><TD ALIGN="LEFT">Conv1 from input</TD><TD>value_1</TD><TD>value_1</TD></TR>
+            <TR><TD ALIGN="LEFT">Pool1 from x</TD><TD>value_2</TD><TD>value_2</TD></TR>
+            <TR><TD ALIGN="LEFT">Conv2 from x</TD><TD>value_3</TD><TD>value_3</TD></TR>
+            <TR><TD ALIGN="LEFT">Pool2 from x</TD><TD>value_4</TD><TD>value_4</TD></TR>
+            <TR><TD ALIGN="LEFT">Flatten from x</TD><TD>value_5</TD><TD>value_5</TD></TR>
+            <TR><TD ALIGN="LEFT">Dense1 from x</TD><TD>value_6</TD><TD>value_6</TD></TR>
+            <TR><TD ALIGN="LEFT">Dense2 from x</TD><TD>value_7</TD><TD>value_7</TD></TR>
+            <TR><TD ALIGN="LEFT">Dense3 from x</TD><TD>value_8</TD><TD>value_8</TD></TR>
+        </TABLE>>
+    ];
+
+    chain [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="10" COLOR="#475569">
+            <TR><TD BGCOLOR="#DBEAFE" COLSPAN="9"><B>Unique graph values and topological flow</B></TD></TR>
+            <TR>
+                <TD>input</TD>
+                <TD>Conv1</TD>
+                <TD>value_1</TD>
+                <TD>Pool1</TD>
+                <TD>value_2</TD>
+                <TD>Conv2</TD>
+                <TD>value_3</TD>
+                <TD>...</TD>
+                <TD>value_8</TD>
+            </TR>
+            <TR>
+                <TD>[28,28,1]</TD>
+                <TD></TD>
+                <TD>[24,24,32]</TD>
+                <TD></TD>
+                <TD>[12,12,32]</TD>
+                <TD></TD>
+                <TD>[8,8,32]</TD>
+                <TD></TD>
+                <TD>[10]</TD>
+            </TR>
+        </TABLE>>
+    ];
+
+    note [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="10" COLOR="#475569">
+            <TR><TD BGCOLOR="#DCFCE7"><B>Key compiler effect</B></TD></TR>
+            <TR><TD ALIGN="LEFT">Semantic analysis keeps only the <I>latest</I> meaning of source-level <FONT FACE="Courier New">x</FONT>.</TD></TR>
+            <TR><TD ALIGN="LEFT">Graph lowering recreates every intermediate value explicitly for later planning.</TD></TR>
+        </TABLE>>
+    ];
+
+    binding_table -> chain;
+    chain -> note [style=dashed, arrowhead=none];
+}

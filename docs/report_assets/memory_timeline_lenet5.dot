@@ -1,0 +1,67 @@
+digraph MemoryTimeline {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.2,
+        nodesep=0.3,
+        ranksep=0.45,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=18,
+        label="LeNet-5 Activation Slot Reuse After Memory Planning",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [shape=plain, fontname="Helvetica"];
+
+    timeline [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#475569">
+            <TR>
+                <TD BGCOLOR="#E2E8F0"><B>Storage</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Conv1</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Pool1</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Conv2</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Pool2</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Flatten</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Dense1</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Dense2</B></TD>
+                <TD BGCOLOR="#E2E8F0"><B>Dense3</B></TD>
+            </TR>
+            <TR>
+                <TD><B>slot_0</B></TD>
+                <TD BGCOLOR="#DBEAFE">value_1</TD>
+                <TD></TD>
+                <TD BGCOLOR="#DBEAFE">value_3</TD>
+                <TD></TD>
+                <TD></TD>
+                <TD BGCOLOR="#DBEAFE">value_6</TD>
+                <TD></TD>
+                <TD BGCOLOR="#DBEAFE">value_8</TD>
+            </TR>
+            <TR>
+                <TD><B>slot_1</B></TD>
+                <TD></TD>
+                <TD BGCOLOR="#DCFCE7">value_2</TD>
+                <TD></TD>
+                <TD BGCOLOR="#DCFCE7">value_4</TD>
+                <TD BGCOLOR="#FCE7F3">alias(value_5)</TD>
+                <TD></TD>
+                <TD BGCOLOR="#DCFCE7">value_7</TD>
+                <TD></TD>
+            </TR>
+            <TR>
+                <TD><B>Meaning</B></TD>
+                <TD>Conv1 out</TD>
+                <TD>Pool1 out</TD>
+                <TD>Conv2 out</TD>
+                <TD>Pool2 out</TD>
+                <TD>Flatten elided</TD>
+                <TD>Dense1 out</TD>
+                <TD>Dense2 out</TD>
+                <TD>Final logits/probabilities</TD>
+            </TR>
+        </TABLE>>
+    ];
+}

@@ -1,0 +1,112 @@
+digraph PlannerStack {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.28,
+        nodesep=0.42,
+        ranksep=0.62,
+        splines=ortho,
+        fontname="Helvetica",
+        fontsize=20,
+        label="Planner Stack Built on Top of NetGraph",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fontname="Helvetica",
+        fontsize=14,
+        penwidth=1.1,
+        margin="0.16,0.10",
+        color="#475569",
+        fillcolor="#F8FAFC"
+    ];
+
+    edge [color="#334155", penwidth=1.1, arrowsize=0.75];
+
+    netgraph [
+        label=<
+            <B>NetGraph</B><BR/>
+            input/output tensor types<BR/>
+            producer-consumer links<BR/>
+            topological order
+        >,
+        fillcolor="#DBEAFE",
+        color="#2563EB"
+    ];
+
+    layout_plan [
+        label=<
+            <B>LayoutPlan</B><BR/>
+            artifact: alias_source_ids, dense_transforms<BR/>
+            detects Flatten -&gt; Dense aliasing<BR/>
+            can remove an explicit flatten copy
+        >,
+        fillcolor="#FCE7F3",
+        color="#DB2777"
+    ];
+
+    weight_plan [
+        label=<
+            <B>WeightPackPlan</B><BR/>
+            artifact: PackedWeightDesc per layer<BR/>
+            chooses Conv OC8 and Dense HWC repacking<BR/>
+            emits repack buffers in network_init()
+        >,
+        fillcolor="#FEF3C7",
+        color="#D97706"
+    ];
+
+    memory_plan [
+        label=<
+            <B>MemoryPlan</B><BR/>
+            artifact: ValueAllocation plus MemorySlot<BR/>
+            computes first-use and last-use intervals<BR/>
+            reuses slot_0, slot_1, ... across values
+        >,
+        fillcolor="#DCFCE7",
+        color="#16A34A"
+    ];
+
+    conv_plan [
+        label=<
+            <B>ConvExecutionPlan</B><BR/>
+            artifact: spatial_block_width per conv<BR/>
+            chooses output-width micro-tiling<BR/>
+            specializes emitted convolution calls
+        >,
+        fillcolor="#E0F2FE",
+        color="#0284C7"
+    ];
+
+    kernel_plan [
+        label=<
+            <B>KernelPlan</B><BR/>
+            artifact: ConvKernelKind, DenseKernelKind<BR/>
+            selects packed, fused, blocked variants<BR/>
+            controls the final runtime function names
+        >,
+        fillcolor="#EDE9FE",
+        color="#6D28D9"
+    ];
+
+    generated_c [
+        label=<
+            <B>Generated C</B><BR/>
+            specialized NetworkState fields<BR/>
+            repack logic in network_init()<BR/>
+            planned kernels inside network_infer()
+        >,
+        fillcolor="#E2E8F0",
+        color="#475569"
+    ];
+
+    netgraph -> layout_plan;
+    layout_plan -> weight_plan;
+    weight_plan -> memory_plan;
+    memory_plan -> conv_plan;
+    conv_plan -> kernel_plan;
+    kernel_plan -> generated_c;
+}

@@ -1,0 +1,53 @@
+digraph AddBranchCEvolution {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.2,
+        nodesep=0.3,
+        ranksep=0.45,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=18,
+        label="AddBranch: Source Program to Emitted C",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [shape=plain, fontname="Helvetica"];
+
+    evolution [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#475569">
+            <TR>
+                <TD BGCOLOR="#E2E8F0"><B>Stage</B></TD>
+                <TD BGCOLOR="#DBEAFE"><B>Source-level view</B></TD>
+                <TD BGCOLOR="#DCFCE7"><B>Internal compiler view</B></TD>
+                <TD BGCOLOR="#FCE7F3"><B>Backend / emitted C view</B></TD>
+            </TR>
+            <TR>
+                <TD><B>Branch creation</B></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">left = MaxPool(...) from input</FONT><BR/><FONT FACE="Courier New">right = AvgPool(...) from input</FONT></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">value_1 = MaxPool(input)</FONT><BR/><FONT FACE="Courier New">value_2 = AvgPool(input)</FONT><BR/>both have shape <FONT FACE="Courier New">[14,14,4]</FONT></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">maxpool2d_forward(input, net-&gt;slot_0, ...)</FONT><BR/><FONT FACE="Courier New">avgpool2d_forward(input, net-&gt;slot_1, ...)</FONT></TD>
+            </TR>
+            <TR>
+                <TD><B>Merge</B></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">merged = Add(left, right)</FONT></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">value_3 = Add(value_1, value_2)</FONT><BR/>shape remains <FONT FACE="Courier New">[14,14,4]</FONT></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">const float* add_inputs_2[2] = { net-&gt;slot_0, net-&gt;slot_1 };</FONT><BR/><FONT FACE="Courier New">add_forward(add_inputs_2, net-&gt;slot_2, 2, 784);</FONT></TD>
+            </TR>
+            <TR>
+                <TD><B>Final reshape</B></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">output = Flatten() from merged</FONT></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">value_4 = Flatten(value_3)</FONT><BR/>shape becomes <FONT FACE="Courier New">[784]</FONT></TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">flatten_hwc_to_chw(net-&gt;slot_2, net-&gt;slot_0, 14, 14, 4);</FONT><BR/><FONT FACE="Courier New">memcpy(output, net-&gt;slot_0, 784 * sizeof(float));</FONT></TD>
+            </TR>
+            <TR>
+                <TD><B>State object</B></TD>
+                <TD ALIGN="LEFT">No weights declaration, no trainable layers.</TD>
+                <TD ALIGN="LEFT">Planner computes 3 activation slots and zero packed-weight bytes.</TD>
+                <TD ALIGN="LEFT"><FONT FACE="Courier New">float* slot_0;</FONT><BR/><FONT FACE="Courier New">float* slot_1;</FONT><BR/><FONT FACE="Courier New">float* slot_2;</FONT><BR/><FONT FACE="Courier New">net-&gt;weights = NULL;</FONT></TD>
+            </TR>
+        </TABLE>>
+    ];
+}

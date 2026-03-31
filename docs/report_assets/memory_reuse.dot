@@ -1,0 +1,75 @@
+digraph MemoryReuse {
+    graph [
+        label="LeNet-5 Activation Slot Reuse After Graph Lowering",
+        labelloc="t",
+        labeljust="l",
+        fontsize=22,
+        fontname="Helvetica",
+        pad=0.25,
+        bgcolor="white"
+    ];
+
+    node [shape=plain, fontname="Helvetica"];
+
+    timeline [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8">
+                <TR>
+                    <TD BGCOLOR="#E2E8F0"><B>Topological Step</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>1</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>2</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>3</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>4</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>5</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>6</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>7</B></TD>
+                    <TD BGCOLOR="#F8FAFC"><B>8</B></TD>
+                </TR>
+                <TR>
+                    <TD BGCOLOR="#E2E8F0"><B>Operation</B></TD>
+                    <TD>Conv1</TD>
+                    <TD>Pool1</TD>
+                    <TD>Conv2</TD>
+                    <TD>Pool2</TD>
+                    <TD>Flatten</TD>
+                    <TD>Dense1</TD>
+                    <TD>Dense2</TD>
+                    <TD>Dense3</TD>
+                </TR>
+                <TR>
+                    <TD BGCOLOR="#E2E8F0"><B>Graph Value Produced</B></TD>
+                    <TD><FONT FACE="Courier New">value_1</FONT></TD>
+                    <TD><FONT FACE="Courier New">value_2</FONT></TD>
+                    <TD><FONT FACE="Courier New">value_3</FONT></TD>
+                    <TD><FONT FACE="Courier New">value_4</FONT></TD>
+                    <TD><FONT FACE="Courier New">value_5</FONT></TD>
+                    <TD><FONT FACE="Courier New">value_6</FONT></TD>
+                    <TD><FONT FACE="Courier New">value_7</FONT></TD>
+                    <TD><FONT FACE="Courier New">value_8</FONT></TD>
+                </TR>
+                <TR>
+                    <TD BGCOLOR="#E2E8F0"><B>Physical Storage</B></TD>
+                    <TD BGCOLOR="#DBEAFE"><FONT FACE="Courier New">slot_0</FONT></TD>
+                    <TD BGCOLOR="#E0F2FE"><FONT FACE="Courier New">slot_1</FONT></TD>
+                    <TD BGCOLOR="#DBEAFE"><FONT FACE="Courier New">slot_0</FONT></TD>
+                    <TD BGCOLOR="#E0F2FE"><FONT FACE="Courier New">slot_1</FONT></TD>
+                    <TD BGCOLOR="#FEF3C7">alias of <FONT FACE="Courier New">value_4</FONT></TD>
+                    <TD BGCOLOR="#DBEAFE"><FONT FACE="Courier New">slot_0</FONT></TD>
+                    <TD BGCOLOR="#E0F2FE"><FONT FACE="Courier New">slot_1</FONT></TD>
+                    <TD BGCOLOR="#DBEAFE"><FONT FACE="Courier New">slot_0</FONT></TD>
+                </TR>
+                <TR>
+                    <TD BGCOLOR="#E2E8F0"><B>Key Note</B></TD>
+                    <TD>dies after Pool1</TD>
+                    <TD>dies after Conv2</TD>
+                    <TD>dies after Pool2</TD>
+                    <TD>kept alive for Flatten alias and Dense1</TD>
+                    <TD>no extra allocation</TD>
+                    <TD>dies after Dense2</TD>
+                    <TD>dies after Dense3</TD>
+                    <TD>kept until output copy</TD>
+                </TR>
+            </TABLE>
+        >
+    ];
+}

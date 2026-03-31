@@ -1,0 +1,71 @@
+digraph AddBranchSemantic {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.22,
+        nodesep=0.32,
+        ranksep=0.52,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=18,
+        label="Complete Semantic Derivation for AddBranch",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fontname="Helvetica",
+        fontsize=10.8,
+        penwidth=1.0,
+        color="#475569",
+        fillcolor="#F8FAFC",
+        margin="0.15,0.08"
+    ];
+
+    edge [color="#334155", penwidth=1.05, arrowsize=0.7];
+
+    root [label="analyze_program\nSemanticResult", fillcolor="#DBEAFE", color="#2563EB"];
+    global [label="Scope global\ninsert AddBranch\nas SYM_LAYER", fillcolor="#E0F2FE", color="#0284C7"];
+    network_scope [label="Scope network:AddBranch\nenter network scope", fillcolor="#DCFCE7", color="#16A34A"];
+    input_sym [label="Insert input\nSYM_INPUT\n[28,28,4]", fillcolor="#FEF3C7", color="#D97706"];
+
+    s1 [label="Stmt 1\nleft = MaxPool\nfrom input", fillcolor="#FCE7F3", color="#DB2777"];
+    s1_lookup [label="lookup input\n[28,28,4]"];
+    s1_infer [label="infer pool\n[14,14,4]"];
+    s1_bind [label="bind left\n[14,14,4]"];
+
+    s2 [label="Stmt 2\nright = AvgPool\nfrom input", fillcolor="#FCE7F3", color="#DB2777"];
+    s2_lookup [label="lookup input\n[28,28,4]"];
+    s2_infer [label="infer pool\n[14,14,4]"];
+    s2_bind [label="bind right\n[14,14,4]"];
+
+    s3 [label="Stmt 3\nmerged = Add\n(left, right)", fillcolor="#FCE7F3", color="#DB2777"];
+    s3_lookup [label="lookup left/right\n[14,14,4]\n[14,14,4]"];
+    s3_check [label="infer Add\nshapes match\n[14,14,4]"];
+    s3_bind [label="bind merged\n[14,14,4]"];
+
+    s4 [label="Stmt 4\noutput = Flatten\nfrom merged", fillcolor="#FCE7F3", color="#DB2777"];
+    s4_lookup [label="lookup merged\n[14,14,4]"];
+    s4_infer [label="infer Flatten\n[784]"];
+    s4_bind [label="bind output\n[784]"];
+
+    final_scope [label="Final symbol state\ninput [28,28,4]\nleft [14,14,4]\nright [14,14,4]\nmerged [14,14,4]\noutput [784]", fillcolor="#E2E8F0"];
+
+    root -> global -> network_scope -> input_sym;
+
+    network_scope -> s1;
+    s1 -> s1_lookup -> s1_infer -> s1_bind;
+
+    network_scope -> s2;
+    s2 -> s2_lookup -> s2_infer -> s2_bind;
+
+    network_scope -> s3;
+    s3 -> s3_lookup -> s3_check -> s3_bind;
+
+    network_scope -> s4;
+    s4 -> s4_lookup -> s4_infer -> s4_bind;
+
+    network_scope -> final_scope;
+}

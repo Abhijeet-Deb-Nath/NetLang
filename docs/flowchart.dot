@@ -1,0 +1,515 @@
+digraph NetLangArchitecture {
+    graph [
+        label="NetLang Compiler Architecture",
+        labelloc="t",
+        labeljust="l",
+        fontsize=24,
+        fontname="Helvetica",
+        pad=0.30,
+        nodesep=0.42,
+        ranksep=0.70,
+        splines=polyline,
+        compound=true,
+        bgcolor="white"
+    ];
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fontname="Helvetica",
+        fontsize=11,
+        penwidth=1.35,
+        margin="0.14,0.08",
+        color="#475569",
+        fillcolor="#F8FAFC",
+        fontcolor="#0F172A"
+    ];
+
+    edge [
+        color="#64748B",
+        penwidth=1.25,
+        arrowsize=0.75,
+        fontname="Helvetica",
+        fontsize=10,
+        fontcolor="#334155"
+    ];
+
+    subgraph cluster_build {
+        label="A. Build the Compiler";
+        labelloc="t";
+        labeljust="l";
+        fontsize=18;
+        fontname="Helvetica-Bold";
+        color="#CBD5E1";
+        penwidth=1.2;
+        style="rounded,filled";
+        fillcolor="#F8FAFC";
+
+        buildbat [
+            label=<
+                <B>build.bat</B><BR/>
+                <FONT POINT-SIZE="10">Windows build driver</FONT>
+            >,
+            fillcolor="#FEF3C7",
+            color="#D97706"
+        ];
+
+        subgraph cluster_generators {
+            label="Frontend Generator Step";
+            labelloc="t";
+            labeljust="l";
+            fontsize=14;
+            color="#E2E8F0";
+            penwidth=1.0;
+            style="rounded,filled";
+            fillcolor="#FFFFFF";
+
+            grammar [
+                label=<
+                    <B>src/parser/net_lang.y</B><BR/>
+                    <FONT POINT-SIZE="10">Bison grammar + parser actions</FONT>
+                >
+            ];
+
+            lexer [
+                label=<
+                    <B>src/lexer/net_lang.l</B><BR/>
+                    <FONT POINT-SIZE="10">Flex lexer rules</FONT>
+                >
+            ];
+
+            bison [
+                label=<
+                    <B>Bison</B><BR/>
+                    <FONT POINT-SIZE="10">parser generator</FONT>
+                >,
+                fillcolor="#DBEAFE",
+                color="#2563EB"
+            ];
+
+            flex [
+                label=<
+                    <B>Flex</B><BR/>
+                    <FONT POINT-SIZE="10">lexer generator</FONT>
+                >,
+                fillcolor="#DBEAFE",
+                color="#2563EB"
+            ];
+
+            parser_c [
+                label=<
+                    <B>build/net_lang.tab.c</B><BR/>
+                    <FONT POINT-SIZE="10">generated parser implementation</FONT>
+                >,
+                fillcolor="#DCFCE7",
+                color="#16A34A"
+            ];
+
+            parser_h [
+                label=<
+                    <B>build/net_lang.tab.h</B><BR/>
+                    <FONT POINT-SIZE="10">token ids + YYSTYPE + YYLTYPE</FONT>
+                >,
+                fillcolor="#DCFCE7",
+                color="#16A34A"
+            ];
+
+            parser_report [
+                label=<
+                    <B>build/net_lang.output</B><BR/>
+                    <FONT POINT-SIZE="10">grammar rules + parser states</FONT>
+                >,
+                fillcolor="#DCFCE7",
+                color="#16A34A"
+            ];
+
+            lexer_c [
+                label=<
+                    <B>build/lex.yy.c</B><BR/>
+                    <FONT POINT-SIZE="10">generated lexer implementation</FONT>
+                >,
+                fillcolor="#DCFCE7",
+                color="#16A34A"
+            ];
+
+            grammar -> bison;
+            lexer -> flex;
+            bison -> parser_c;
+            bison -> parser_h;
+            bison -> parser_report;
+            flex -> lexer_c;
+        }
+
+        subgraph cluster_sources {
+            label="Handwritten Compiler Sources";
+            labelloc="t";
+            labeljust="l";
+            fontsize=14;
+            color="#E2E8F0";
+            penwidth=1.0;
+            style="rounded,filled";
+            fillcolor="#FFFFFF";
+
+            main_src [
+                label=<
+                    <B>src/main.c</B><BR/>
+                    <FONT POINT-SIZE="10">compiler driver</FONT>
+                >
+            ];
+
+            ast_src [
+                label=<
+                    <B>src/ast/*</B><BR/>
+                    <FONT POINT-SIZE="10">AST model + helpers</FONT>
+                >
+            ];
+
+            semantic_src [
+                label=<
+                    <B>src/semantic/*</B><BR/>
+                    <FONT POINT-SIZE="10">semantic checks + symbol tables</FONT>
+                >
+            ];
+
+            graph_src [
+                label=<
+                    <B>src/graph/*</B><BR/>
+                    <FONT POINT-SIZE="10">graph IR lowering</FONT>
+                >
+            ];
+
+            planner_src [
+                label=<
+                    <B>src/planner/*</B><BR/>
+                    <FONT POINT-SIZE="10">layout + packing + memory planning</FONT>
+                >
+            ];
+
+            codegen_src [
+                label=<
+                    <B>src/codegen/*</B><BR/>
+                    <FONT POINT-SIZE="10">code emission + backend selection</FONT>
+                >
+            ];
+        }
+
+        subgraph cluster_build_backend {
+            label="Compile + Link";
+            labelloc="t";
+            labeljust="l";
+            fontsize=14;
+            color="#E2E8F0";
+            penwidth=1.0;
+            style="rounded,filled";
+            fillcolor="#FFFFFF";
+
+            compile_step [
+                label=<
+                    <B>gcc -c</B><BR/>
+                    <FONT POINT-SIZE="10">compile each .c into an object file</FONT>
+                >,
+                fillcolor="#DBEAFE",
+                color="#2563EB"
+            ];
+
+            objects [
+                label=<
+                    <B>build/*.o</B><BR/>
+                    <FONT POINT-SIZE="10">object files</FONT>
+                >,
+                fillcolor="#F3E8FF",
+                color="#7C3AED"
+            ];
+
+            link_step [
+                label=<
+                    <B>gcc link step</B><BR/>
+                    <FONT POINT-SIZE="10">symbol resolution + relocation</FONT>
+                >,
+                fillcolor="#DBEAFE",
+                color="#2563EB"
+            ];
+
+            compiler_exe [
+                label=<
+                    <B>build/netlang.exe</B><BR/>
+                    <FONT POINT-SIZE="10">compiler executable</FONT>
+                >,
+                fillcolor="#F3E8FF",
+                color="#7C3AED"
+            ];
+
+            compile_step -> objects -> link_step -> compiler_exe;
+        }
+
+        buildbat -> grammar [lhead=cluster_generators];
+        buildbat -> lexer [lhead=cluster_generators];
+        buildbat -> main_src [lhead=cluster_sources];
+
+        parser_c -> compile_step;
+        parser_h -> compile_step [style=dashed, arrowhead=none];
+        lexer_c -> compile_step;
+        main_src -> compile_step;
+        ast_src -> compile_step;
+        semantic_src -> compile_step;
+        graph_src -> compile_step;
+        planner_src -> compile_step;
+        codegen_src -> compile_step;
+    }
+
+    subgraph cluster_execute {
+        label="B. Compile a NetLang Program";
+        labelloc="t";
+        labeljust="l";
+        fontsize=18;
+        fontname="Helvetica-Bold";
+        color="#CBD5E1";
+        penwidth=1.2;
+        style="rounded,filled";
+        fillcolor="#FFFFFF";
+
+        input_program [
+            label=<
+                <B>input.nlang</B><BR/>
+                <FONT POINT-SIZE="10">user program</FONT>
+            >,
+            fillcolor="#F3E8FF",
+            color="#7C3AED"
+        ];
+
+        main_driver [
+            label=<
+                <B>main()</B><BR/>
+                <FONT POINT-SIZE="10">driver in src/main.c</FONT>
+            >,
+            fillcolor="#E0F2FE",
+            color="#0284C7"
+        ];
+
+        subgraph cluster_frontend {
+            label="Frontend";
+            labelloc="t";
+            labeljust="l";
+            fontsize=14;
+            color="#E2E8F0";
+            penwidth=1.0;
+            style="rounded,filled";
+            fillcolor="#FAFCFF";
+
+            parser_run [
+                label=<
+                    <B>yyparse()</B><BR/>
+                    <FONT POINT-SIZE="10">generated parser</FONT>
+                >,
+                fillcolor="#E0F2FE",
+                color="#0284C7"
+            ];
+
+            lexer_run [
+                label=<
+                    <B>yylex()</B><BR/>
+                    <FONT POINT-SIZE="10">generated lexer</FONT>
+                >,
+                fillcolor="#E0F2FE",
+                color="#0284C7"
+            ];
+
+            token_stream [
+                label=<
+                    <B>Token stream</B><BR/>
+                    <FONT POINT-SIZE="10">IDENTIFIER, NUMBER, CONV2D, ...</FONT>
+                >,
+                fillcolor="#F3E8FF",
+                color="#7C3AED"
+            ];
+
+            ast_root [
+                label=<
+                    <B>AST (ast_root)</B><BR/>
+                    <FONT POINT-SIZE="10">parser actions build the syntax tree</FONT>
+                >,
+                fillcolor="#F3E8FF",
+                color="#7C3AED"
+            ];
+
+            parser_run -> lexer_run [label="requests tokens"];
+            lexer_run -> token_stream [arrowhead=none];
+            token_stream -> parser_run [label="returns token", minlen=1];
+            parser_run -> ast_root [label="reductions + semantic actions"];
+        }
+
+        subgraph cluster_middle {
+            label="Semantic + IR Lowering";
+            labelloc="t";
+            labeljust="l";
+            fontsize=14;
+            color="#E2E8F0";
+            penwidth=1.0;
+            style="rounded,filled";
+            fillcolor="#FAFCFF";
+
+            semantic_stage [
+                label=<
+                    <B>analyze_program(ast_root)</B><BR/>
+                    <FONT POINT-SIZE="10">semantic validation + scopes + shape checks</FONT>
+                >,
+                fillcolor="#E0F2FE",
+                color="#0284C7"
+            ];
+
+            fusion_stage [
+                label=<
+                    <B>Fusion detection</B><BR/>
+                    <FONT POINT-SIZE="10">current optimization pass</FONT>
+                >,
+                fillcolor="#FCE7F3",
+                color="#DB2777"
+            ];
+
+            graph_ir [
+                label=<
+                    <B>netgraph_build()</B><BR/>
+                    <FONT POINT-SIZE="10">graph IR + inferred shapes + topo order</FONT>
+                >,
+                fillcolor="#E0F2FE",
+                color="#0284C7"
+            ];
+
+            semantic_stage -> fusion_stage -> graph_ir;
+        }
+
+        subgraph cluster_backend {
+            label="Planning + Code Generation";
+            labelloc="t";
+            labeljust="l";
+            fontsize=14;
+            color="#E2E8F0";
+            penwidth=1.0;
+            style="rounded,filled";
+            fillcolor="#FAFCFF";
+
+            layout_plan [
+                label=<
+                    <B>Layout plan</B><BR/>
+                    <FONT POINT-SIZE="10">Flatten -&gt; Dense specialization</FONT>
+                >,
+                fillcolor="#FCE7F3",
+                color="#DB2777"
+            ];
+
+            weight_plan [
+                label=<
+                    <B>Weight packing plan</B><BR/>
+                    <FONT POINT-SIZE="10">Conv OC8 + Dense repacking</FONT>
+                >,
+                fillcolor="#FCE7F3",
+                color="#DB2777"
+            ];
+
+            memory_plan [
+                label=<
+                    <B>Memory plan</B><BR/>
+                    <FONT POINT-SIZE="10">arena slots + last-use reuse</FONT>
+                >,
+                fillcolor="#FCE7F3",
+                color="#DB2777"
+            ];
+
+            exec_plan [
+                label=<
+                    <B>Conv execution plan</B><BR/>
+                    <FONT POINT-SIZE="10">blocking + thread strategy</FONT>
+                >,
+                fillcolor="#FCE7F3",
+                color="#DB2777"
+            ];
+
+            kernel_plan [
+                label=<
+                    <B>Kernel selection</B><BR/>
+                    <FONT POINT-SIZE="10">packed / fused / blocked variants</FONT>
+                >,
+                fillcolor="#FCE7F3",
+                color="#DB2777"
+            ];
+
+            emit_c [
+                label=<
+                    <B>generate_network_code()</B><BR/>
+                    <FONT POINT-SIZE="10">emit specialized C for this network</FONT>
+                >,
+                fillcolor="#E0F2FE",
+                color="#0284C7"
+            ];
+
+            generated_c [
+                label=<
+                    <B>generated/*.c</B><BR/>
+                    <FONT POINT-SIZE="10">network-specific C source</FONT>
+                >,
+                fillcolor="#DCFCE7",
+                color="#16A34A"
+            ];
+
+            layout_plan -> weight_plan -> memory_plan -> exec_plan -> kernel_plan -> emit_c -> generated_c;
+        }
+
+        subgraph cluster_native {
+            label="Final Native Build";
+            labelloc="t";
+            labeljust="l";
+            fontsize=14;
+            color="#E2E8F0";
+            penwidth=1.0;
+            style="rounded,filled";
+            fillcolor="#FAFCFF";
+
+            runtime_c [
+                label=<
+                    <B>src/codegen/runtime.c</B><BR/>
+                    <FONT POINT-SIZE="10">runtime support</FONT>
+                >,
+                fillcolor="#EDE9FE",
+                color="#6D28D9"
+            ];
+
+            kernels_c [
+                label=<
+                    <B>src/codegen/kernels.c</B><BR/>
+                    <FONT POINT-SIZE="10">AVX2 kernels + packing helpers</FONT>
+                >,
+                fillcolor="#EDE9FE",
+                color="#6D28D9"
+            ];
+
+            native_compile [
+                label=<
+                    <B>gcc / clang</B><BR/>
+                    <FONT POINT-SIZE="10">compile generated C with runtime</FONT>
+                >,
+                fillcolor="#DBEAFE",
+                color="#2563EB"
+            ];
+
+            native_exe [
+                label=<
+                    <B>Final native executable</B><BR/>
+                    <FONT POINT-SIZE="10">specialized inference binary</FONT>
+                >,
+                fillcolor="#F3E8FF",
+                color="#7C3AED"
+            ];
+
+            runtime_c -> native_compile;
+            kernels_c -> native_compile;
+            generated_c -> native_compile;
+            native_compile -> native_exe;
+        }
+
+        compiler_exe -> main_driver [ltail=cluster_build];
+        input_program -> main_driver;
+        main_driver -> parser_run [lhead=cluster_frontend];
+        ast_root -> semantic_stage [ltail=cluster_frontend, lhead=cluster_middle];
+        graph_ir -> layout_plan [ltail=cluster_middle, lhead=cluster_backend];
+    }
+}

@@ -1,0 +1,71 @@
+digraph NetLangCompilerPipeline {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.25,
+        nodesep=0.4,
+        ranksep=0.55,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=20,
+        label="NetLang Compiler Pipeline",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [shape=plain, fontname="Helvetica"];
+    edge [color="#334155", penwidth=1.2, arrowsize=0.8];
+
+    frontend [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#475569">
+            <TR><TD BGCOLOR="#E2E8F0"><B>1. Frontend</B></TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Files:</B> src/lexer/net_lang.l, src/parser/net_lang.y, src/ast/*</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Input:</B> NetLang source text</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Work:</B> tokenization, parsing, AST construction</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Output:</B> AST rooted at <FONT FACE="Courier New">ast_root</FONT></TD></TR>
+        </TABLE>>
+    ];
+
+    semantic [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#475569">
+            <TR><TD BGCOLOR="#DBEAFE"><B>2. Semantic Analysis</B></TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Files:</B> src/semantic/semantic.c, symbol_table.c, type_checker.c</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Work:</B> scope creation, symbol lookup, tensor-shape inference, diagnostics</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Output:</B> <FONT FACE="Courier New">SemanticResult</FONT>, scope tree, inferred <FONT FACE="Courier New">TensorType</FONT> data</TD></TR>
+        </TABLE>>
+    ];
+
+    graphlower [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#475569">
+            <TR><TD BGCOLOR="#DCFCE7"><B>3. Graph Lowering</B></TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Files:</B> src/graph/graph.c, src/graph/graph.h</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Work:</B> source-name rebinding -&gt; unique graph values, dependency graph construction, topological ordering</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Output:</B> <FONT FACE="Courier New">NetGraph</FONT> with <FONT FACE="Courier New">GraphNode</FONT> / <FONT FACE="Courier New">GraphValue</FONT></TD></TR>
+        </TABLE>>
+    ];
+
+    planners [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#475569">
+            <TR><TD BGCOLOR="#FCE7F3"><B>4. Planner Stack</B></TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Files:</B> src/planner/*, src/codegen/conv_execution_plan.c, src/codegen/kernel_selection.c</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Work:</B> flatten aliasing, dense layout transforms, weight packing, activation slot reuse, conv micro-tiling, kernel family selection</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Output:</B> layout plan, weight-pack plan, memory plan, execution plan, kernel plan</TD></TR>
+        </TABLE>>
+    ];
+
+    backend [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#475569">
+            <TR><TD BGCOLOR="#FEF3C7"><B>5. Backend Code Emission</B></TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Files:</B> src/codegen/codegen.c, runtime.c, kernels.c</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Work:</B> emit specialized C, emit runtime calls, prepare final native build inputs</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Output:</B> generated/*.c -&gt; gcc/clang -&gt; native inference executable</TD></TR>
+        </TABLE>>
+    ];
+
+    frontend -> semantic -> graphlower -> planners -> backend;
+}

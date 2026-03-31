@@ -1,0 +1,89 @@
+digraph LeNet5Shapes {
+    graph [
+        label="LeNet-5 Semantic Shape Evolution",
+        labelloc="t",
+        labeljust="l",
+        fontsize=24,
+        fontname="Helvetica",
+        pad=0.25,
+        nodesep=0.35,
+        ranksep=0.45,
+        splines=polyline,
+        bgcolor="white"
+    ];
+
+    rankdir=TB;
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fontname="Helvetica",
+        fontsize=11,
+        margin="0.14,0.10",
+        penwidth=1.2,
+        color="#475569",
+        fillcolor="#F8FAFC",
+        fontcolor="#0F172A"
+    ];
+
+    edge [
+        color="#64748B",
+        penwidth=1.2,
+        arrowsize=0.75
+    ];
+
+    input [label=<
+        <B>Input</B><BR/>
+        <FONT FACE="Courier New">[28, 28, 1]</FONT>
+    >, fillcolor="#F3E8FF", color="#7C3AED"];
+
+    conv1 [label=<
+        <B>Conv2D + ReLU</B><BR/>
+        <FONT FACE="Courier New">value_1</FONT><BR/>
+        <FONT FACE="Courier New">[24, 24, 32]</FONT>
+    >, fillcolor="#DBEAFE", color="#2563EB"];
+
+    pool1 [label=<
+        <B>MaxPool</B><BR/>
+        <FONT FACE="Courier New">value_2</FONT><BR/>
+        <FONT FACE="Courier New">[12, 12, 32]</FONT>
+    >, fillcolor="#E0F2FE", color="#0284C7"];
+
+    conv2 [label=<
+        <B>Conv2D + ReLU</B><BR/>
+        <FONT FACE="Courier New">value_3</FONT><BR/>
+        <FONT FACE="Courier New">[8, 8, 32]</FONT>
+    >, fillcolor="#DBEAFE", color="#2563EB"];
+
+    pool2 [label=<
+        <B>MaxPool</B><BR/>
+        <FONT FACE="Courier New">value_4</FONT><BR/>
+        <FONT FACE="Courier New">[4, 4, 32]</FONT>
+    >, fillcolor="#E0F2FE", color="#0284C7"];
+
+    flatten [label=<
+        <B>Flatten</B><BR/>
+        <FONT FACE="Courier New">value_5</FONT><BR/>
+        <FONT FACE="Courier New">[512]</FONT>
+    >, fillcolor="#FEF3C7", color="#D97706"];
+
+    dense1 [label=<
+        <B>Dense + ReLU</B><BR/>
+        <FONT FACE="Courier New">value_6</FONT><BR/>
+        <FONT FACE="Courier New">[100]</FONT>
+    >, fillcolor="#DCFCE7", color="#16A34A"];
+
+    dense2 [label=<
+        <B>Dense + ReLU</B><BR/>
+        <FONT FACE="Courier New">value_7</FONT><BR/>
+        <FONT FACE="Courier New">[100]</FONT>
+    >, fillcolor="#DCFCE7", color="#16A34A"];
+
+    dense3 [label=<
+        <B>Dense + Softmax</B><BR/>
+        <FONT FACE="Courier New">value_8</FONT><BR/>
+        <FONT FACE="Courier New">[10]</FONT>
+    >, fillcolor="#DCFCE7", color="#16A34A"];
+
+    input -> conv1 -> pool1 -> conv2 -> pool2 -> flatten -> dense1 -> dense2 -> dense3;
+}

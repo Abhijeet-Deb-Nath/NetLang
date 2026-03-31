@@ -1,0 +1,50 @@
+digraph SemanticScopes {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.22,
+        nodesep=0.45,
+        ranksep=0.55,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=18,
+        label="Semantic Scope Tree and Symbol Bindings",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [shape=plain, fontname="Helvetica"];
+    edge [color="#334155", penwidth=1.1, arrowsize=0.75];
+
+    global_scope [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#475569">
+            <TR><TD BGCOLOR="#E2E8F0" COLSPAN="3"><B>Scope: global</B></TD></TR>
+            <TR><TD BGCOLOR="#F8FAFC"><B>Symbol</B></TD><TD BGCOLOR="#F8FAFC"><B>Kind</B></TD><TD BGCOLOR="#F8FAFC"><B>TensorType</B></TD></TR>
+            <TR><TD ALIGN="LEFT">LeNet5</TD><TD>SYM_LAYER</TD><TD>-</TD></TR>
+        </TABLE>>
+    ];
+
+    network_scope [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#475569">
+            <TR><TD BGCOLOR="#DBEAFE" COLSPAN="3"><B>Scope: network:LeNet5</B></TD></TR>
+            <TR><TD BGCOLOR="#F8FAFC"><B>Symbol</B></TD><TD BGCOLOR="#F8FAFC"><B>Kind</B></TD><TD BGCOLOR="#F8FAFC"><B>TensorType</B></TD></TR>
+            <TR><TD ALIGN="LEFT">input</TD><TD>SYM_INPUT</TD><TD>[28, 28, 1]</TD></TR>
+            <TR><TD ALIGN="LEFT">x</TD><TD>SYM_VARIABLE</TD><TD>[10] after final Dense</TD></TR>
+        </TABLE>>
+    ];
+
+    note_bind [
+        label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#475569">
+            <TR><TD BGCOLOR="#FEF3C7"><B>Binding rule inside one scope</B></TD></TR>
+            <TR><TD ALIGN="LEFT"><FONT FACE="Courier New">scope_lookup(scope, "x", 0)</FONT> checks only the local scope.</TD></TR>
+            <TR><TD ALIGN="LEFT"><FONT FACE="Courier New">scope_bind_variable(...)</FONT> updates the existing local binding for repeated assignments.</TD></TR>
+            <TR><TD ALIGN="LEFT">Result: source-level <FONT FACE="Courier New">x = ...</FONT> may appear repeatedly without creating ambiguous duplicate semantic bindings.</TD></TR>
+        </TABLE>>
+    ];
+
+    global_scope -> network_scope [label="child scope"];
+    network_scope -> note_bind [style=dashed, arrowhead=none];
+}

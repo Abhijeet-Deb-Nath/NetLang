@@ -1,0 +1,79 @@
+digraph AddBranchAST {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.22,
+        nodesep=0.34,
+        ranksep=0.52,
+        splines=polyline,
+        fontname="Helvetica",
+        fontsize=18,
+        label="Complete AST for AddBranch",
+        labelloc="t",
+        labeljust="l"
+    ];
+
+    node [
+        shape=box,
+        style="rounded,filled",
+        fontname="Helvetica",
+        fontsize=11.5,
+        penwidth=1.0,
+        color="#475569",
+        fillcolor="#F8FAFC",
+        margin="0.14,0.08"
+    ];
+
+    edge [color="#334155", penwidth=1.05, arrowsize=0.7];
+
+    program [label="PROGRAM"];
+    network [label="NETWORK\nAddBranch", fillcolor="#DBEAFE", color="#2563EB"];
+    input_decl [label="INPUT", fillcolor="#DCFCE7", color="#16A34A"];
+    shape_arr [label="ARRAY"];
+    dim28a [label="INT\n28"];
+    dim28b [label="INT\n28"];
+    dim4 [label="INT\n4"];
+
+    stmt1 [label="ASSIGN\nleft", fillcolor="#FEF3C7", color="#D97706"];
+    mp1 [label="MaxPool\npool=[2,2]\nstride=2\npad=0", fillcolor="#E0F2FE", color="#0284C7"];
+    from1 [label="IDENT\ninput"];
+
+    stmt2 [label="ASSIGN\nright", fillcolor="#FEF3C7", color="#D97706"];
+    ap2 [label="AvgPool\npool=[2,2]\nstride=2\npad=0", fillcolor="#E0F2FE", color="#0284C7"];
+    from2 [label="IDENT\ninput"];
+
+    stmt3 [label="ASSIGN\nmerged", fillcolor="#FEF3C7", color="#D97706"];
+    add3 [label="ADD", fillcolor="#E0F2FE", color="#0284C7"];
+    add_left [label="IDENT\nleft"];
+    add_right [label="IDENT\nright"];
+
+    stmt4 [label="ASSIGN\noutput", fillcolor="#FEF3C7", color="#D97706"];
+    flat4 [label="FLATTEN", fillcolor="#E0F2FE", color="#0284C7"];
+    from4 [label="IDENT\nmerged"];
+
+    program -> network;
+    network -> input_decl;
+    input_decl -> shape_arr;
+    shape_arr -> dim28a;
+    shape_arr -> dim28b;
+    shape_arr -> dim4;
+
+    network -> stmt1;
+    stmt1 -> mp1 [label="value"];
+    stmt1 -> from1 [label="from"];
+
+    network -> stmt2;
+    stmt2 -> ap2 [label="value"];
+    stmt2 -> from2 [label="from"];
+
+    network -> stmt3;
+    stmt3 -> add3 [label="value"];
+    add3 -> add_left [label="arg 0"];
+    add3 -> add_right [label="arg 1"];
+
+    network -> stmt4;
+    stmt4 -> flat4 [label="value"];
+    stmt4 -> from4 [label="from"];
+
+    { rank = same; input_decl; stmt1; stmt2; stmt3; stmt4; }
+}
